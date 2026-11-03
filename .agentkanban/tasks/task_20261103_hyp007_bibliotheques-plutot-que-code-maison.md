@@ -3,14 +3,14 @@ title: "HYP-007 · Remplacer le code maison par des bibliothèques courantes"
 lane: todo
 created: 2026-11-03T21:29:19+01:00
 updated: 2026-11-03T21:29:19+01:00
-description: "P1 · M · Fondations et gouvernance · dépend de HYP-002"
+description: "P1 · S · Fondations et gouvernance · coordination des migrations vers des bibliothèques"
 ---
 
 ## Conversation
 
 ### user
 
-**Ticket** HYP-007 · **Priorité** P1 · **Taille** M · **Epic** Fondations et gouvernance · **Dépend de** HYP-002 · **Labels** python, dette
+**Ticket** HYP-007 · **Priorité** P1 · **Taille** S · **Epic** Fondations et gouvernance · **Dépend de** HYP-006, HYP-008, HYP-009, HYP-014, HYP-015, HYP-016, HYP-017 · **Labels** python, dette, coordination
 
 #### Contexte
 
@@ -28,12 +28,25 @@ Relevé des endroits concernés :
 | tableaux du banc LLM en texte | **matplotlib** pour les graphiques (exactitude, latence, jetons par modèle) | `src/hypomnesis/llm/benchmark.py` |
 | estimateurs par règles | **scikit-learn** quand un vrai modèle appris est voulu (ticket HYP-054) | langages M2 |
 
+#### Découpage
+
+Ce ticket coordonne les migrations ; chacune a son ticket, et celui-ci se termine quand elles le sont :
+
+| Ticket | Migration |
+|---|---|
+| HYP-006 | CLI : argparse → Typer |
+| HYP-008 | graphe de provenance des faits → NetworkX |
+| HYP-009 | outil Kanban → NetworkX et PyYAML |
+| HYP-014 | client LLM → paquet officiel `ollama` |
+| HYP-015 | traceur maison → SDK OpenTelemetry (puis HYP-070) |
+| HYP-016 | graphiques du banc LLM → matplotlib |
+| HYP-017 | certificats et manifestes → modèles Pydantic |
+| HYP-054 | estimateurs appris → scikit-learn (ticket existant) |
+
 #### Tâches proposées
 
-- Ajouter les dépendances retenues à `pyproject.toml`, avec une justification d'une ligne chacune.
-- Remplacer chaque élément du tableau, sans changer le comportement observable : mêmes API publiques, mêmes rapports.
-- Supprimer le code maison devenu inutile.
-- Mettre à jour `TECHNICAL.md`.
+- Après les migrations : relire `pyproject.toml` (une ligne de justification par dépendance ajoutée) et `TECHNICAL.md`.
+- Vérifier qu'aucun autre code d'infrastructure maison ne subsiste ; ouvrir un ticket pour chaque cas trouvé.
 
 #### Critères d'acceptation
 
