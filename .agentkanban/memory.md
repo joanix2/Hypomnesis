@@ -21,6 +21,12 @@ Détails d'implémentation : `TECHNICAL.md`.
 - Une tâche portant le label `humain` demande une décision de l'utilisateur.
 - Tout besoin découvert hors périmètre devient une nouvelle tâche `HYP-NNN`.
 
+## Outils
+
+- Graphe de connaissances : `graphify query|path|explain` sur `graphify-out/` (voir `CLAUDE.md`),
+  reconstruit après chaque commit ; `graphify update .` après des changements non commités.
+- Sous-agents : `.claude/agents/` (`hyp-planner`, `hyp-implementer`, `hyp-prover`, `hyp-reviewer`), voir `AGENTS.md`.
+
 ## Définition de fini (toutes tâches)
 
 - Critères d'acceptation de la tâche satisfaits.

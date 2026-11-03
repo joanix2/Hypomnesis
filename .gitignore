@@ -9,3 +9,6 @@ build/
 .hypothesis/
 .coverage
 htmlcov/
+
+# Graphify : graphe dérivé, régénéré localement (hook post-commit)
+graphify-out/

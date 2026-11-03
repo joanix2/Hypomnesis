@@ -33,6 +33,22 @@ semi-anneau. Propriétés : `docs/verification/proprietes.md`. Stratégie : `doc
 
 - `examples/basics/`, `examples/mechanics/` : tour du langage, plaque du §4.2.
 
+## Graphe de connaissances (Graphify)
+
+`graphify-out/` (non versionné) contient le graphe du dépôt : code, docs, tickets. Il est
+régénéré après chaque commit par le hook `post-commit` installé par `graphify hook install`.
+`CLAUDE.md` demande aux agents de l'interroger avant d'explorer le code.
+
+```bash
+graphify update .                     # reconstruire le graphe du code (sans LLM)
+graphify query "comment est typé un match ?"
+graphify path "Checker" "Interpreter"
+graphify explain "Session"
+```
+
+Pour enrichir les relations sémantiques des documents (spécification, notes, tickets), lancer
+`/graphify . --update` dans Claude Code : cette étape utilise des sous-agents.
+
 ## Commandes
 
 ```bash
