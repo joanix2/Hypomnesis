@@ -6,8 +6,9 @@ import Hypomnesis.Core.Syntax
 Interpréteur à environnements et fermetures, comme `runtime/interpreter.py`.
 Le paramètre `fuel` borne le nombre d'étapes : il rend la fonction totale
 (Lean l'exige) et modélise les budgets de calcul du §11 du cahier des
-charges. Un résultat est soit une valeur, soit `timeout` (budget épuisé),
-soit `stuck` (erreur d'exécution : c'est ce que le typage doit exclure).
+charges. Un résultat est une valeur, `timeout` (budget épuisé), `matchFail`
+(aucun motif ne s'applique : `Match_failure` de l'interpréteur Python) ou
+`stuck` (erreur d'exécution : c'est ce que le typage doit exclure).
 -/
 
 namespace Hypomnesis.Core
@@ -19,18 +20,21 @@ inductive Val where
   | clo (env : List Val) (body : Expr)
   | rclo (env : List Val) (body : Expr)
   | pair (fst snd : Val)
+  | con (c : Nat) (arg : Val)
   deriving Repr
 
 inductive Res where
   | ok (v : Val)
   | stuck
   | timeout
+  | matchFail
   deriving Repr
 
 def Res.bind : Res → (Val → Res) → Res
   | .ok v, k => k v
   | .stuck, _ => .stuck
   | .timeout, _ => .timeout
+  | .matchFail, _ => .matchFail
 
 def evalOp : BinOp → Int → Int → Val
   | .add, a, b => .int (a + b)
@@ -38,6 +42,19 @@ def evalOp : BinOp → Int → Int → Val
   | .mul, a, b => .int (a * b)
   | .eq, a, b => .bool (decide (a = b))
   | .lt, a, b => .bool (decide (a < b))
+
+/-- Filtrage : les valeurs liées, la plus récente d'abord, ou `none`. -/
+def matchPat : Pat → Val → Option (List Val)
+  | .wild, _ => some []
+  | .var, v => some [v]
+  | .int n, .int m => if n = m then some [] else none
+  | .bool b, .bool b' => if b = b' then some [] else none
+  | .pair p₁ p₂, .pair a b =>
+    match matchPat p₁ a, matchPat p₂ b with
+    | some vs₁, some vs₂ => some (vs₂ ++ vs₁)
+    | _, _ => none
+  | .ctor c p, .con c' v => if c = c' then matchPat p v else none
+  | _, _ => none
 
 def eval : Nat → List Val → Expr → Res
   | 0, _, _ => .timeout
@@ -85,5 +102,12 @@ def eval : Nat → List Val → Expr → Res
         match va, vb with
         | .int x, .int y => .ok (evalOp op x y)
         | _, _ => .stuck
+    | .construct _ c x => (eval n env x).bind fun v => .ok (.con c v)
+    | .case x p e₁ e₂ =>
+      (eval n env x).bind fun v =>
+        match matchPat p v with
+        | some vs => eval n (vs ++ env) e₁
+        | none => eval n env e₂
+    | .fail _ => .matchFail
 
 end Hypomnesis.Core

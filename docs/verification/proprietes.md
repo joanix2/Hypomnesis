@@ -21,7 +21,7 @@ la manière dont on peut en établir la validité.
 
 | # | Théorème (Lean) | Énoncé | Exigences couvertes |
 |---|---|---|---|
-| P1 | `Core.eval_safe` | un terme bien typé, évalué dans un environnement bien typé, rend une valeur du type annoncé ou épuise son budget ; **il ne se bloque jamais** | §4.1, §16.4 « erreurs de types détectées avant exécution », H2 |
+| P1 | `Core.eval_safe` | un terme bien typé, évalué dans un environnement bien typé, rend une valeur du type annoncé, épuise son budget ou échoue au filtrage (`Match_failure`) ; **il ne se bloque jamais** | §4.1, §16.4 « erreurs de types détectées avant exécution », H2 |
 | P2 | `Core.closed_never_stuck` | corollaire pour les programmes clos | idem |
 | P3 | `Core.typeOf_sound` | le vérificateur exécutable n'accepte que des termes dérivables | §13.2, §14.3 (une sortie LLM typée est réellement bien typée) |
 | P4 | `Core.typeOf_complete` | il accepte tous les termes dérivables | §13.2 |
@@ -34,14 +34,20 @@ la manière dont on peut en établir la validité.
 | P11 | `Epistemics.retract_unrelated` | une conclusion qui ne dépend pas d'une observation n'est pas affectée par son retrait (**localité de la révision**) | §7.3 étape 1, H4 |
 | P12 | `Epistemics.support_mono` | dégrader le support d'une observation ne peut pas améliorer celui d'une conclusion | §7.1, §14.4 (le LLM ne peut pas « blanchir » une valeur) |
 | P13 | `Epistemics.conjunction_no_stronger` | dériver d'une estimation donne au mieux une estimation | §7.1 |
+| P14 | `Core.matchPat_sound` | un motif bien typé qui filtre une valeur bien typée lie des valeurs des types annoncés | §4.1 (filtrage) |
+| P15 | `Core.patTypeOf_sound`, `patTypeOf_complete` | le typage des motifs est décidé exactement par le vérificateur | §13.2 |
+| P16 | `Examples.program_typed` | un programme réel (longueur de liste) est typé **par calcul**, au moyen du vérificateur prouvé | démonstration du mécanisme de certificat |
 
 **Fragment couvert** (`formal/Hypomnesis/Core/Syntax.lean`) :
-- types `int`, `bool`, `unit`, fonctions et produits ;
+- types `int`, `bool`, `unit`, fonctions, produits et **types de données** (variants, listes),
+  monomorphisés dans une signature ;
 - lambdas annotées, récursion (`fix` ↔ `LetRec`), `let`, `if` élaboré, paires ;
+- constructeurs et **filtrage** (`case` en chaîne binaire, `fail`), motifs joker, variable,
+  littéral, paire, constructeur ;
 - primitives entières.
 
-Les variants, les records, le filtrage général et le polymorphisme ne sont **pas encore**
-couverts (§3, F1–F2).
+Ne sont **pas encore** couverts : records (F1b), motifs alternatifs et alias, exhaustivité
+(F1c) et polymorphisme (F2).
 
 ---
 
@@ -53,7 +59,8 @@ couverts (§3, F1–F2).
 |---|---|---|
 | fonctions pures, immutabilité | déterminisme ; l'évaluation ne dépend que de l'environnement | ✅ P8 |
 | typage avant exécution | sûreté du typage | ✅ P1 (fragment) · 🎯 F1–F2 (variants, records, `match`, polymorphisme) |
-| types algébriques, filtrage | sûreté étendue + **exhaustivité** : un `match` exhaustif bien typé ne lève jamais `Match_failure` | 🎯 F1 |
+| types algébriques, filtrage | sûreté étendue aux variants et au filtrage | ✅ P1, P14, P15 |
+| | **exhaustivité** : un `match` exhaustif bien typé ne lève jamais `Match_failure` | 🎯 F1c |
 | inférence Hindley-Milner | *correction* de l'inférence : obtenue **sans prouver l'inférence Python**, par vérification de son résultat (certificat) | 🎯 F3 |
 | | *principalité* (le type inféré est le plus général) | 🧪 tests différentiels ; preuve en Lean possible mais non prioritaire |
 | modules | la résolution de noms préserve le sens : renommer un module ne change pas le résultat | 🎯 F2 |

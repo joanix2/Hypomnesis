@@ -14,6 +14,11 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms typeOf_complete
 #print axioms hasType_unique
 #print axioms eval_fuel_mono
+#print axioms matchPat_sound
+#print axioms patTypeOf_sound
+#print axioms patTypeOf_complete
+#print axioms Examples.program_typed
+#print axioms Examples.program_never_stuck
 #print axioms Prov.eval_subst
 #print axioms holds_after_retract
 #print axioms retract_unrelated

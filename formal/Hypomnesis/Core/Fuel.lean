@@ -21,6 +21,7 @@ theorem Res.bind_mono {r r' : Res} {k k' : Val → Res}
     rw [hr (by simp)]
     exact hk v h
   | stuck => rw [hr (by simp)]; rfl
+  | matchFail => rw [hr (by simp)]; rfl
   | timeout => exact absurd rfl h
 
 theorem eval_succ (n : Nat) :
@@ -47,6 +48,11 @@ theorem eval_succ (n : Nat) :
     | binop op a b =>
       exact Res.bind_mono ih (fun va => Res.bind_mono ih (fun vb _ => by
         cases va <;> cases vb <;> rfl)) h
+    | construct d c x => exact Res.bind_mono ih (fun _ _ => rfl) h
+    | case x p e₁ e₂ =>
+      refine Res.bind_mono ih (fun v hk => ?_) h
+      rcases hm : matchPat p v with _ | vs <;> simp only [hm] at hk ⊢ <;> exact ih hk
+    | fail => rfl
 
 /-- **Monotonie du budget.** -/
 theorem eval_fuel_mono {n m : Nat} {env : List Val} {e : Expr}

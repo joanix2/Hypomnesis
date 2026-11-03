@@ -12,6 +12,7 @@ Stratégie (certificats, tests différentiels) : [docs/verification/strategie.md
 | `Hypomnesis/Core/Soundness.lean` | sûreté : un terme bien typé ne se bloque jamais |
 | `Hypomnesis/Core/Check.lean` | vérificateur exécutable, correct et complet ; décidabilité ; unicité |
 | `Hypomnesis/Core/Fuel.lean` | le budget ne change jamais un résultat obtenu |
+| `Hypomnesis/Core/Examples.lean` | longueur d'une liste d'entiers : typage établi par calcul, exécution |
 | `Hypomnesis/Epistemics/Provenance.lean` | provenance en semi-anneau, révision, monotonie du support |
 
 ```bash
