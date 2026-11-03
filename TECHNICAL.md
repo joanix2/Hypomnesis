@@ -19,6 +19,20 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Session | `src/hypomnesis/session.py` | enchaîne tout ; pile de 512 Mo pour la récursion profonde |
 | CLI | `src/hypomnesis/cli.py` | `run`, `check`, `repl` |
 
+## Certificats
+
+`src/hypomnesis/certify/` exporte la Core IR élaborée et annotée (prélude compris) en JSON,
+format `certificate/1.0.0` validé par `contracts/schemas/certificate-1.0.0.json` :
+
+- les variables locales sont des indices de de Bruijn (0 = lieur le plus proche) ;
+- les variables de motif sont des emplacements numérotés (`{"bind": k}`) ;
+- les variables de type sont nommées par définition et liées par des listes `forall` ;
+- les littéraux portent leur sorte.
+
+`load.py` fait l'opération inverse ; les tests vérifient `export(load(c)) = c` et que le programme
+réimporté calcule les mêmes valeurs. CLI : `hypomnesis check FICHIERS --emit-certificate cert.json`.
+Le vérificateur Lean qui relira ces certificats est HYP-026.
+
 ## Contrats
 
 `src/hypomnesis/contracts/` : schémas JSON Schema 2020-12 (enveloppe, manifeste d'extension) et

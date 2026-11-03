@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -21,6 +22,27 @@ def _load_files(session: Session, paths: list[Path], *, execute: bool) -> int:
             return 1
         for binding in result.bindings:
             print(binding.render() if execute else binding.render_signature())
+    return 0
+
+
+def _emit_certificate(session: Session, path: Path) -> int:
+    """Write the session's certificate, validated against its JSON Schema."""
+    from hypomnesis.certify import CERTIFICATE_SCHEMA_ID, CertificateError, session_certificate
+    from hypomnesis.contracts.registry import SchemaRegistry
+
+    try:
+        certificate = session_certificate(session)
+    except CertificateError as exc:
+        print(f"certificate: {exc}", file=sys.stderr)
+        return 1
+    issues = SchemaRegistry.with_builtin_schemas().issues(CERTIFICATE_SCHEMA_ID, certificate)
+    if issues:
+        print("certificate: invalid against its schema", file=sys.stderr)
+        for issue in issues[:10]:
+            print(f"  {issue}", file=sys.stderr)
+        return 1
+    path.write_text(json.dumps(certificate, ensure_ascii=False), encoding="utf-8")
+    print(f"certificate: {len(session.definitions)} definitions -> {path}", file=sys.stderr)
     return 0
 
 
@@ -65,13 +87,22 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("files", nargs="+", type=Path)
     check = commands.add_parser("check", help="type-check files and print their signatures")
     check.add_argument("files", nargs="+", type=Path)
+    check.add_argument(
+        "--emit-certificate",
+        metavar="FILE",
+        type=Path,
+        help="write the elaborated, annotated Core IR (prelude included) as a JSON certificate",
+    )
     commands.add_parser("repl", help="interactive toplevel")
     args = parser.parse_args(argv)
 
     session = Session()
     if args.command == "repl":
         return _repl(session)
-    return _load_files(session, args.files, execute=args.command == "run")
+    status = _load_files(session, args.files, execute=args.command == "run")
+    if status == 0 and getattr(args, "emit_certificate", None) is not None:
+        status = _emit_certificate(session, args.emit_certificate)
+    return status
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ from functools import cache
 from importlib.resources import files
 from typing import TypeVar
 
+from hypomnesis.ir import core as ir
 from hypomnesis.language import ast as A
 from hypomnesis.language.errors import EvaluationError
 from hypomnesis.language.parser import parse_expression, parse_program
@@ -64,12 +65,16 @@ class Session:
         self.natives = natives or default_registry()
         self.checker = Checker(self.natives.arities())
         self.interpreter = Interpreter(self.natives)
+        # Every elaborated definition, in order (the prelude included): the
+        # content of a certificate (see hypomnesis.certify).
+        self.definitions: list[ir.Definition] = []
         if prelude:
             self.load(prelude_source())
 
     def check(self, source: str) -> LoadResult:
         """Type-check ``source`` and extend the type environment, without running it."""
         result = self.checker.check_program(parse_program(source))
+        self.definitions.extend(result.definitions)
         return LoadResult([self._binding(info, None) for info in result.values], result.types)
 
     def load(self, source: str) -> LoadResult:
@@ -77,6 +82,7 @@ class Session:
         return self._run(self.checker.check_program(parse_program(source)))
 
     def _run(self, result: CheckResult) -> LoadResult:
+        self.definitions.extend(result.definitions)
         run_deep(lambda: self.interpreter.execute(result.definitions))
         bindings = [
             self._binding(info, self.interpreter.globals[info.qname]) for info in result.values
