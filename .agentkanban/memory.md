@@ -18,6 +18,12 @@ Détails d'implémentation : `TECHNICAL.md`.
 
 ## Conventions
 
+- **Bibliothèques plutôt que code maison** (préférence de l'utilisateur) : utiliser les
+  bibliothèques courantes dès qu'elles couvrent le besoin — NetworkX (graphes), NumPy, SciPy,
+  scikit-learn, matplotlib, Typer (CLI), le client officiel `ollama`, OpenTelemetry, etc. — tant
+  qu'elles restent raisonnables en poids. Ne réimplémenter que ce qui est propre à Hypomnesis
+  (langage, typage, IR, sémantique). Le noyau prouvé (Lean) reste sans dépendance.
+
 - Documentation et tickets en **français** ; code, identifiants et commentaires de code en **anglais**
   (sauf les exemples `.hyp` de domaines métiers francophones).
 - Python ≥ 3.11, environnement `.venv/` ; Lean 4.35 dans `formal/` (sans Mathlib).
