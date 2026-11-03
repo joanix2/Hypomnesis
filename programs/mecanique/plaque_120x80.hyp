@@ -1,0 +1,11 @@
+(* Programme M1 écrit dans le langage « mécanique » (M2).
+   « Crée une plaque de 120 × 80 mm, estime son épaisseur, vérifie sa validité
+     et exporte sa géométrie. » *)
+
+let demande = {
+  Plaque.nom = "plaque-support";
+  largeur = 120.0;
+  hauteur = 80.0;
+  epaisseur = None;         (* inconnue : le moteur l'estimera puis la résoudra *)
+  masse_max = 0.5;
+}

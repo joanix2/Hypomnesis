@@ -13,5 +13,6 @@ htmlcov/
 # Graphify : graphe dérivé, régénéré localement (hook post-commit)
 graphify-out/
 
-# Sorties des démonstrateurs
+# Résultats M0
+sortie/
 sortie-plaque/

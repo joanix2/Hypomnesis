@@ -46,30 +46,49 @@ def _emit_certificate(session: Session, path: Path) -> int:
     return 0
 
 
-def _demo(args: argparse.Namespace) -> int:
-    if args.scenario == "ventilation":
-        from hypomnesis.demos.ventilation import pipeline as ventilation
+def _pairs(items: list[str]) -> dict[str, str]:
+    return dict(item.split("=", 1) for item in items if "=" in item)
 
-        print(ventilation.render(ventilation.run(args.temperature, broken=args.panne)))
-        return 0
-    from hypomnesis.demos.plaque.pipeline import EXPORT_PERMISSION, TranscriptionError, render, run
 
-    permissions = frozenset() if args.sans_permission else frozenset({EXPORT_PERMISSION})
+def _lancer(args: argparse.Namespace) -> int:
+    from hypomnesis.engine import design, feedback
+    from hypomnesis.engine.language import LanguageError, load_language
+
     try:
-        report = run(
-            args.demande,
+        language = load_language(args.langage)
+        if args.programme is not None:
+            program = args.programme.read_text(encoding="utf-8")
+        elif args.demande is not None and "transcriber" in language.manifest:
+            program = language.adapter(language.manifest["transcriber"])(args.demande)
+        else:
+            print("un programme M1 ou une --demande transcriptible est requis", file=sys.stderr)
+            return 64
+        if language.procedure["kind"] == "feedback-loop":
+            print(
+                feedback.render(
+                    feedback.run_feedback(language, program, environment=_pairs(args.env))
+                )
+            )
+            return 0
+        report = design.run_design(
+            language,
+            program,
             estimator=args.estimateur,
             mode=args.mode,
             out_dir=args.sortie,
-            masse_max=args.masse_max,
-            permissions=permissions,
-            mesure=args.mesure,
+            permissions=frozenset() if args.sans_permission else None,
+            observations={k: float(v) for k, v in _pairs(args.observer).items()},
         )
-    except (TranscriptionError, HypomnesisError) as exc:
-        print(f"demande refusée : {exc}", file=sys.stderr)
+        print(design.render(report))
+        return 0
+    except (LanguageError, HypomnesisError, ValueError) as exc:
+        message = (
+            exc.render(None, str(args.programme or "<programme>"))
+            if isinstance(exc, HypomnesisError)
+            else str(exc)
+        )
+        print(f"refusé : {message}", file=sys.stderr)
         return 1
-    print(render(report))
-    return 0
 
 
 def _repl(session: Session) -> int:
@@ -120,25 +139,37 @@ def main(argv: list[str] | None = None) -> int:
         help="write the elaborated, annotated Core IR (prelude included) as a JSON certificate",
     )
     commands.add_parser("repl", help="interactive toplevel")
-    demo = commands.add_parser("demo", help="démonstrateurs de bout en bout")
-    demo.add_argument("scenario", choices=["plaque", "ventilation"])
-    demo.add_argument(
-        "--demande",
-        default="Crée une plaque de 120 × 80 mm, estime son épaisseur, "
-        "vérifie sa validité et exporte sa géométrie.",
+    lancer = commands.add_parser(
+        "lancer",
+        help="exécuter un programme M1 écrit dans un langage M2 (dossier avec langage.json)",
     )
-    demo.add_argument("--estimateur", choices=["regle", "abaque"], default="regle")
-    demo.add_argument("--mode", choices=["simulate", "dry-run", "production"], default="dry-run")
-    demo.add_argument("--sortie", type=Path, default=Path("sortie-plaque"))
-    demo.add_argument("--masse-max", type=float, default=0.5, help="kg")
-    demo.add_argument("--mesure", type=float, help="épaisseur mesurée ensuite (mm) : révision")
-    demo.add_argument("--sans-permission", action="store_true", help="refuser l'export")
-    demo.add_argument("--temperature", type=float, default=31.0, help="ventilation : °C initiaux")
-    demo.add_argument("--panne", action="store_true", help="ventilation : ventilateur en panne")
+    lancer.add_argument("langage", type=Path, help="dossier du langage M2")
+    lancer.add_argument("programme", type=Path, nargs="?", help="programme M1 (.hyp)")
+    lancer.add_argument("--demande", help="demande en langage naturel, transcrite en programme M1")
+    lancer.add_argument("--estimateur", help="identifiant d'un estimateur déclaré par le langage")
+    lancer.add_argument("--mode", choices=["simulate", "dry-run", "production"], default="dry-run")
+    lancer.add_argument("--sortie", type=Path, default=Path("sortie"), help="résultats M0")
+    lancer.add_argument(
+        "--observer",
+        action="append",
+        default=[],
+        metavar="CHAMP=VALEUR",
+        help="observation ultérieure (révision)",
+    )
+    lancer.add_argument(
+        "--env",
+        action="append",
+        default=[],
+        metavar="CLE=VALEUR",
+        help="option de l'environnement (adaptateurs)",
+    )
+    lancer.add_argument(
+        "--sans-permission", action="store_true", help="n'accorder aucune permission"
+    )
     args = parser.parse_args(argv)
 
-    if args.command == "demo":
-        return _demo(args)
+    if args.command == "lancer":
+        return _lancer(args)
     session = Session()
     if args.command == "repl":
         return _repl(session)

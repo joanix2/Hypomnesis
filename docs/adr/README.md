@@ -12,3 +12,4 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0005](0005-provenance-et-observabilite-distinctes.md) | Provenance épistémique et observabilité restent distinctes | Acceptée |
 | [0006](0006-m3-theorie-des-types-a-deux-niveaux.md) | Le M3 est une théorie des types à deux niveaux, modale et graduée | Proposée |
 | [0007](0007-semantique-de-reference-lean.md) | Sémantique de référence en Lean 4 et compilation certifiante | Acceptée |
+| [0008](0008-niveaux-m3-m2-m1-m0.md) | Séparation stricte des niveaux M3, M2, M1, M0 | Acceptée |

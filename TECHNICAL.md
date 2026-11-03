@@ -19,21 +19,26 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Session | `src/hypomnesis/session.py` | enchaîne tout ; pile de 512 Mo pour la récursion profonde |
 | CLI | `src/hypomnesis/cli.py` | `run`, `check`, `repl` |
 
-## Démonstrateur MVP (HYP-120)
+## Moteur générique et langages (ADR 0008)
 
-`src/hypomnesis/demos/plaque/` : domaine `domaine.hyp` (règles et constantes), contrats de
-l'actionneur d'export, `pipeline.py`. Briques minimales réutilisables :
+`src/hypomnesis/engine/` (M3) charge un langage M2 et exécute un programme M1 :
 
 | Module | Rôle |
 |---|---|
-| `epistemics/provenance.py` | termes de provenance, semi-anneaux (support, booléen, confiance), retrait : miroir du modèle Lean |
-| `epistemics/knowledge.py` | base de connaissances : observé / estimé / dérivé, inconnues, journal en ajout seul, révision, explication |
-| `ir/problem.py` | Problem IR : variables, domaines discrets, contraintes linéaires, objectif ; vérification indépendante |
-| `backends/z3_solver.py` | Z3 sur la Problem IR, modèle revérifié en rationnels exacts |
-| `effects/dispatcher.py` | commandes : contrat, permission, contraintes métier, modes simulate / dry-run / production, états |
-| `observability/trace.py` | spans imbriqués (structure OpenTelemetry), arbre et export JSON |
+| `engine/language.py` | chargement d'un paquet `languages/<langage>/` : manifeste validé (`language-manifest/1.0.0`), sources Hypomnesis, contrats, adaptateurs confinés au paquet |
+| `engine/design.py` | procédure générique `constrained-design` : connu/inconnu, estimation, `Problem.problem` → Z3 → vérification, validation, actions, révision |
+| `engine/feedback.py` | procédure générique `feedback-loop` : capteur, décision, actionneur, vérification sous hypothèse, budget |
+| `engine/bridge.py` | valeur Hypomnesis → JSON (commandes) ; `Problem.problem` → Problem IR |
 
-CLI : `hypomnesis demo plaque [--mode …] [--estimateur regle|abaque] [--mesure MM]`.
+Briques M3 utilisées : `epistemics/` (provenance, connaissances), `ir/problem.py`,
+`backends/z3_solver.py`, `effects/dispatcher.py`, `observability/trace.py`, et le module
+`Problem` de la bibliothèque standard.
+
+Convention des fonctions M2 appelées par `constrained-design` : elles reçoivent la demande
+puis la valeur de chaque champ déclaré dans `estimators`, dans l'ordre du manifeste.
+
+CLI : `hypomnesis lancer LANGAGE [PROGRAMME] [--demande …] [--estimateur …] [--mode …]
+[--observer champ=valeur] [--env cle=valeur] [--sortie DIR]`.
 
 ## Certificats
 

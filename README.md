@@ -21,24 +21,28 @@ parser LALR, inférence Hindley-Milner, types algébriques, records, modules, fi
 interpréteur avec appels terminaux, prélude écrit en Hypomnesis, REPL, contrats JSON Schema
 de l'enveloppe de message et du manifeste d'extension.
 
-## Démonstrateur MVP
+## Niveaux : moteur, langages, programmes, résultats
 
-Le scénario du cahier des charges (§16.2), de bout en bout :
+| Niveau | Dossier | Contenu |
+|---|---|---|
+| M3 | `src/hypomnesis/` | le moteur : métalangage, typage, runtime, connaissances, effets, solveurs, procédures génériques |
+| M2 | `languages/` | des langages métier écrits en Hypomnesis : `mecanique`, `ventilation` |
+| M1 | `programs/` | des programmes écrits dans ces langages |
+| M0 | `sortie/` | les résultats : rapports, fichiers exportés |
 
 ```bash
-hypomnesis demo plaque                              # dry-run : rien n'est exporté
-hypomnesis demo plaque --mode production --mesure 5 # export SVG/JSON, puis révision par une mesure
-hypomnesis demo plaque --estimateur abaque --masse-max 0.2
-hypomnesis demo plaque --sans-permission --mode production
-hypomnesis demo ventilation             # §16.3 : capteur → règle → actionneur → capteur
-hypomnesis demo ventilation --panne     # l'effet attendu est réfuté, l'hypothèse retirée
+hypomnesis lancer languages/mecanique programs/mecanique/plaque_120x80.hyp
+hypomnesis lancer languages/mecanique programs/mecanique/plaque_120x80.hyp --mode production --observer epaisseur=5
+hypomnesis lancer languages/mecanique --demande "Crée une plaque de 200 × 150 mm, masse maximale 1 kg."
+hypomnesis lancer languages/mecanique programs/mecanique/plaque_120x80.hyp --estimateur abaque
+hypomnesis lancer languages/ventilation programs/ventilation/salle_serveurs.hyp --env panne=1
 ```
 
-Demande en français → programme Hypomnesis typé → connaissances avec provenance → épaisseur
-estimée (estimateurs interchangeables) → résolue par Z3 (solution revérifiée) → validée par les
-règles du domaine écrites en Hypomnesis → export contrôlé (contrat, permission, contraintes,
-mode) → rapport expliquant chaque conclusion, journal, traces. Domaine :
-`src/hypomnesis/demos/plaque/domaine.hyp`.
+Le scénario du cahier des charges (§16.2) : programme typé → connaissances avec provenance →
+inconnue estimée par une fonction du langage → contraintes déclarées dans le langage, résolues
+par Z3 et revérifiées → validation par les règles du langage → commande d'export contrôlée
+(contrat, permission, contraintes, mode) → rapport, journal, traces, révision. Voir
+[ADR 0008](docs/adr/0008-niveaux-m3-m2-m1-m0.md).
 
 ## Démarrage
 

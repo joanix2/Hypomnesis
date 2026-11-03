@@ -1,0 +1,24 @@
+(* Langage « ventilation » (M2) : régulation de température par ventilateur.
+   Règles pures : elles décrivent les commandes, le moteur (M3) les exécute. *)
+
+module Ventilation = struct
+  (* Installation : ce que décrit un programme M1. *)
+  type installation = { capteur : string; ventilateur : string; budget : int }
+
+  let seuil = 28.0                 (* °C *)
+  let baisse_attendue = 1.0        (* °C après une action *)
+
+  (* Décision : None = rien à faire ; Some v = vitesse en %, proportionnelle au dépassement. *)
+  let decider temperature =
+    if temperature <= seuil then None
+    else
+      let v = 40 + int_of_float ((temperature -. seuil) *. 20.0) in
+      Some (if v > 100 then 100 else v)
+
+  (* Contenu de la commande, validé ensuite par le contrat fan.set. *)
+  type commande = { fan_id : string; speed_percent : int }
+  let commande vitesse = { fan_id = "fan-1"; speed_percent = vitesse }
+
+  (* Effet attendu : la température a baissé d'au moins baisse_attendue. *)
+  let effet_confirme avant apres = avant -. apres >= baisse_attendue
+end

@@ -177,3 +177,33 @@ module List = struct
     | [x] -> [x]
     | _ -> let (a, b) = split l in merge cmp (sort cmp a) (sort cmp b)
 end
+
+(* ------------------------------------------------------------ problems *)
+
+(* Constraint problems, declared by M2 languages and solved by the engine (M3):
+   the engine turns a `Problem.problem` value into its Problem IR, calls a solver
+   and re-checks the solution independently of it. Linear constraints:
+   sum (coefficient * variable) relation bound. *)
+module Problem = struct
+  type relation = Le | Ge | Eq
+
+  type variable = {
+    name : string;
+    lower : float option;
+    upper : float option;
+    choices : float list;  (* allowed values; [] = any *)
+  }
+
+  type constraint = {
+    label : string;
+    terms : (string * float) list;
+    relation : relation;
+    bound : float;
+  }
+
+  type problem = {
+    variables : variable list;
+    constraints : constraint list;
+    target : (string * float) option;  (* minimise the distance to this value *)
+  }
+end

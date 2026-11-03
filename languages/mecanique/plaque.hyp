@@ -1,0 +1,66 @@
+(* Langage « mécanique » (M2) : le concept de plaque, ses règles, ses estimateurs,
+   ses contraintes et ses commandes. Écrit en Hypomnesis, au-dessus du moteur (M3),
+   qui n'en sait rien. Longueurs en mm, masses en kg. Règles illustratives. *)
+
+module Plaque = struct
+  (* Demande : ce que décrit un programme M1. `None` = inconnu à déterminer. *)
+  type demande = {
+    nom : string;
+    largeur : float;
+    hauteur : float;
+    epaisseur : float option;
+    masse_max : float;
+  }
+
+  (* Paramètres des règles : une seule source de vérité. *)
+  let densite_acier = 0.00000785                       (* kg/mm³ *)
+  let epaisseur_min = 1.0                               (* mm *)
+  let elancement_max = 40.0                             (* petit côté / épaisseur *)
+  let epaisseurs_standard = [1.0; 1.5; 2.0; 3.0; 4.0; 5.0; 6.0; 8.0; 10.0; 12.0]
+
+  let petit_cote (d : demande) = if d.largeur < d.hauteur then d.largeur else d.hauteur
+  let masse (d : demande) e = d.largeur *. d.hauteur *. e *. densite_acier
+
+  (* Estimateurs : deux heuristiques métier interchangeables. *)
+  let estimer_regle (d : demande) = petit_cote d /. 25.0
+  let estimer_abaque (d : demande) =
+    let surface = d.largeur *. d.hauteur in
+    if surface < 5000.0 then 2.0 else if surface < 15000.0 then 3.0 else 5.0
+
+  (* Problème de contraintes (bibliothèque standard Problem) : épaisseur standard
+     la plus proche de l'estimation, respectant élancement et masse. *)
+  let probleme (d : demande) estimation = {
+    Problem.variables = [{
+      Problem.name = "epaisseur";
+      lower = Some epaisseur_min;
+      upper = None;
+      choices = epaisseurs_standard;
+    }];
+    constraints = [
+      (* petit côté / e ≤ élancement max  ⇔  élancement max · e ≥ petit côté *)
+      { Problem.label = "élancement"; terms = [("epaisseur", elancement_max)];
+        relation = Problem.Ge; bound = petit_cote d };
+      (* largeur · hauteur · densité · e ≤ masse max *)
+      { Problem.label = "masse"; terms = [("epaisseur", d.largeur *. d.hauteur *. densite_acier)];
+        relation = Problem.Le; bound = d.masse_max };
+    ];
+    target = Some ("epaisseur", estimation);
+  }
+
+  (* Règles de validation : la liste des violations (vide = valide). *)
+  let verifier (d : demande) e =
+    let r1 = if e < epaisseur_min then ["épaisseur inférieure au minimum"] else [] in
+    let r2 = if petit_cote d /. e > elancement_max then ["plaque trop élancée"] else [] in
+    let r3 = if masse d e > d.masse_max then ["masse supérieure à la masse maximale"] else [] in
+    r1 @ r2 @ r3
+
+  (* Commande d'export : contenu typé, validé ensuite par le contrat geometry.export. *)
+  type piece = { name : string; width_mm : float; height_mm : float; thickness_mm : float }
+  type export = { part : piece; format : string; path : string }
+
+  let commande_export (d : demande) e format = {
+    part = { name = d.nom; width_mm = d.largeur; height_mm = d.hauteur; thickness_mm = e };
+    format = format;
+    path = d.nom ^ "." ^ format;
+  }
+end

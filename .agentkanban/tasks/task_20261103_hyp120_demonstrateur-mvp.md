@@ -87,3 +87,15 @@ Ajout : le scénario secondaire du §16.3, `hypomnesis demo ventilation [--panne
 7 tests (`tests/integration/test_demo_ventilation.py`), dont le rejet d'un relevé hors contrat. Le ticket détaillé HYP-068 reste ouvert pour la version complète (transport fichiers, rejeu).
 
 ### user
+
+### agent
+
+Restructuration demandée par l'utilisateur : séparation stricte M3 / M2 / M1 / M0 (ADR 0008).
+
+- `src/hypomnesis/demos/` est supprimé. Le moteur (M3) offre deux procédures génériques, `engine/design.py` (`constrained-design`) et `engine/feedback.py` (`feedback-loop`), configurées par un manifeste `langage.json` validé par schéma. Le chargeur de langages confine les adaptateurs à leur paquet.
+- Langages M2 : `languages/mecanique` et `languages/ventilation`. Estimateurs, contraintes (type `Problem.problem` de la bibliothèque standard), règles et contenu des commandes sont **en Hypomnesis**. Le Python se limite aux adaptateurs vers l'extérieur : écriture de fichiers, pièce simulée, transcription tenant lieu de LLM.
+- Programmes M1 : `programs/mecanique/plaque_120x80.hyp`, `programs/ventilation/salle_serveurs.hyp`. Résultats M0 dans `sortie/`.
+- CLI générique : `hypomnesis lancer LANGAGE [PROGRAMME]`.
+- 19 tests, dont le test d'architecture `test_engine_contains_no_domain`, qui a aussitôt trouvé un exemple métier oublié dans un commentaire du moteur.
+
+### user

@@ -6,6 +6,16 @@ Métalangage fonctionnel (syntaxe OCaml) pour définir des DSL métiers : connai
 contraintes, effets contrôlés. Spécification : `docs/specification/cahier-des-charges-v0.2.md`.
 Détails d'implémentation : `TECHNICAL.md`.
 
+## Niveaux d'abstraction (ADR 0008) — règle structurante
+
+- **M3** `src/hypomnesis/` : moteur, métalangage, bibliothèque standard, procédures génériques.
+  **Aucun domaine** (test `test_engine_contains_no_domain`).
+- **M2** `languages/<langage>/` : langage métier en Hypomnesis (règles, estimateurs, contraintes,
+  commandes), contrats, adaptateurs Python vers le monde extérieur seulement, `langage.json`.
+- **M1** `programs/<langage>/` : programmes écrits dans un langage M2.
+- **M0** `sortie/` : résultats (non versionné).
+- Les dépendances ne vont que vers le niveau supérieur. Jamais de logique métier en Python.
+
 ## Conventions
 
 - Documentation et tickets en **français** ; code, identifiants et commentaires de code en **anglais**

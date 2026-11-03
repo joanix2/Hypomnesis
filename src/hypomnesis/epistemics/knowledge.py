@@ -51,7 +51,7 @@ class Source:
 
 @dataclass(frozen=True)
 class Fact:
-    key: str  # "plaque.epaisseur"
+    key: str  # "<objet>.<propriété>", par exemple "demande.largeur"
     value: Any
     provenance: Prov
     method: str  # how it was obtained: "observé", "estimé", "dérivé par solveur Z3", …

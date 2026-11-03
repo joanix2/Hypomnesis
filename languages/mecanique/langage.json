@@ -1,0 +1,32 @@
+{
+  "name": "mecanique",
+  "version": "0.1.0",
+  "description": "Pièces mécaniques simples : plaques, estimation d'épaisseur, contraintes d'élancement et de masse, export de géométrie.",
+  "sources": ["plaque.hyp"],
+  "contracts": [
+    "contrats/geometry.export-1.0.0.json",
+    "contrats/geometry.export.result-1.0.0.json"
+  ],
+  "transcriber": "adaptateurs/transcription.py:transcrire",
+  "procedure": {
+    "kind": "constrained-design",
+    "request": "demande",
+    "estimators": {
+      "epaisseur": [
+        { "id": "regle", "version": "1", "function": "Plaque.estimer_regle", "confidence": 0.6 },
+        { "id": "abaque", "version": "1", "function": "Plaque.estimer_abaque", "confidence": 0.7 }
+      ]
+    },
+    "problem": "Plaque.probleme",
+    "validator": "Plaque.verifier",
+    "derived": { "masse_kg": "Plaque.masse" },
+    "actions": [
+      {
+        "actuator": "geometry.export",
+        "adapter": "adaptateurs/export.py:actionneur",
+        "command": "Plaque.commande_export",
+        "variants": ["svg", "json"]
+      }
+    ]
+  }
+}
