@@ -14,6 +14,7 @@ from dataclasses import dataclass, field, replace
 from hypomnesis.ir import core as ir
 from hypomnesis.language import ast as A
 from hypomnesis.language.errors import NameResolutionError, Span, TypeCheckError
+from hypomnesis.language.typesystem.annotations import close
 from hypomnesis.language.typesystem.types import (
     ARROW,
     BOOL,
@@ -32,7 +33,8 @@ from hypomnesis.language.typesystem.types import (
     arrows,
     expect,
     generalize,
-    instantiate,
+    generalize_vars,
+    instantiate_args,
     list_of,
     mono,
     prune,
@@ -124,6 +126,27 @@ class CheckResult:
     types: list[TypeInfo]
 
 
+@dataclass(frozen=True)
+class _LetStep:
+    """One binding of a local `let`: a name (``Let``) or a pattern (``Match``)."""
+
+    name: str | None
+    pattern: ir.Pattern | None
+    value: ir.Expr
+    value_type: Type
+    forall_vars: tuple[TVar, ...]
+    span: Span | None
+
+    def bind(self, value: ir.Expr, body: ir.Expr) -> ir.Expr:
+        if self.name is not None:
+            return ir.Let(
+                self.name, value, body, forall_vars=self.forall_vars, value_type=self.value_type
+            )
+        assert self.pattern is not None
+        case = ir.Case(self.pattern, None, body)
+        return ir.Match(value, (case,), self.span, forall_vars=self.forall_vars)
+
+
 # ------------------------------------------------------------------ checker
 
 
@@ -166,6 +189,7 @@ class Checker:
             for item in program.items:
                 self._annot_vars = {}
                 self._check_item(item)
+            close(self._definitions)
         except BaseException:
             self._restore(saved)
             raise
@@ -286,7 +310,17 @@ class Checker:
                 qname = self._fresh_qname(name)
                 targets.append((name, qname))
                 pending.append((name, qname, generalize(bt, 0)))
-            self._definitions.append(ir.DefValue(pattern, value, tuple(targets), binding.span))
+            _, quantified = generalize_vars(t, 0)
+            self._definitions.append(
+                ir.DefValue(
+                    pattern,
+                    value,
+                    tuple(targets),
+                    binding.span,
+                    forall_vars=quantified,
+                    value_type=t,
+                )
+            )
         for name, qname, scheme in pending:
             self._define_value(name, qname, scheme)
 
@@ -303,9 +337,12 @@ class Checker:
             expect(t, tv, binding.span, f"The recursive definition of {binding.name}")
             assert isinstance(value, ir.Lambda)
             lambdas.append((info.qname, value))
+        foralls = []
         for _, tv, info in slots:
-            info.scheme = generalize(tv, 0)
-        self._definitions.append(ir.DefRec(tuple(lambdas)))
+            info.scheme, quantified = generalize_vars(tv, 0)
+            foralls.append(quantified)
+        types = tuple(tv for _, tv, _ in slots)
+        self._definitions.append(ir.DefRec(tuple(lambdas), types=types, foralls=tuple(foralls)))
 
     def _rec_bindings(self, bindings: tuple[A.Binding, ...]) -> list[A.FunBinding]:
         result = []
@@ -379,8 +416,11 @@ class Checker:
                 item.span,
             )
         qname = self._fresh_qname(item.name)
-        self._define_value(item.name, qname, generalize(t, 0))
-        self._definitions.append(ir.DefNative(qname, item.symbol, arity))
+        scheme, quantified = generalize_vars(t, 0)
+        self._define_value(item.name, qname, scheme)
+        self._definitions.append(
+            ir.DefNative(qname, item.symbol, arity, forall_vars=quantified, value_type=t)
+        )
 
     # ------------------------------------------------------- type syntax
 
@@ -433,11 +473,13 @@ class Checker:
 
     def _infer_Var(self, e: A.Var, env: Env, level: int):
         if e.path in env:
-            return instantiate(env[e.path], level), ir.Local(e.path)
+            t, args = instantiate_args(env[e.path], level)
+            return t, ir.Local(e.path, type_args=args)
         info = self._lookup("values", e.path, e.span, "value")
-        return instantiate(info.scheme, level), ir.Global(info.qname)
+        t, args = instantiate_args(info.scheme, level)
+        return t, ir.Global(info.qname, type_args=args)
 
-    def _instantiate_ctor(self, info: CtorInfo, level: int) -> tuple[Type, Type | None]:
+    def _instantiate_ctor(self, info: CtorInfo, level: int) -> tuple[TCon, Type | None]:
         args = [TVar(level) for _ in range(info.owner.arity)]
         result = TCon(info.owner.qname, tuple(args))
         return result, None if info.arg is None else substitute(info.arg, args)
@@ -446,10 +488,11 @@ class Checker:
         info = self._lookup("ctors", e.path, e.span, "constructor")
         result, arg = self._instantiate_ctor(info, level)
         if arg is None:
-            return result, ir.Construct(info.name, info.index, None)
+            return result, ir.Construct(info.name, info.index, None, type_args=result.args)
         name = self.gensym()
-        body = ir.Construct(info.name, info.index, ir.Local(name))
-        return arrow(arg, result), ir.Lambda((name,), body, name=info.name)
+        body = ir.Construct(info.name, info.index, ir.Local(name), type_args=result.args)
+        lam = ir.Lambda((name,), body, name=info.name, param_types=(arg,))
+        return arrow(arg, result), lam
 
     def _infer_Apply(self, e: A.Apply, env: Env, level: int):
         args: list[A.Expr] = []
@@ -487,7 +530,7 @@ class Checker:
             raise TypeCheckError(f"constructor {ctor.path} expects no argument", ctor.span)
         at, arg_ir = self.infer(arg, env, level)
         expect(at, arg_t, arg.span, "This argument")
-        return result, ir.Construct(info.name, info.index, arg_ir)
+        return result, ir.Construct(info.name, info.index, arg_ir, type_args=result.args)
 
     def _params(self, patterns: tuple[A.Pattern, ...], env: Env, level: int, span: Span | None):
         """Elaborate parameter patterns into plain names plus wrapping matches."""
@@ -516,14 +559,14 @@ class Checker:
     def _infer_Lambda(self, e: A.Lambda, env: Env, level: int):
         types, names, inner_env, wrap = self._params(e.params, env, level, e.span)
         bt, body = self.infer(e.body, inner_env, level)
-        return arrows(types, bt), ir.Lambda(names, wrap(body))
+        return arrows(types, bt), ir.Lambda(names, wrap(body), param_types=tuple(types))
 
     def _infer_Function(self, e: A.Function, env: Env, level: int):
         name = self.gensym()
         param = TVar(level)
         result, cases = self._infer_arms(param, e.arms, env, level)
         match = ir.Match(ir.Local(name), cases, e.span)
-        return arrow(param, result), ir.Lambda((name,), match)
+        return arrow(param, result), ir.Lambda((name,), match, param_types=(param,))
 
     def _infer_fun_binding(self, b: A.FunBinding, env: Env, level: int) -> tuple[Type, ir.Expr]:
         if b.params:
@@ -534,7 +577,8 @@ class Checker:
         if b.annot is not None:
             expect(bt, self._to_type(b.annot, level=level), b.body.span)
         if wrap is not None:
-            return arrows(types, bt), ir.Lambda(names, wrap(body), name=b.name)
+            lam = ir.Lambda(names, wrap(body), name=b.name, param_types=tuple(types))
+            return arrows(types, bt), lam
         if isinstance(body, ir.Lambda):
             body = replace(body, name=b.name)
         return bt, body
@@ -543,12 +587,13 @@ class Checker:
         if e.rec:
             return self._infer_let_rec(e, env, level)
         new_env = dict(env)
-        steps: list[tuple[str, ir.Expr] | tuple[ir.Pattern, ir.Expr, Span | None]] = []
+        steps: list[_LetStep] = []
         for binding in e.bindings:
             if isinstance(binding, A.FunBinding):
                 t, value = self._infer_fun_binding(binding, env, level + 1)
-                new_env[binding.name] = generalize(t, level)
-                steps.append((binding.name, value))
+                scheme, quantified = generalize_vars(t, level)
+                new_env[binding.name] = scheme
+                steps.append(_LetStep(binding.name, None, value, t, quantified, binding.span))
             else:
                 assert isinstance(binding, A.PatBinding)
                 t, value = self.infer(binding.body, env, level + 1)
@@ -557,26 +602,28 @@ class Checker:
                 expect(pt, t, binding.pattern.span, "This pattern")
                 for name, bt in binds.items():
                     new_env[name] = generalize(bt, level)
-                steps.append((pattern, value, binding.span))
+                _, quantified = generalize_vars(t, level)
+                steps.append(_LetStep(None, pattern, value, t, quantified, binding.span))
         body_t, body = self.infer(e.body, new_env, level)
 
         # With `and`, every right-hand side sees the outer scope: evaluate
-        # them into fresh temporaries before binding any user name.
+        # them into fresh temporaries before binding any user name. Each
+        # temporary is generalised like its binding, then re-instantiated at
+        # the identity (Λᾱ. temp [ᾱ]).
         if len(steps) > 1:
             temps = [self.gensym() for _ in steps]
             for temp, step in zip(reversed(temps), reversed(steps), strict=True):
-                body = self._bind_step(step, ir.Local(temp), body)
+                body = step.bind(ir.Local(temp, type_args=step.forall_vars), body)
             for temp, step in zip(reversed(temps), reversed(steps), strict=True):
-                body = ir.Let(temp, step[1], body)
+                body = ir.Let(
+                    temp,
+                    step.value,
+                    body,
+                    forall_vars=step.forall_vars,
+                    value_type=step.value_type,
+                )
             return body_t, body
-        return body_t, self._bind_step(steps[0], steps[0][1], body)
-
-    @staticmethod
-    def _bind_step(step, value: ir.Expr, body: ir.Expr) -> ir.Expr:
-        if len(step) == 2:
-            return ir.Let(step[0], value, body)
-        pattern, _, span = step
-        return ir.Match(value, (ir.Case(pattern, None, body),), span)
+        return body_t, steps[0].bind(steps[0].value, body)
 
     def _infer_let_rec(self, e: A.Let, env: Env, level: int):
         bindings = self._rec_bindings(e.bindings)
@@ -588,9 +635,14 @@ class Checker:
             expect(t, tvars[b.name], b.span, f"The recursive definition of {b.name}")
             assert isinstance(value, ir.Lambda)
             lambdas.append((b.name, value))
-        new_env = {**env, **{name: generalize(tv, level) for name, tv in tvars.items()}}
+        new_env = dict(env)
+        foralls = []
+        for name, tv in tvars.items():
+            new_env[name], quantified = generalize_vars(tv, level)
+            foralls.append(quantified)
         body_t, body = self.infer(e.body, new_env, level)
-        return body_t, ir.LetRec(tuple(lambdas), body)
+        types = tuple(tvars.values())
+        return body_t, ir.LetRec(tuple(lambdas), body, types=types, foralls=tuple(foralls))
 
     def _infer_If(self, e: A.If, env: Env, level: int):
         ct, cond = self.infer(e.cond, env, level)
@@ -629,21 +681,21 @@ class Checker:
 
     def _infer_ListLit(self, e: A.ListLit, env: Env, level: int):
         item_t: Type = TVar(level)
-        result: ir.Expr = ir.Construct("[]", 0, None)
+        result: ir.Expr = ir.Construct("[]", 0, None, type_args=(item_t,))
         items = []
         for item in e.items:
             t, x = self.infer(item, env, level)
             expect(t, item_t, item.span, "This list element")
             items.append(x)
         for x in reversed(items):
-            result = ir.Construct("::", 1, ir.Tuple((x, result)))
+            result = ir.Construct("::", 1, ir.Tuple((x, result)), type_args=(item_t,))
         return list_of(item_t), result
 
     def _infer_Cons(self, e: A.Cons, env: Env, level: int):
         ht, head = self.infer(e.head, env, level)
         tt, tail = self.infer(e.tail, env, level)
         expect(tt, list_of(ht), e.tail.span)
-        return tt, ir.Construct("::", 1, ir.Tuple((head, tail)))
+        return tt, ir.Construct("::", 1, ir.Tuple((head, tail)), type_args=(ht,))
 
     def _record_owner(self, t: Type, name: str, span: Span | None) -> TypeInfo:
         """Find the record type owning field ``name``, preferring the known type of ``t``."""
@@ -676,7 +728,8 @@ class Checker:
         if missing:
             raise TypeCheckError(f"some record fields are undefined: {', '.join(missing)}", e.span)
         fields = tuple((f.name, seen[f.name]) for f in owner.fields)
-        return TCon(owner.qname, tuple(args)), ir.Record(owner.qname, fields)
+        record = ir.Record(owner.qname, fields, type_args=tuple(args))
+        return TCon(owner.qname, tuple(args)), record
 
     def _infer_RecordUpdate(self, e: A.RecordUpdate, env: Env, level: int):
         bt, base = self.infer(e.base, env, level)

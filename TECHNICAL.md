@@ -11,7 +11,8 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Parser | `src/hypomnesis/language/parser.py` | arbre Lark → AST (`language/ast.py`) |
 | Types | `src/hypomnesis/language/typesystem/types.py` | termes, unification à niveaux, schémas, affichage |
 | Vérification | `src/hypomnesis/language/typesystem/infer.py` | résolution des noms, HM, élaboration vers la Core IR ; incrémental et transactionnel |
-| Core IR | `src/hypomnesis/ir/core.py` | IR résolue exécutée par le runtime |
+| Core IR | `src/hypomnesis/ir/core.py` | IR résolue exécutée par le runtime ; annotée par les types inférés (paramètres, quantificateurs, instanciations) |
+| Annotations | `src/hypomnesis/language/typesystem/annotations.py` | fermeture des variables non contraintes (`unit`) et vérification de l'invariant « toute variable de type est liée » |
 | Runtime | `src/hypomnesis/runtime/interpreter.py` | nœuds compilés en fermetures ; appels terminaux par trampoline |
 | Primitives | `src/hypomnesis/runtime/natives.py` | registre fermé de primitives pures |
 | Prélude | `src/hypomnesis/stdlib/prelude.hyp` | bibliothèque standard en Hypomnesis |

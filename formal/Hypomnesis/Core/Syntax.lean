@@ -13,6 +13,12 @@ Correspondance avec la Core IR Python :
 * `ite`   ↔ `Match` sur un booléen (forme élaborée de `if`) ;
 * `pair`, `fst`, `snd` ↔ `Tuple` et filtrage de tuple ;
 * `binop` ↔ application des primitives `int.add`, `poly.eq`, ...
+
+Annotations (HYP-024). Les types portés ici par la syntaxe viennent des
+annotations que le vérificateur Python ajoute à sa Core IR : `lam dom` ↔
+`Lambda.param_types`, `fix dom cod` ↔ `LetRec.types` / `DefRec.types`. Les
+annotations Python liées au polymorphisme (`forall_vars`, `type_args`) n'ont
+pas encore d'équivalent : elles seront formalisées avec HYP-023.
 -/
 
 namespace Hypomnesis.Core

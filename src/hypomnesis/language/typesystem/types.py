@@ -147,7 +147,14 @@ def expect(actual: Type, expected: Type, span: Span | None, what: str = "This ex
 
 def generalize(t: Type, level: int) -> Scheme:
     """Quantify every variable whose level is deeper than ``level``."""
+    return generalize_vars(t, level)[0]
+
+
+def generalize_vars(t: Type, level: int) -> tuple[Scheme, tuple[TVar, ...]]:
+    """Like :func:`generalize`, also returning the quantified variables:
+    ``vars[i]`` is the variable that became ``TGen(i)``."""
     mapping: dict[int, TGen] = {}
+    quantified: list[TVar] = []
 
     def go(t: Type) -> Type:
         t = prune(t)
@@ -155,6 +162,7 @@ def generalize(t: Type, level: int) -> Scheme:
             if t.level > level:
                 if t.id not in mapping:
                     mapping[t.id] = TGen(len(mapping))
+                    quantified.append(t)
                 return mapping[t.id]
             return t
         if isinstance(t, TCon):
@@ -162,7 +170,7 @@ def generalize(t: Type, level: int) -> Scheme:
         return t
 
     body = go(t)
-    return Scheme(len(mapping), body)
+    return Scheme(len(mapping), body), tuple(quantified)
 
 
 def substitute(t: Type, args: Sequence[Type]) -> Type:
@@ -175,9 +183,16 @@ def substitute(t: Type, args: Sequence[Type]) -> Type:
 
 
 def instantiate(scheme: Scheme, level: int) -> Type:
+    return instantiate_args(scheme, level)[0]
+
+
+def instantiate_args(scheme: Scheme, level: int) -> tuple[Type, tuple[Type, ...]]:
+    """Instantiate ``scheme`` with fresh variables, also returning them in
+    ``TGen`` order (the explicit type application of the elaborated term)."""
     if scheme.arity == 0:
-        return scheme.body
-    return substitute(scheme.body, [TVar(level) for _ in range(scheme.arity)])
+        return scheme.body, ()
+    args = tuple(TVar(level) for _ in range(scheme.arity))
+    return substitute(scheme.body, args), args
 
 
 def arity_of(t: Type) -> int:
