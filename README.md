@@ -8,6 +8,7 @@ ni les solveurs, ni les bibliothèques scientifiques : il fournit un langage typ
 décrire, les composer et contrôler leurs interactions.
 
 - Spécification : [docs/specification/cahier-des-charges-v0.2.md](docs/specification/cahier-des-charges-v0.2.md)
+- Bilan MVP (critères du §16.4) : [docs/mvp-bilan.md](docs/mvp-bilan.md)
 - Architecture et avancement : [docs/architecture/overview.md](docs/architecture/overview.md)
 - Référence du langage : [docs/language/reference.md](docs/language/reference.md)
 - Décisions d'architecture : [docs/adr/](docs/adr/README.md)
