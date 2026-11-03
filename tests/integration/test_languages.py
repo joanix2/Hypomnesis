@@ -111,8 +111,19 @@ def test_ill_typed_program_is_refused_before_any_effect(tmp_path):
 
 def test_a_program_cannot_rely_on_missing_premises(tmp_path):
     program = 'let procedure = Effect.record "x" 1 "?" (Effect.Derived ["inexistant"])'
-    with pytest.raises(EvaluationError, match="prémisses inconnues"):
+    with pytest.raises(EvaluationError, match="prémisses inconnues") as raised:
         plaque(tmp_path, program)
+    assert "Faits connus à ce point : aucun" in raised.value.message
+
+
+def test_retracting_an_unrecorded_fact_lists_the_known_ones(tmp_path):
+    program = (
+        'let procedure = Effect.record "a" 1 "?" Effect.Given >>= fun () -> '
+        'Effect.retract "b" "?" >>= fun _ -> Effect.return 0'
+    )
+    with pytest.raises(EvaluationError, match="retrait d'un fait inconnu : b") as raised:
+        plaque(tmp_path, program)
+    assert "Faits connus à ce point : a" in raised.value.message
 
 
 def test_undeclared_sensor_is_refused(tmp_path):

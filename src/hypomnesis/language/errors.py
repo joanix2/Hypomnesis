@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+MAX_LINE = 100
+
 
 @dataclass(frozen=True)
 class Span:
@@ -38,6 +40,10 @@ class HypomnesisError(Exception):
         line = lines[self.span.line - 1]
         start = self.span.column
         end = self.span.end_column if self.span.end_line == self.span.line else len(line) + 1
+        if len(line) > MAX_LINE:  # prose or minified input: keep the diagnostic readable
+            if start > MAX_LINE:
+                return f"{text}\n  {line[:MAX_LINE]}…"
+            line, end = line[:MAX_LINE] + "…", min(end, MAX_LINE + 1)
         width = max(1, end - start)
         return f"{text}\n  {line}\n  {' ' * (start - 1)}{'^' * width}"
 

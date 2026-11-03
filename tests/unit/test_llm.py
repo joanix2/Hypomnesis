@@ -72,3 +72,48 @@ def test_benchmark_end_to_end_with_a_fake_model(tmp_path, monkeypatch):
     results = run_benchmark(FakeLLM(GOOD), ["faux"], [language], log=lambda _: None)
     assert results[0].correct and results[0].executed
     assert "| faux | 1 |" in summary(results)
+
+
+def test_missing_binding_is_a_semantic_error_not_a_crash():
+    inline = (
+        'let procedure = Plaque.concevoir { Plaque.nom = "p"; largeur = 1.0; hauteur = 1.0; '
+        "epaisseur = None; masse_max = 1.0 } Plaque.estimateur_regle\n"
+    )
+    errors = semantic_errors(MECANIQUE, inline, {"bindings": {"demande": {"largeur": 1.0}}})
+    assert errors == ["le programme ne définit pas `demande`"]
+
+
+def test_missing_entry_point_says_what_to_write():
+    llm = FakeLLM(
+        'let demande = { Plaque.nom = "p"; largeur = 1.0; hauteur = 1.0; '
+        "epaisseur = None; masse_max = 1.0 }\n",
+        GOOD,
+    )
+    result = translate(llm, "m", load_language(MECANIQUE), "plaque", examples=[])
+    assert result.accepted
+    assert "`procedure` n'est pas défini" in result.attempts[0].error
+    assert "let procedure = " in llm.calls[1][-1]["content"]
+
+
+def test_prose_answer_is_told_to_return_code_only_and_the_diagnostic_stays_short():
+    prose = "Okay, let's tackle this problem. " + "blah " * 200
+    llm = FakeLLM(prose, GOOD)
+    result = translate(llm, "m", load_language(MECANIQUE), "plaque", examples=[])
+    feedback = llm.calls[1][-1]["content"]
+    assert "n'est pas un programme" in feedback
+    assert len(feedback) < 600 and result.accepted
+
+
+def test_simulation_failure_is_fed_back_to_the_model():
+    runs = []
+
+    def simulate(program: str) -> str:
+        runs.append(program)
+        return "boom : prémisses inconnues" if len(runs) == 1 else ""
+
+    llm = FakeLLM(GOOD, GOOD)
+    result = translate(llm, "m", load_language(MECANIQUE), "plaque", examples=[], simulate=simulate)
+    assert result.accepted and len(result.attempts) == 2
+    assert result.attempts[0].stage == "runtime error" and result.compiled
+    assert "échoue à l'exécution" in llm.calls[1][-1]["content"]
+    assert "boom" in llm.calls[1][-1]["content"]

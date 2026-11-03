@@ -24,6 +24,7 @@ from typing import Any
 from hypomnesis.engine.bridge import to_json
 from hypomnesis.engine.language import load_language
 from hypomnesis.engine.procedure import run_procedure
+from hypomnesis.language.errors import HypomnesisError
 from hypomnesis.llm.translation import ChatClient, Translation, translate
 
 ANY = "*"
@@ -45,11 +46,11 @@ class CaseResult:
 
     @property
     def typed_first(self) -> bool:
-        return not self.translation.attempts[0].error
+        return self.translation.attempts[0].stage in ("", "runtime error")
 
     @property
     def typed(self) -> bool:
-        return self.translation.accepted
+        return self.translation.compiled
 
     @property
     def correct(self) -> bool:
@@ -100,7 +101,11 @@ def semantic_errors(language_root: Path, program: str, expect: dict[str, Any]) -
     language.load_program(program)
     errors = []
     for binding, fields in expect.get("bindings", {}).items():
-        actual = to_json(language.session.value(binding))
+        try:
+            actual = to_json(language.session.value(binding))
+        except HypomnesisError:
+            errors.append(f"le programme ne définit pas `{binding}`")
+            continue
         for name, expected in fields.items():
             got = actual.get(name, "<absent>") if isinstance(actual, dict) else "<absent>"
             if not _same(expected, got):
@@ -115,30 +120,48 @@ def semantic_errors(language_root: Path, program: str, expect: dict[str, Any]) -
     return errors
 
 
+def _dry_run(root: Path, program: str, environment: dict) -> str:
+    """ "" if the procedure runs in simulation, else the runtime diagnostic."""
+    try:
+        run_procedure(
+            load_language(root),
+            program,
+            mode="dry-run",
+            out_dir=Path("sortie") / "benchmark-llm" / "runs",
+            environment=environment,
+            max_steps=200,
+        )
+    except HypomnesisError as exc:
+        return exc.render(program, "<programme>")
+    except Exception as exc:  # l'échec d'exécution est une mesure, pas une erreur du banc
+        return f"{type(exc).__name__}: {exc}"
+    return ""
+
+
 def run_case(
     client: ChatClient, model: str, root: Path, spec: dict, case: dict, repairs: int
 ) -> CaseResult:
     language = load_language(root)
     examples = [(root / e).read_text(encoding="utf-8") for e in spec.get("examples", [])]
+    environment = case.get("environment", {})
     translation = translate(
-        client, model, language, case["request"], examples=examples, max_repairs=repairs
+        client,
+        model,
+        language,
+        case["request"],
+        examples=examples,
+        max_repairs=repairs,
+        simulate=lambda program: _dry_run(root, program, environment),
     )
     result = CaseResult(language.name, case["id"], model, translation)
-    if not translation.accepted:
+    if not translation.compiled:
         return result
-    result.semantic_errors = semantic_errors(root, translation.program, case.get("expect", {}))
     try:
-        run_procedure(
-            load_language(root),
-            translation.program,
-            mode="dry-run",
-            out_dir=Path("sortie") / "benchmark-llm" / "runs",
-            environment=case.get("environment", {}),
-            max_steps=200,
-        )
-        result.executed = True
-    except Exception as exc:  # l'échec d'exécution est une mesure, pas une erreur du banc
-        result.execution_error = f"{type(exc).__name__}: {exc}"
+        result.semantic_errors = semantic_errors(root, translation.program, case.get("expect", {}))
+    except Exception as exc:  # un programme inattendu est une mesure, pas une panne du banc
+        result.semantic_errors = [f"contrôle impossible : {type(exc).__name__}: {exc}"]
+    result.execution_error = translation.attempts[-1].error if not translation.accepted else ""
+    result.executed = translation.accepted
     return result
 
 

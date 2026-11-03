@@ -12,6 +12,7 @@ knowledge lives here.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
@@ -45,14 +46,18 @@ class ChatClient(Protocol):
 class Attempt:
     program: str
     reply: Reply
-    error: str = ""  # diagnostic du compilateur, vide si accepté
-    stage: str = ""  # "syntax error", "type error", …
+    error: str = ""  # diagnostic du compilateur ou de la simulation, vide si accepté
+    stage: str = ""  # "syntax error", "type error", "runtime error", …
 
 
 @dataclass
 class Translation:
     request: str
     attempts: list[Attempt] = field(default_factory=list)
+
+    @property
+    def compiled(self) -> bool:
+        return bool(self.attempts) and self.attempts[-1].stage in ("", "runtime error")
 
     @property
     def accepted(self) -> bool:
@@ -90,14 +95,42 @@ def system_prompt(language: Language, examples: list[str]) -> str:
 def check(language_root: Path, program: str) -> tuple[str, str]:
     """Charge le programme dans une session neuve du langage : ("", "") s'il est accepté."""
     language = load_language(language_root)
+    entry = language.procedure["entry"]
     try:
         language.load_program(program)
-        entry = language.procedure["entry"]
         if not language.session.type_of(entry).endswith("Effect.t"):
             return "type error", f"`{entry}` doit être une procédure (type … Effect.t)"
     except HypomnesisError as exc:
+        if exc.stage == "name error" and f"unbound value {entry}" in exc.message:
+            return exc.stage, (
+                f"`{entry}` n'est pas défini : le programme doit se terminer par "
+                f"`let {entry} = …` qui appelle une procédure du langage."
+            )
         return exc.stage, exc.render(program, "<programme>")
     return "", ""
+
+
+_PROGRAM_START = re.compile(r"\s*(let|module|open|type|external|\(\*)\b|\s*\(\*")
+
+
+def repair_message(stage: str, error: str, program: str) -> str:
+    """The feedback sent to the model: diagnostic, then what to do about it."""
+    if stage == "runtime error":
+        return (
+            f"Le programme est accepté par le compilateur mais échoue à l'exécution "
+            f"(simulation) :\n{error}\n"
+            "Choisis une autre procédure du langage, ou une autre façon de l'appeler, "
+            "qui produit elle-même les faits dont l'étape fautive a besoin. "
+            "Renvoie uniquement le programme complet."
+        )
+    prose = stage == "syntax error" and not _PROGRAM_START.match(program)
+    hint = (
+        "Ta réponse n'est pas un programme : elle commence par du texte. Renvoie uniquement "
+        "le code du programme, sans réflexion ni explication."
+        if prose
+        else "Corrige-le et renvoie uniquement le programme complet."
+    )
+    return f"Le compilateur refuse ce programme :\n{error}\n{hint}"
 
 
 def translate(
@@ -108,6 +141,7 @@ def translate(
     *,
     examples: list[str],
     max_repairs: int = 2,
+    simulate: Callable[[str], str] | None = None,
 ) -> Translation:
     messages = [
         {"role": "system", "content": system_prompt(language, examples)},
@@ -118,15 +152,14 @@ def translate(
         reply = client.chat(model, messages)
         program = extract_code(reply.text)
         stage, error = check(language.root, program)
+        if not error and simulate is not None:
+            error = simulate(program)  # dry-run failure, "" if the program runs
+            stage = "runtime error" if error else ""
         result.attempts.append(Attempt(program, reply, error, stage))
         if not error:
             break
         messages += [
             {"role": "assistant", "content": reply.text},
-            {
-                "role": "user",
-                "content": f"Le compilateur refuse ce programme :\n{error}\n"
-                "Corrige-le et renvoie uniquement le programme complet.",
-            },
+            {"role": "user", "content": repair_message(stage, error, program)},
         ]
     return result

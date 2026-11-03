@@ -207,7 +207,11 @@ def run_procedure(
             elif op == "Retract":
                 key, why, k = arg
                 if key not in kb.facts:
-                    raise EvaluationError(f"retrait d'un fait inconnu : {key}")
+                    raise EvaluationError(
+                        f"retrait d'un fait inconnu : {key}. Un fait ne se retire que s'il a "
+                        "été enregistré plus tôt dans la même procédure ; cette étape suppose "
+                        f"qu'une étape précédente l'a produit. {_known(kb)}"
+                    )
                 invalidated = kb.retract_source(kb.source_id(key), why)
                 value = apply(k, [from_iterable(invalidated)])
             elif op == "Note":
@@ -225,6 +229,10 @@ def run_procedure(
     return report
 
 
+def _known(kb: KnowledgeBase) -> str:
+    return f"Faits connus à ce point : {', '.join(kb.facts) or 'aucun'}."
+
+
 def _record(kb: KnowledgeBase, key: str, value: Json, method: str, support: Variant) -> None:
     if support.tag == "Given":
         kb.observe(key, value, f"programme M1 : {method}")
@@ -236,7 +244,11 @@ def _record(kb: KnowledgeBase, key: str, value: Json, method: str, support: Vari
         premises = list(iter_list(support.arg))
         missing = [p for p in premises if p not in kb.facts]
         if missing:
-            raise EvaluationError(f"prémisses inconnues pour {key} : {', '.join(missing)}")
+            raise EvaluationError(
+                f"prémisses inconnues pour {key} : {', '.join(missing)}. Ces faits n'ont pas "
+                "été enregistrés avant cette étape : elle suppose qu'une étape précédente "
+                f"(estimation, mesure, résolution) les a produits. {_known(kb)}"
+            )
         kb.derive(key, value, method, premises)
     else:
         raise EvaluationError(f"support inconnu : {support.tag}")
