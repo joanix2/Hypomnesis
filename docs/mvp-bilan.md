@@ -7,7 +7,7 @@ l'établit : une commande à lancer, un test ou un théorème.
 | # | Critère (§16.4) | État | Preuve |
 |---|---|---|---|
 | 1 | Un domaine métier peut être défini sans modifier le noyau | ✅ | domaines `plaque` et `ventilation` (`src/hypomnesis/demos/*/domaine.hyp`) : règles et constantes en Hypomnesis, plugins et contrats à côté ; aucune modification du compilateur ni du runtime |
-| 2 | Les programmes valides sont typés et exécutés | ✅ | 160 tests, exemples, `hypomnesis run` |
+| 2 | Les programmes valides sont typés et exécutés | ✅ | 141 tests, exemples, `hypomnesis run` |
 | 3 | Les erreurs de types sont détectées avant exécution | ✅ | tests ; **prouvé** en Lean pour le fragment (P1) ; certificats revérifiés (`hypomnesis-check`) |
 | 4 | Deux plugins substituables derrière la même interface | ✅ | `--estimateur regle|abaque` : même programme, estimations différentes (`test_swapping_the_estimator_keeps_the_program`) |
 | 5 | Messages externes validés par leurs JSON Schema | ✅ | relevés du capteur (enveloppe puis contenu), commandes, réponses des actionneurs |
