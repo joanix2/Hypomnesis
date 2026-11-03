@@ -2,88 +2,104 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.example.org/hypomnesis/language-manifest/1.0.0",
   "title": "LanguageManifest",
-  "description": "Manifest of an M2 language package: its Hypomnesis sources, contracts, adapters and the generic engine procedure it plugs into. Function names refer to values of the language; adapter references are `file.py:attribute` inside the package.",
+  "description": "Manifest of an M2 language package: its Hypomnesis sources, contracts, adapters, and the procedure entry point (a value of type 'a Effect.t in the M1 program) with the sensors and actuators it may use. Adapter references are `file.py:attribute` inside the package.",
   "type": "object",
   "properties": {
-    "name": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
-    "version": { "type": "string" },
-    "description": { "type": "string" },
-    "sources": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-    "contracts": { "type": "array", "items": { "type": "string" } },
-    "transcriber": { "$ref": "#/$defs/adapter" },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "contracts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "transcriber": {
+      "$ref": "#/$defs/adapter"
+    },
     "procedure": {
-      "oneOf": [
-        { "$ref": "#/$defs/constrainedDesign" },
-        { "$ref": "#/$defs/feedbackLoop" }
-      ]
+      "$ref": "#/$defs/program"
     }
   },
-  "required": ["name", "version", "sources", "procedure"],
+  "required": [
+    "name",
+    "version",
+    "sources",
+    "procedure"
+  ],
   "additionalProperties": false,
   "$defs": {
-    "function": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9_']*(\\.[A-Za-z_][A-Za-z0-9_']*)+$" },
-    "adapter": { "type": "string", "pattern": "^[^:]+\\.py:[A-Za-z_][A-Za-z0-9_]*$" },
-    "action": {
-      "type": "object",
-      "properties": {
-        "actuator": { "type": "string" },
-        "adapter": { "$ref": "#/$defs/adapter" },
-        "command": { "$ref": "#/$defs/function" },
-        "variants": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["actuator", "adapter", "command"],
-      "additionalProperties": false
+    "adapter": {
+      "type": "string",
+      "pattern": "^[^:]+\\.py:[A-Za-z_][A-Za-z0-9_]*$"
     },
-    "constrainedDesign": {
-      "description": "Known fields observed, unknown fields estimated, constraint problem solved, result validated, then actions.",
+    "program": {
+      "description": "The procedure is a Hypomnesis value of type 'a Effect.t, interpreted by the engine. The language declares the sensors and actuators it may use.",
       "type": "object",
       "properties": {
-        "kind": { "const": "constrained-design" },
-        "request": { "type": "string", "description": "Binding of the M1 program holding the request record." },
-        "estimators": {
+        "kind": {
+          "const": "program"
+        },
+        "entry": {
+          "type": "string",
+          "description": "Binding of the M1 program holding the procedure."
+        },
+        "environment": {
+          "$ref": "#/$defs/adapter"
+        },
+        "sensors": {
           "type": "object",
           "additionalProperties": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": { "type": "string" },
-                "version": { "type": "string" },
-                "function": { "$ref": "#/$defs/function" },
-                "confidence": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
-              },
-              "required": ["id", "version", "function", "confidence"],
-              "additionalProperties": false
-            }
+            "type": "object",
+            "properties": {
+              "read": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "read"
+            ],
+            "additionalProperties": false
           }
         },
-        "problem": { "$ref": "#/$defs/function" },
-        "validator": { "$ref": "#/$defs/function" },
-        "derived": {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/function" }
-        },
-        "actions": { "type": "array", "items": { "$ref": "#/$defs/action" } }
+        "actuators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "actuator": {
+                "type": "string"
+              },
+              "adapter": {
+                "$ref": "#/$defs/adapter"
+              }
+            },
+            "required": [
+              "actuator",
+              "adapter"
+            ],
+            "additionalProperties": false
+          }
+        }
       },
-      "required": ["kind", "request", "estimators", "problem", "validator"],
-      "additionalProperties": false
-    },
-    "feedbackLoop": {
-      "description": "Sensor reading, pure decision, actuator command, verification of the expected effect under an explicit hypothesis.",
-      "type": "object",
-      "properties": {
-        "kind": { "const": "feedback-loop" },
-        "setup": { "type": "string", "description": "Binding of the M1 program holding the installation record." },
-        "environment": { "$ref": "#/$defs/adapter" },
-        "sensor_schema": { "type": "string" },
-        "measure": { "type": "string", "description": "Field of the sensor payload that is measured." },
-        "decide": { "$ref": "#/$defs/function" },
-        "actuator": { "$ref": "#/$defs/action" },
-        "verify": { "$ref": "#/$defs/function" },
-        "hypothesis": { "type": "string" }
-      },
-      "required": ["kind", "setup", "environment", "sensor_schema", "measure", "decide", "actuator", "verify", "hypothesis"],
+      "required": [
+        "kind",
+        "entry"
+      ],
       "additionalProperties": false
     }
   }

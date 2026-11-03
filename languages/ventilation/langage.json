@@ -1,7 +1,7 @@
 {
   "name": "ventilation",
-  "version": "0.1.0",
-  "description": "Régulation de température par ventilateur, avec vérification de l'effet des commandes.",
+  "version": "0.2.0",
+  "description": "Régulation de température par ventilateur ; procédures écrites en Hypomnesis (effets comme valeurs).",
   "sources": ["ventilation.hyp"],
   "contracts": [
     "contrats/temperature.reading-1.0.0.json",
@@ -9,18 +9,10 @@
     "contrats/fan.set.result-1.0.0.json"
   ],
   "procedure": {
-    "kind": "feedback-loop",
-    "setup": "installation",
+    "kind": "program",
+    "entry": "procedure",
     "environment": "adaptateurs/piece.py:piece",
-    "sensor_schema": "https://schemas.example.org/hypomnesis/temperature.reading/1.0.0",
-    "measure": "celsius",
-    "decide": "Ventilation.decider",
-    "actuator": {
-      "actuator": "fan.set",
-      "adapter": "adaptateurs/piece.py:ventilateur",
-      "command": "Ventilation.commande"
-    },
-    "verify": "Ventilation.effet_confirme",
-    "hypothesis": "le ventilateur fonctionne"
+    "sensors": { "thermo-1": { "read": "message" } },
+    "actuators": [{ "actuator": "fan.set", "adapter": "adaptateurs/piece.py:ventilateur" }]
   }
 }

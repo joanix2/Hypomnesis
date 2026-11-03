@@ -18,8 +18,9 @@ COMMAND = "https://schemas.example.org/hypomnesis/geometry.export/1.0.0"
 RESULT = "https://schemas.example.org/hypomnesis/geometry.export.result/1.0.0"
 
 
-def actionneur(out_dir: Path) -> Actuator:
-    out_dir = out_dir.resolve()
+def actionneur(env: Any) -> Actuator:
+    """`env` : l'environnement de l'atelier (ou directement un répertoire de sortie)."""
+    out_dir = Path(getattr(env, "out_dir", env)).resolve()
 
     def contraintes(payload: Mapping[str, Any]) -> list[str]:
         target = (out_dir / payload["path"]).resolve()

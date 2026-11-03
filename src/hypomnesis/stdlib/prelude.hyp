@@ -207,3 +207,71 @@ module Problem = struct
     target : (string * float) option;  (* minimise the distance to this value *)
   }
 end
+
+(* ---------------------------------------------------------------- json *)
+
+(* Data crossing the boundary with the outside world (sensors, actuators). *)
+module Json = struct
+  type t =
+    | Null
+    | Bool of bool
+    | Num of float
+    | Str of string
+    | Arr of t list
+    | Obj of (string * t) list
+
+  let field k j = match j with Obj kvs -> List.assoc_opt k kvs | _ -> None
+  let num j = match j with Num x -> Some x | _ -> None
+  let str j = match j with Str s -> Some s | _ -> None
+  let bool j = match j with Bool b -> Some b | _ -> None
+  let num_field k j = Option.bind (field k j) num
+  let str_field k j = Option.bind (field k j) str
+end
+
+external to_json : 'a -> Json.t = "core.to_json"
+
+(* ------------------------------------------------------------- effects *)
+
+(* Effects as values (cahier des charges §10). A procedure is a value of type
+   'a Effect.t: a description of operations, each with the continuation that
+   receives its result. Programs only build such values; the engine (M3)
+   interprets them, through contracts and permissions. *)
+module Effect = struct
+  (* Support of a recorded piece of knowledge. Observation is not among them:
+     only the engine records observations, when it actually reads a sensor. *)
+  type support =
+    | Given                       (* stated by the program (M1) *)
+    | Estimated of float          (* confidence *)
+    | Assumed of float            (* hypothesis, confidence *)
+    | Derived of string list      (* keys of the premises *)
+
+  type 'a t =
+    | Done of 'a
+    | Observe of string * (string * Json.t -> 'a t)          (* sensor -> (key, reading) *)
+    | Act of string * Json.t * (Json.t -> 'a t)              (* actuator, command -> outcome *)
+    | Solve of Problem.problem * ((string * float) list option -> 'a t)
+    | Record of string * Json.t * string * support * (unit -> 'a t)
+    | Retract of string * string * (string list -> 'a t)     (* key, reason -> invalidated *)
+    | Note of string * (unit -> 'a t)                        (* report line *)
+
+  let return x = Done x
+
+  let rec bind m f =
+    match m with
+    | Done x -> f x
+    | Observe (s, k) -> Observe (s, (fun r -> bind (k r) f))
+    | Act (a, c, k) -> Act (a, c, (fun r -> bind (k r) f))
+    | Solve (p, k) -> Solve (p, (fun r -> bind (k r) f))
+    | Record (key, v, m', s, k) -> Record (key, v, m', s, (fun u -> bind (k u) f))
+    | Retract (key, why, k) -> Retract (key, why, (fun r -> bind (k r) f))
+    | Note (text, k) -> Note (text, (fun u -> bind (k u) f))
+
+  let observe sensor = Observe (sensor, return)
+  let act actuator command = Act (actuator, to_json command, return)
+  let solve problem = Solve (problem, return)
+  let record key value meth support = Record (key, to_json value, meth, support, return)
+  let retract key why = Retract (key, why, return)
+  let note text = Note (text, return)
+end
+
+let ( >>= ) m f = Effect.bind m f

@@ -9,3 +9,6 @@ let demande = {
   epaisseur = None;         (* inconnue : le moteur l'estimera puis la résoudra *)
   masse_max = 0.5;
 }
+
+(* La procédure : concevoir avec l'estimateur « règle » (substituable). *)
+let procedure = Plaque.concevoir demande Plaque.estimateur_regle

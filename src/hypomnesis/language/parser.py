@@ -157,6 +157,12 @@ class _ToAst(Transformer):
         left, op, right = children
         return A.BinOp(str(op), left, right, span=_span(meta))
 
+    def bind_lambda(self, meta, children):
+        # `m >>= fun x -> e` : le corps de la fonction s'étend le plus loin possible.
+        left, op, *params, body = children
+        lam = A.Lambda(tuple(params), body, span=_span(meta))
+        return A.BinOp(str(op), left, lam, span=_span(meta))
+
     def cons_expr(self, meta, children):
         head, _, tail = children
         return A.Cons(head, tail, span=_span(meta))

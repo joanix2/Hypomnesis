@@ -32,16 +32,22 @@ de l'enveloppe de message et du manifeste d'extension.
 
 ```bash
 hypomnesis lancer languages/mecanique programs/mecanique/plaque_120x80.hyp
-hypomnesis lancer languages/mecanique programs/mecanique/plaque_120x80.hyp --mode production --observer epaisseur=5
+hypomnesis lancer languages/mecanique programs/mecanique/plaque_mesuree.hyp --mode production --env mesure=5
 hypomnesis lancer languages/mecanique --demande "Crée une plaque de 200 × 150 mm, masse maximale 1 kg."
-hypomnesis lancer languages/mecanique programs/mecanique/plaque_120x80.hyp --estimateur abaque
-hypomnesis lancer languages/ventilation programs/ventilation/salle_serveurs.hyp --env panne=1
+hypomnesis lancer languages/ventilation programs/ventilation/salle_serveurs.hyp --mode production --env panne=1
 ```
 
-Le scénario du cahier des charges (§16.2) : programme typé → connaissances avec provenance →
-inconnue estimée par une fonction du langage → contraintes déclarées dans le langage, résolues
-par Z3 et revérifiées → validation par les règles du langage → commande d'export contrôlée
-(contrat, permission, contraintes, mode) → rapport, journal, traces, révision. Voir
+Les procédures sont écrites en Hypomnesis : ce sont des valeurs `'a Effect.t` (observer, agir,
+résoudre, enregistrer, retirer) que seul le moteur exécute, à travers contrats et permissions.
+Exemple, extrait de `languages/mecanique/plaque.hyp` :
+
+```ocaml
+let concevoir (d : demande) (est : estimateur) =
+  donnees d >>= fun () ->
+  let estimation = est.estimer d in
+  Effect.record "epaisseur.estimation" estimation est.id (Effect.Estimated est.confiance) >>= fun () ->
+  Effect.solve (probleme d estimation) >>= fun solution -> …
+``` Voir
 [ADR 0008](docs/adr/0008-niveaux-m3-m2-m1-m0.md).
 
 ## Démarrage

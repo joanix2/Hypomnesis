@@ -18,29 +18,33 @@ READING = "https://schemas.example.org/hypomnesis/temperature.reading/1.0.0"
 
 
 class Piece:
-    def __init__(self, installation: Mapping[str, Any], options: Mapping[str, Any]) -> None:
-        self.capteur = installation["capteur"]
+    def __init__(self, options: Mapping[str, Any]) -> None:
         self.celsius = float(options.get("temperature", 31.0))
         self.panne = str(options.get("panne", "")).lower() in ("1", "true", "oui")
         self.vitesse = 0
         self._ids = itertools.count(1)
+        self._lu = False
 
-    def message(self) -> dict[str, Any]:
+    def message(self, capteur: str) -> dict[str, Any]:
+        """Relevé du capteur ; la physique avance d'un pas entre deux relevés."""
+        if self._lu:
+            self.tick()
+        self._lu = True
         return {
             "message_id": f"msg-{next(self._ids)}",
             "schema_id": READING,
             "schema_version": "1.0.0",
             "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "correlation_id": "ventilation",
-            "payload": {"sensor_id": self.capteur, "celsius": round(self.celsius, 2)},
+            "payload": {"sensor_id": capteur, "celsius": round(self.celsius, 2)},
         }
 
     def tick(self) -> None:
         self.celsius += 0.2 if self.panne or self.vitesse == 0 else -self.vitesse / 25
 
 
-def piece(installation: Mapping[str, Any], options: Mapping[str, Any]) -> Piece:
-    return Piece(installation, options)
+def piece(options: Mapping[str, Any], out_dir: Any) -> Piece:
+    return Piece(options)
 
 
 def ventilateur(env: Piece) -> Actuator:

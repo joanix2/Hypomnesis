@@ -1,7 +1,10 @@
-(* Programme M1 écrit dans le langage « ventilation » (M2). *)
+(* Programme M1 écrit dans le langage « ventilation » (M2) :
+   une installation, et la procédure à suivre. *)
 
 let installation = {
   Ventilation.capteur = "thermo-1";
   ventilateur = "fan-1";
   budget = 5;
 }
+
+let procedure = Ventilation.reguler installation

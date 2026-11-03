@@ -19,26 +19,27 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Session | `src/hypomnesis/session.py` | enchaîne tout ; pile de 512 Mo pour la récursion profonde |
 | CLI | `src/hypomnesis/cli.py` | `run`, `check`, `repl` |
 
-## Moteur générique et langages (ADR 0008)
+## Moteur, langages, procédures (ADR 0008, HYP-060)
 
-`src/hypomnesis/engine/` (M3) charge un langage M2 et exécute un programme M1 :
+`src/hypomnesis/engine/` (M3) charge un langage M2 et exécute la procédure d'un programme M1 :
 
 | Module | Rôle |
 |---|---|
 | `engine/language.py` | chargement d'un paquet `languages/<langage>/` : manifeste validé (`language-manifest/1.0.0`), sources Hypomnesis, contrats, adaptateurs confinés au paquet |
-| `engine/design.py` | procédure générique `constrained-design` : connu/inconnu, estimation, `Problem.problem` → Z3 → vérification, validation, actions, révision |
-| `engine/feedback.py` | procédure générique `feedback-loop` : capteur, décision, actionneur, vérification sous hypothèse, budget |
-| `engine/bridge.py` | valeur Hypomnesis → JSON (commandes) ; `Problem.problem` → Problem IR |
+| `engine/procedure.py` | **interpréteur d'effets** : exécute une valeur `'a Effect.t` (observer, agir, résoudre, enregistrer, retirer, noter), borné en nombre d'étapes |
+| `engine/bridge.py` | valeur Hypomnesis → JSON ; `Problem.problem` → Problem IR |
 
-Briques M3 utilisées : `epistemics/` (provenance, connaissances), `ir/problem.py`,
-`backends/z3_solver.py`, `effects/dispatcher.py`, `observability/trace.py`, et le module
-`Problem` de la bibliothèque standard.
+Bibliothèque standard (prélude, M3) : `Json.t`, `to_json` (primitive pure), `Problem`,
+`Effect` (`'a Effect.t`, `return`, `bind`, `observe`, `act`, `solve`, `record`, `retract`,
+`note`) et l'opérateur `>>=`. `m >>= fun x -> e` est accepté par la grammaire. Le support
+`Effect.Given | Estimated c | Assumed c | Derived prémisses` qualifie ce qu'un programme
+enregistre ; seul le moteur crée des faits observés, lors d'une lecture de capteur.
 
-Convention des fonctions M2 appelées par `constrained-design` : elles reçoivent la demande
-puis la valeur de chaque champ déclaré dans `estimators`, dans l'ordre du manifeste.
+Briques M3 utilisées par l'interpréteur : `epistemics/` (provenance, connaissances),
+`ir/problem.py`, `backends/z3_solver.py`, `effects/dispatcher.py`, `observability/trace.py`.
 
-CLI : `hypomnesis lancer LANGAGE [PROGRAMME] [--demande …] [--estimateur …] [--mode …]
-[--observer champ=valeur] [--env cle=valeur] [--sortie DIR]`.
+CLI : `hypomnesis lancer LANGAGE [PROGRAMME] [--demande …] [--mode …] [--env cle=valeur]
+[--sortie DIR] [--sans-permission]`.
 
 ## Certificats
 

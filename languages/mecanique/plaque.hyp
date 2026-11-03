@@ -63,4 +63,73 @@ module Plaque = struct
     format = format;
     path = d.nom ^ "." ^ format;
   }
+
+  (* ------------------------------------------------------- procédures *)
+  (* Effets comme valeurs (type 'a Effect.t) : décrits ici, exécutés par le moteur. *)
+
+  type estimateur = { id : string; confiance : float; estimer : demande -> float }
+
+  let estimateur_regle = { id = "regle v1"; confiance = 0.6; estimer = estimer_regle }
+  let estimateur_abaque = { id = "abaque v1"; confiance = 0.7; estimer = estimer_abaque }
+
+  let connus = ["demande.nom"; "demande.largeur"; "demande.hauteur"; "demande.masse_max"]
+
+  let donnees (d : demande) =
+    Effect.record "demande.nom" d.nom "demande" Effect.Given >>= fun () ->
+    Effect.record "demande.largeur" d.largeur "demande" Effect.Given >>= fun () ->
+    Effect.record "demande.hauteur" d.hauteur "demande" Effect.Given >>= fun () ->
+    Effect.record "demande.masse_max" d.masse_max "demande" Effect.Given
+
+  (* Valider, puis exporter si la plaque est valide. Rend le verdict. *)
+  let valider_et_exporter (d : demande) e =
+    let erreurs = verifier d e in
+    let premisses = "demande.epaisseur" :: connus in
+    Effect.record "demande.masse_kg" (masse d e) "Plaque.masse" (Effect.Derived premisses) >>= fun () ->
+    Effect.record "demande.valide" (erreurs = []) "Plaque.verifier" (Effect.Derived premisses) >>= fun () ->
+    match erreurs with
+    | [] ->
+      Effect.note ("valide avec " ^ Float.to_string e ^ " mm") >>= fun () ->
+      Effect.act "geometry.export" (commande_export d e "svg") >>= fun _ ->
+      Effect.act "geometry.export" (commande_export d e "json") >>= fun _ ->
+      Effect.return "Valide"
+    | _ ->
+      Effect.note ("invalide : " ^ String.concat "; " erreurs) >>= fun () ->
+      Effect.return "Invalide"
+
+  (* Conception : épaisseur donnée, ou estimée puis résolue sous les contraintes. *)
+  let concevoir (d : demande) (est : estimateur) =
+    donnees d >>= fun () ->
+    match d.epaisseur with
+    | Some e ->
+      Effect.record "demande.epaisseur" e "demande" Effect.Given >>= fun () ->
+      valider_et_exporter d e
+    | None ->
+      let estimation = est.estimer d in
+      Effect.record "epaisseur.estimation" estimation ("estimateur " ^ est.id)
+        (Effect.Estimated est.confiance) >>= fun () ->
+      Effect.note ("épaisseur estimée : " ^ Float.to_string estimation ^ " mm (" ^ est.id ^ ")") >>= fun () ->
+      Effect.solve (probleme d estimation) >>= fun solution ->
+      match Option.bind solution (List.assoc_opt "epaisseur") with
+      | None ->
+        Effect.note "aucune épaisseur ne satisfait les contraintes" >>= fun () ->
+        Effect.return "Impossible"
+      | Some e ->
+        Effect.record "demande.epaisseur" e "résolu par le solveur sous les contraintes"
+          (Effect.Derived ("epaisseur.estimation" :: connus)) >>= fun () ->
+        Effect.note ("épaisseur résolue : " ^ Float.to_string e ^ " mm") >>= fun () ->
+        valider_et_exporter d e
+
+  (* Révision : mesurer l'épaisseur réelle, retirer l'estimation, revalider. *)
+  let reviser_par_mesure (d : demande) =
+    Effect.observe "pied-a-coulisse" >>= fun (cle, releve) ->
+    let mesure = Option.value (Json.num_field "thickness_mm" releve) 0.0 in
+    Effect.retract "epaisseur.estimation" "remplacée par une mesure" >>= fun invalides ->
+    Effect.note ("mesure " ^ Float.to_string mesure ^ " mm ; invalidés : " ^ String.concat ", " invalides) >>= fun () ->
+    Effect.record "demande.epaisseur" mesure "mesure directe" (Effect.Derived [cle]) >>= fun () ->
+    valider_et_exporter d mesure
+
+  let concevoir_puis_mesurer (d : demande) (est : estimateur) =
+    concevoir d est >>= fun verdict ->
+    Effect.note ("verdict avant mesure : " ^ verdict) >>= fun () ->
+    reviser_par_mesure d
 end

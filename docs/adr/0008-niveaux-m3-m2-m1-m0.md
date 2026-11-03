@@ -23,10 +23,11 @@ langages (M2), dans lesquels on écrit des programmes (M1) qui produisent des r�
   écrite en Hypomnesis dans le langage M2. Le Python d'un langage M2 se limite aux
   **adaptateurs** vers le monde extérieur (actionneurs, capteurs, substituts de LLM). Ils sont
   chargés uniquement depuis le paquet du langage.
-- Le moteur offre des **procédures génériques** (`Resolver`, §6), configurées par le manifeste :
-  `constrained-design` et `feedback-loop`. Il les exécute sans connaître aucun domaine. Les
-  contraintes sont déclarées en Hypomnesis avec le type `Problem.problem` de la bibliothèque
-  standard.
+- Les **procédures** sont écrites en Hypomnesis, dans le langage (M2) ou le programme (M1) :
+  ce sont des valeurs de type `'a Effect.t` (bibliothèque standard) que le moteur interprète
+  (`engine/procedure.py`). Les opérations sont génériques : observer un capteur déclaré, agir via
+  le dispatcher, résoudre un `Problem.problem`, enregistrer ou retirer une connaissance. Seul le
+  moteur crée des faits « observés ».
 - Un **test d'architecture** (`test_engine_contains_no_domain`) échoue si un nom de domaine
   apparaît dans `src/hypomnesis/`.
 
@@ -34,6 +35,6 @@ langages (M2), dans lesquels on écrit des programmes (M1) qui produisent des r�
 
 - La commande `hypomnesis lancer LANGAGE [PROGRAMME]` remplace les démonstrations dédiées.
 - Ajouter un domaine, c'est ajouter un dossier dans `languages/`, sans toucher au moteur.
-- Étape suivante : remplacer les procédures figées par des procédures M1 écrites en Hypomnesis,
-  dont les effets sont des valeurs (HYP-060). Les deux procédures actuelles en deviendront des
-  cas particuliers.
+- Mise à jour (HYP-060) : les procédures figées d'abord prévues dans le moteur (`constrained-design`,
+  `feedback-loop`) ont été supprimées. Elles sont désormais écrites en Hypomnesis dans les langages
+  (`Plaque.concevoir`, `Ventilation.reguler`).

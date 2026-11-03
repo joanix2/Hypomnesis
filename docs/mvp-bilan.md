@@ -44,12 +44,10 @@ valeurs que l'interpréteur Python (HYP-020 à HYP-026).
 
 **Les écarts à résorber pour que l'architecture tienne sa promesse.**
 
-1. **Les procédures sont figées dans le moteur.** Depuis l'ADR 0008, plus aucune logique métier
-   n'est en Python : le moteur offre deux procédures génériques (`constrained-design`,
-   `feedback-loop`) configurées par les langages. Mais un programme M1 ne peut pas encore décrire
-   sa propre procédure. Le cahier des charges veut qu'une procédure soit un programme Hypomnesis
-   dont les effets sont des valeurs interprétées par le runtime (§10, HYP-060). C'est l'écart
-   principal.
+1. ✅ **Résorbé (HYP-060) : les procédures sont des programmes.** Une procédure est une valeur
+   Hypomnesis de type `'a Effect.t`, écrite dans le langage M2 ou le programme M1, que seul le
+   moteur interprète (§10). Conception de plaque, révision par mesure et régulation de température
+   sont écrites ainsi ; le moteur n'a plus aucune procédure figée.
 2. ✅ **Résorbé : contraintes déclarées dans le langage.** Elles sont écrites en Hypomnesis avec le
    type `Problem.problem` de la bibliothèque standard, puis traduites par le moteur en Problem IR.
 3. **Le fragment certifié est étroit.** Flottants, chaînes, records et polymorphisme local en
@@ -63,7 +61,6 @@ valeurs que l'interpréteur Python (HYP-020 à HYP-026).
 
 | Ordre | Itération | Pourquoi |
 |---|---|---|
-| 1 | Effets comme valeurs dans le langage : un `'a effect`, et le pipeline plaque réécrit en Hypomnesis | ferme l'écart 1, cœur de la promesse (§10) |
 | 2 | Transcription par Claude avec boucle de diagnostics du compilateur, sur un jeu de demandes | mesure H2, ferme le critère 15 |
 | 4 | Export OTLP et stack Grafana | critères 13 et 14 |
 | 5 | Flottants et records dans le fragment Lean | rend le domaine `plaque` certifiable |

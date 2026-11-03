@@ -51,8 +51,8 @@ def _pairs(items: list[str]) -> dict[str, str]:
 
 
 def _lancer(args: argparse.Namespace) -> int:
-    from hypomnesis.engine import design, feedback
     from hypomnesis.engine.language import LanguageError, load_language
+    from hypomnesis.engine.procedure import render, run_procedure
 
     try:
         language = load_language(args.langage)
@@ -63,30 +63,21 @@ def _lancer(args: argparse.Namespace) -> int:
         else:
             print("un programme M1 ou une --demande transcriptible est requis", file=sys.stderr)
             return 64
-        if language.procedure["kind"] == "feedback-loop":
-            print(
-                feedback.render(
-                    feedback.run_feedback(language, program, environment=_pairs(args.env))
-                )
-            )
-            return 0
-        report = design.run_design(
+        report = run_procedure(
             language,
             program,
-            estimator=args.estimateur,
             mode=args.mode,
             out_dir=args.sortie,
+            environment=_pairs(args.env),
             permissions=frozenset() if args.sans_permission else None,
-            observations={k: float(v) for k, v in _pairs(args.observer).items()},
         )
-        print(design.render(report))
+        print(render(report))
         return 0
     except (LanguageError, HypomnesisError, ValueError) as exc:
-        message = (
-            exc.render(None, str(args.programme or "<programme>"))
-            if isinstance(exc, HypomnesisError)
-            else str(exc)
-        )
+        if isinstance(exc, HypomnesisError):
+            message = exc.render(None, str(args.programme or "<programme>"))
+        else:
+            message = str(exc)
         print(f"refusé : {message}", file=sys.stderr)
         return 1
 
@@ -146,16 +137,8 @@ def main(argv: list[str] | None = None) -> int:
     lancer.add_argument("langage", type=Path, help="dossier du langage M2")
     lancer.add_argument("programme", type=Path, nargs="?", help="programme M1 (.hyp)")
     lancer.add_argument("--demande", help="demande en langage naturel, transcrite en programme M1")
-    lancer.add_argument("--estimateur", help="identifiant d'un estimateur déclaré par le langage")
     lancer.add_argument("--mode", choices=["simulate", "dry-run", "production"], default="dry-run")
     lancer.add_argument("--sortie", type=Path, default=Path("sortie"), help="résultats M0")
-    lancer.add_argument(
-        "--observer",
-        action="append",
-        default=[],
-        metavar="CHAMP=VALEUR",
-        help="observation ultérieure (révision)",
-    )
     lancer.add_argument(
         "--env",
         action="append",

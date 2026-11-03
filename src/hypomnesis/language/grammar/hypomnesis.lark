@@ -21,7 +21,7 @@ external_item: "external" value_name ":" type_expr "=" STRING
 value_name: LIDENT
           | "(" operator ")"
 
-!operator: PIPE | ATAT | EQ | NEQ | LT | GT | LE | GE | AT | CARET
+!operator: PIPE | BIND | ATAT | EQ | NEQ | LT | GT | LE | GE | AT | CARET
          | PLUS | MINUS | PLUSDOT | MINUSDOT | STAR | SLASH | STARDOT | SLASHDOT
          | MOD | STARSTAR
 
@@ -52,7 +52,8 @@ arm: pattern ["when" expr] "->" expr
 ?apply_op: pipe_expr ATAT apply_op                        -> binop
          | pipe_expr
 
-?pipe_expr: pipe_expr PIPE or_expr                        -> binop
+?pipe_expr: pipe_expr (PIPE | BIND) or_expr               -> binop
+          | pipe_expr BIND "fun" pat_atom+ "->" expr     -> bind_lambda
           | or_expr
 
 ?or_expr: and_expr OROR or_expr                           -> binop
@@ -178,6 +179,7 @@ REC: "rec"
 
 ARROW: "->"
 PIPE: "|>"
+BIND: ">>="
 ATAT: "@@"
 OROR: "||"
 AMPAMP: "&&"

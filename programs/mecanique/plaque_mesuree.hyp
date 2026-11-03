@@ -1,0 +1,11 @@
+(* Programme M1 : concevoir une plaque, puis la mesurer et réviser la conception. *)
+
+let demande = {
+  Plaque.nom = "plaque-mesuree";
+  largeur = 120.0;
+  hauteur = 80.0;
+  epaisseur = None;
+  masse_max = 0.5;
+}
+
+let procedure = Plaque.concevoir_puis_mesurer demande Plaque.estimateur_abaque

@@ -31,5 +31,6 @@ def transcrire(demande: str) -> str:
         f"  hauteur = {hauteur!r};\n"
         f"  epaisseur = {f'Some {_nombre(epaisseur.group(1))!r}' if epaisseur else 'None'};\n"
         f"  masse_max = {(_nombre(masse.group(1)) if masse else 0.5)!r};\n"
-        "}\n"
+        "}\n\n"
+        "let procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
     ).replace("'", '"')
