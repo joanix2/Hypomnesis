@@ -19,6 +19,22 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Session | `src/hypomnesis/session.py` | enchaîne tout ; pile de 512 Mo pour la récursion profonde |
 | CLI | `src/hypomnesis/cli.py` | `run`, `check`, `repl` |
 
+## Démonstrateur MVP (HYP-120)
+
+`src/hypomnesis/demos/plaque/` : domaine `domaine.hyp` (règles et constantes), contrats de
+l'actionneur d'export, `pipeline.py`. Briques minimales réutilisables :
+
+| Module | Rôle |
+|---|---|
+| `epistemics/provenance.py` | termes de provenance, semi-anneaux (support, booléen, confiance), retrait : miroir du modèle Lean |
+| `epistemics/knowledge.py` | base de connaissances : observé / estimé / dérivé, inconnues, journal en ajout seul, révision, explication |
+| `ir/problem.py` | Problem IR : variables, domaines discrets, contraintes linéaires, objectif ; vérification indépendante |
+| `backends/z3_solver.py` | Z3 sur la Problem IR, modèle revérifié en rationnels exacts |
+| `effects/dispatcher.py` | commandes : contrat, permission, contraintes métier, modes simulate / dry-run / production, états |
+| `observability/trace.py` | spans imbriqués (structure OpenTelemetry), arbre et export JSON |
+
+CLI : `hypomnesis demo plaque [--mode …] [--estimateur regle|abaque] [--mesure MM]`.
+
 ## Certificats
 
 `src/hypomnesis/certify/` exporte la Core IR élaborée et annotée (prélude compris) en JSON,

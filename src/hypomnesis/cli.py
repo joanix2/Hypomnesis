@@ -46,6 +46,27 @@ def _emit_certificate(session: Session, path: Path) -> int:
     return 0
 
 
+def _demo(args: argparse.Namespace) -> int:
+    from hypomnesis.demos.plaque.pipeline import EXPORT_PERMISSION, TranscriptionError, render, run
+
+    permissions = frozenset() if args.sans_permission else frozenset({EXPORT_PERMISSION})
+    try:
+        report = run(
+            args.demande,
+            estimator=args.estimateur,
+            mode=args.mode,
+            out_dir=args.sortie,
+            masse_max=args.masse_max,
+            permissions=permissions,
+            mesure=args.mesure,
+        )
+    except (TranscriptionError, HypomnesisError) as exc:
+        print(f"demande refusée : {exc}", file=sys.stderr)
+        return 1
+    print(render(report))
+    return 0
+
+
 def _repl(session: Session) -> int:
     print(f"Hypomnesis {__version__} — enter items or expressions, end with ';;'. Ctrl-D to quit.")
     buffer: list[str] = []
@@ -94,8 +115,23 @@ def main(argv: list[str] | None = None) -> int:
         help="write the elaborated, annotated Core IR (prelude included) as a JSON certificate",
     )
     commands.add_parser("repl", help="interactive toplevel")
+    demo = commands.add_parser("demo", help="démonstrateurs de bout en bout")
+    demo.add_argument("scenario", choices=["plaque"])
+    demo.add_argument(
+        "--demande",
+        default="Crée une plaque de 120 × 80 mm, estime son épaisseur, "
+        "vérifie sa validité et exporte sa géométrie.",
+    )
+    demo.add_argument("--estimateur", choices=["regle", "abaque"], default="regle")
+    demo.add_argument("--mode", choices=["simulate", "dry-run", "production"], default="dry-run")
+    demo.add_argument("--sortie", type=Path, default=Path("sortie-plaque"))
+    demo.add_argument("--masse-max", type=float, default=0.5, help="kg")
+    demo.add_argument("--mesure", type=float, help="épaisseur mesurée ensuite (mm) : révision")
+    demo.add_argument("--sans-permission", action="store_true", help="refuser l'export")
     args = parser.parse_args(argv)
 
+    if args.command == "demo":
+        return _demo(args)
     session = Session()
     if args.command == "repl":
         return _repl(session)

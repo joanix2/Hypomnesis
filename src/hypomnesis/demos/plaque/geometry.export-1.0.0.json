@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/geometry.export/1.0.0",
+  "title": "GeometryExportCommand",
+  "type": "object",
+  "properties": {
+    "command_id": { "type": "string", "minLength": 1 },
+    "part": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "width_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "height_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "thickness_mm": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": ["name", "width_mm", "height_mm", "thickness_mm"],
+      "additionalProperties": false
+    },
+    "format": { "enum": ["svg", "json"] },
+    "path": { "type": "string", "minLength": 1 }
+  },
+  "required": ["command_id", "part", "format", "path"],
+  "additionalProperties": false
+}

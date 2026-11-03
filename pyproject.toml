@@ -14,6 +14,7 @@ dependencies = [
   "lark>=1.2",
   "jsonschema[format-nongpl]>=4.21",
   "referencing>=0.35",
+  "z3-solver>=4.12",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +47,9 @@ ignore = [
   "E731",  # the interpreter compiles IR nodes to lambdas on purpose
   "N802",  # _infer_<NodeName> dispatch methods
 ]
+
+# Typographie française des dimensions (« 120 × 80 mm ») : voulue, pas une confusion.
+allowed-confusables = ["×"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B011"]

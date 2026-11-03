@@ -14,6 +14,9 @@ Détails d'implémentation : `TECHNICAL.md`.
 - **Commits réguliers** (demande explicite de l'utilisateur, prioritaire sur la règle par défaut
   d'`INSTRUCTION.md`) : un commit par étape logique terminée et vérifiée, message en français,
   terminé par la ligne `Co-Authored-By` de l'agent.
+- **Fusion automatique** (demande de l'utilisateur, 2026-11-03) : après `./scripts/validate.sh complet`
+  vert, fusionner la branche de travail dans `main` en avance rapide et pousser. Objectif : itérer
+  vite vers un MVP démontrable.
 - **Validation à la demande** (aucun hook git) : skill `/valider` ou `./scripts/validate.sh <mode>`
   (`rapide` avant chaque commit, `complet` avant de déclarer une tâche finie ou de pousser, `lean`
   après une modification de `formal/`, `graphe` pour rafraîchir Graphify). Ne jamais contourner

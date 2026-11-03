@@ -20,6 +20,23 @@ parser LALR, inférence Hindley-Milner, types algébriques, records, modules, fi
 interpréteur avec appels terminaux, prélude écrit en Hypomnesis, REPL, contrats JSON Schema
 de l'enveloppe de message et du manifeste d'extension.
 
+## Démonstrateur MVP
+
+Le scénario du cahier des charges (§16.2), de bout en bout :
+
+```bash
+hypomnesis demo plaque                              # dry-run : rien n'est exporté
+hypomnesis demo plaque --mode production --mesure 5 # export SVG/JSON, puis révision par une mesure
+hypomnesis demo plaque --estimateur abaque --masse-max 0.2
+hypomnesis demo plaque --sans-permission --mode production
+```
+
+Demande en français → programme Hypomnesis typé → connaissances avec provenance → épaisseur
+estimée (estimateurs interchangeables) → résolue par Z3 (solution revérifiée) → validée par les
+règles du domaine écrites en Hypomnesis → export contrôlé (contrat, permission, contraintes,
+mode) → rapport expliquant chaque conclusion, journal, traces. Domaine :
+`src/hypomnesis/demos/plaque/domaine.hyp`.
+
 ## Démarrage
 
 ```bash
