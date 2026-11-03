@@ -11,6 +11,7 @@ décrire, les composer et contrôler leurs interactions.
 - Architecture et avancement : [docs/architecture/overview.md](docs/architecture/overview.md)
 - Référence du langage : [docs/language/reference.md](docs/language/reference.md)
 - Décisions d'architecture : [docs/adr/](docs/adr/README.md)
+- Vérification formelle (Lean 4) : [docs/verification/proprietes.md](docs/verification/proprietes.md), preuves dans [formal/](formal/README.md)
 
 ## État
 

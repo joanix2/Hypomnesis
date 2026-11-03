@@ -32,3 +32,26 @@ jobs:
         run: |
           hypomnesis run examples/basics/tour.hyp
           hypomnesis run examples/mechanics/units.hyp examples/mechanics/plate.hyp
+
+  proofs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: formal
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --no-modify-path --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Build proofs
+        run: lake build
+      - name: Reject sorry
+        run: "! grep -rnwE 'sorry|admit' Hypomnesis"
+      - name: Audit axioms
+        run: |
+          lake env lean Audit.lean | tee axioms.txt
+          ! grep -E 'sorryAx' axioms.txt
+          ! grep -oE 'axioms: \[[^]]*\]' axioms.txt | tr -d '[]' | sed 's/axioms: //' \
+            | tr ',' '\n' | sed 's/ //g' | grep -vE '^(propext|Quot.sound|Classical.choice)?$'

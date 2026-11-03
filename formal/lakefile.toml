@@ -1,0 +1,6 @@
+name = "hypomnesis-formal"
+version = "0.1.0"
+defaultTargets = ["Hypomnesis"]
+
+[[lean_lib]]
+name = "Hypomnesis"
