@@ -4,3 +4,7 @@ defaultTargets = ["Hypomnesis"]
 
 [[lean_lib]]
 name = "Hypomnesis"
+
+[[lean_exe]]
+name = "hypomnesis-check"
+root = "Main"

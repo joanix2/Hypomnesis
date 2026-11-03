@@ -1,0 +1,24 @@
+(* Programme entièrement dans le fragment vérifié par le noyau Lean (HYP-026) :
+   entiers, booléens, listes, options, variants, récursion, filtrage, et les
+   fonctions polymorphes du prélude (monomorphisées par le décodeur).
+
+   hypomnesis check examples/basics/certifiable.hyp --emit-certificate cert.json
+   cd formal && lake exe hypomnesis-check check ../cert.json *)
+
+type shape = Square of int | Rect of int * int
+
+let area s =
+  match s with
+  | Square c -> c * c
+  | Rect (w, h) -> w * h
+
+let rec fact n = if n <= 1 then 1 else n * fact (n - 1)
+
+let squares = List.map (fun x -> x * x) [1; 2; 3; 4]
+let total = List.sum squares
+let areas = List.map area [Square 3; Rect (2, 5); Square 1]
+let biggest = List.fold_left max 0 areas
+let first_area = match List.hd_opt areas with Some a -> a | None -> 0
+let count = List.length areas
+let small = List.filter (fun a -> a < 5) areas
+let f5 = fact 5

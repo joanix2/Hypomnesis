@@ -6,6 +6,10 @@
   "type": "object",
   "properties": {
     "certificate_version": { "const": "1.0.0" },
+    "program_start": {
+      "description": "Index of the first definition of the program itself; earlier ones come from the prelude.",
+      "$ref": "#/$defs/index"
+    },
     "types": { "type": "array", "items": { "$ref": "#/$defs/typeDecl" } },
     "definitions": { "type": "array", "items": { "$ref": "#/$defs/definition" } }
   },
@@ -136,9 +140,10 @@
           "type": "object",
           "properties": {
             "tag": { "$ref": "#/$defs/name" },
+            "index": { "$ref": "#/$defs/index" },
             "arg": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/pattern" }] }
           },
-          "required": ["tag", "arg"],
+          "required": ["tag", "index", "arg"],
           "additionalProperties": false
         },
         "tuple": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/pattern" } },
@@ -294,12 +299,13 @@
         "construct": {
           "type": "object",
           "properties": {
+            "type": { "$ref": "#/$defs/name" },
             "tag": { "$ref": "#/$defs/name" },
             "index": { "$ref": "#/$defs/index" },
             "type_args": { "$ref": "#/$defs/types" },
             "arg": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/expr" }] }
           },
-          "required": ["tag", "index", "type_args", "arg"],
+          "required": ["type", "tag", "index", "type_args", "arg"],
           "additionalProperties": false
         }
       },

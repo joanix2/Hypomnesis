@@ -70,6 +70,7 @@ class Session:
         self.definitions: list[ir.Definition] = []
         if prelude:
             self.load(prelude_source())
+        self.prelude_definitions = len(self.definitions)
 
     def check(self, source: str) -> LoadResult:
         """Type-check ``source`` and extend the type environment, without running it."""

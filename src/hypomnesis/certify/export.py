@@ -40,9 +40,14 @@ class CertificateError(Exception):
     """The IR cannot be exported (missing annotation, free type variable)."""
 
 
-def export_certificate(types: Iterable[TypeInfo], definitions: Iterable[ir.Definition]) -> Json:
+def export_certificate(
+    types: Iterable[TypeInfo], definitions: Iterable[ir.Definition], program_start: int = 0
+) -> Json:
+    """``program_start`` is the index of the first definition of the program
+    itself (the ones before it come from the prelude)."""
     return {
         "certificate_version": CERTIFICATE_VERSION,
+        "program_start": program_start,
         "types": [_type_decl(info) for info in types if info.kind != "alias"],
         "definitions": [_Exporter().definition(d) for d in definitions],
     }
@@ -228,8 +233,11 @@ class _Exporter:
         if isinstance(e, ir.Field):
             return {"field": {"expr": self.expr(e.expr, ctx), "name": e.name}}
         if isinstance(e, ir.Construct):
+            if e.owner is None:
+                raise CertificateError(f"constructor {e.tag} without its type")
             return {
                 "construct": {
+                    "type": e.owner,
                     "tag": e.tag,
                     "index": e.index,
                     "type_args": self.types(e.type_args),
@@ -257,7 +265,10 @@ class _Exporter:
             if isinstance(p, ir.PLit):
                 return {"lit": _literal(p.value)}
             if isinstance(p, ir.PCtor):
-                return {"ctor": {"tag": p.tag, "arg": None if p.arg is None else go(p.arg)}}
+                if p.index < 0:
+                    raise CertificateError(f"constructor pattern {p.tag} without its index")
+                arg = None if p.arg is None else go(p.arg)
+                return {"ctor": {"tag": p.tag, "index": p.index, "arg": arg}}
             if isinstance(p, ir.PTuple):
                 return {"tuple": [go(x) for x in p.items]}
             if isinstance(p, ir.PRecord):

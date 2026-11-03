@@ -15,7 +15,11 @@ from hypomnesis.session import Session
 
 def session_certificate(session: Session) -> Json:
     """Certificate of everything elaborated in ``session``, prelude included."""
-    return export_certificate(session.checker.types_by_qname.values(), session.definitions)
+    return export_certificate(
+        session.checker.types_by_qname.values(),
+        session.definitions,
+        program_start=session.prelude_definitions,
+    )
 
 
 __all__ = [

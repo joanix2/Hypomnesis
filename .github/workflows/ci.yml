@@ -44,6 +44,15 @@ jobs:
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
       - name: Build proofs
         run: lake build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Certificate checker on the certifiable example
+        run: |
+          lake build hypomnesis-check
+          pip install -e ..
+          hypomnesis check ../examples/basics/certifiable.hyp --emit-certificate cert.json
+          .lake/build/bin/hypomnesis-check check cert.json
       - name: Reject sorry
         run: "! grep -rnwE 'sorry|admit' Hypomnesis"
       - name: Audit axioms

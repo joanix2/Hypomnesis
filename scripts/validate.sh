@@ -4,7 +4,8 @@
 #   scripts/validate.sh            # rapide : Ruff, Kanban, tests            (~15 s)
 #   scripts/validate.sh complet    # tout : pre-commit (linters, Pyright, schémas,
 #                                  #   workflows, Lean), tests, audit des axiomes
-#   scripts/validate.sh lean       # preuves : lake build, aucun sorry, audit des axiomes
+#   scripts/validate.sh lean       # preuves : lake build, aucun sorry, audit des axiomes,
+#                                  #   vérificateur de certificats sur l'exemple certifiable
 #   scripts/validate.sh graphe     # reconstruit le graphe Graphify et y réinjecte le Kanban
 #
 # Chaque étape s'exécute même si une précédente échoue ; un résumé final liste les
@@ -49,6 +50,17 @@ lean_audit() {
     fi
 }
 
+certificate_check() {
+    (cd formal && lake build hypomnesis-check) || return 1
+    local cert
+    cert=$(mktemp --suffix=.json)
+    "$PY" -m hypomnesis.cli check examples/basics/certifiable.hyp --emit-certificate "$cert" >/dev/null \
+        && formal/.lake/build/bin/hypomnesis-check check "$cert"
+    local status=$?
+    rm -f "$cert"
+    return $status
+}
+
 graph_refresh() {
     command -v graphify >/dev/null 2>&1 || { echo "graphify absent du PATH"; return 1; }
     graphify update . && "$PY" scripts/kanban.py graph
@@ -65,9 +77,11 @@ case "$MODE" in
         step "pre-commit (tous les linters)" "$PY" -m pre_commit run --all-files --show-diff-on-failure
         step "tests" "$PY" -m pytest -q
         step "lean (audit des axiomes)" lean_audit
+        step "lean (vérificateur de certificats)" certificate_check
         ;;
     lean)
         step "lean (build, sorry, axiomes)" lean_audit
+        step "lean (vérificateur de certificats)" certificate_check
         ;;
     graphe)
         step "graphe Graphify + Kanban" graph_refresh

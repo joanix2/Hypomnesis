@@ -52,6 +52,8 @@ class PLit(Pattern):
 class PCtor(Pattern):
     tag: str
     arg: Pattern | None
+    # Annotation : rang du constructeur dans sa déclaration (le runtime filtre par `tag`).
+    index: int = field(default=-1, compare=False, repr=False)
 
 
 @dataclass(frozen=True)
@@ -179,6 +181,7 @@ class Construct(Expr):
     index: int
     arg: Expr | None
     type_args: tuple[Type, ...] = field(default=(), compare=False, repr=False)
+    owner: str | None = field(default=None, compare=False, repr=False)  # qname du type
 
 
 # ------------------------------------------------------- top-level forms

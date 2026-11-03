@@ -61,7 +61,9 @@ def test_round_trip_loses_nothing(paths):
     session = session_for(paths)
     certificate = session_certificate(session)
     reloaded = load_definitions(json.loads(json.dumps(certificate)))
-    assert export_certificate(session.checker.types_by_qname.values(), reloaded) == certificate
+    types = session.checker.types_by_qname.values()
+    again = export_certificate(types, reloaded, program_start=certificate["program_start"])
+    assert again == certificate
 
 
 @pytest.mark.parametrize("paths", PROGRAMS.values(), ids=PROGRAMS.keys())

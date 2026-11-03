@@ -31,7 +31,11 @@ format `certificate/1.0.0` validé par `contracts/schemas/certificate-1.0.0.json
 
 `load.py` fait l'opération inverse ; les tests vérifient `export(load(c)) = c` et que le programme
 réimporté calcule les mêmes valeurs. CLI : `hypomnesis check FICHIERS --emit-certificate cert.json`.
-Le vérificateur Lean qui relira ces certificats est HYP-026.
+Le vérificateur Lean `hypomnesis-check` (`formal/Main.lean`, `formal/Hypomnesis/Certificate.lean`)
+les relit : `cd formal && lake build hypomnesis-check`, puis
+`lake exe hypomnesis-check check cert.json` (codes : 0 accepté, 1 rejeté par `typeOf`, 2 hors du
+fragment, 3 illisible) ou `eval cert.json` (sémantique de référence). Exemple entièrement dans
+le fragment : `examples/basics/certifiable.hyp`.
 
 ## Contrats
 

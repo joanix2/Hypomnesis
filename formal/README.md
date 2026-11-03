@@ -14,10 +14,13 @@ Stratégie (certificats, tests différentiels) : [docs/verification/strategie.md
 | `Hypomnesis/Core/Fuel.lean` | le budget ne change jamais un résultat obtenu |
 | `Hypomnesis/Core/Examples.lean` | longueur d'une liste d'entiers : typage établi par calcul, exécution |
 | `Hypomnesis/Epistemics/Provenance.lean` | provenance en semi-anneau, révision, monotonie du support |
+| `Hypomnesis/Certificate.lean` | décodage des certificats JSON vers le fragment (non prouvé, hors base de confiance) |
+| `Main.lean` | exécutable `hypomnesis-check` (`check`, `eval`) |
 
 ```bash
 lake build                 # vérifie toutes les preuves
 lake env lean Audit.lean   # liste les axiomes utilisés
+lake build hypomnesis-check && lake exe hypomnesis-check check ../cert.json
 ```
 
 Aucune dépendance (pas de Mathlib) ; version de Lean fixée dans `lean-toolchain`.

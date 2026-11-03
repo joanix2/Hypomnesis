@@ -38,6 +38,12 @@ la manière dont on peut en établir la validité.
 | P15 | `Core.patTypeOf_sound`, `patTypeOf_complete` | le typage des motifs est décidé exactement par le vérificateur | §13.2 |
 | P16 | `Examples.program_typed` | un programme réel (longueur de liste) est typé **par calcul**, au moyen du vérificateur prouvé | démonstration du mécanisme de certificat |
 
+**Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
+(P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
+donc au programme traduit : il ne peut pas se bloquer dans la sémantique de référence. Ce qui
+reste de confiance : la fidélité de la traduction (décodeur) et celle de l'interpréteur Python à
+la sémantique Lean, couverte par les tests différentiels (HYP-028).
+
 **Fragment couvert** (`formal/Hypomnesis/Core/Syntax.lean`) :
 - types `int`, `bool`, `unit`, fonctions, produits et **types de données** (variants, listes),
   monomorphisés dans une signature ;

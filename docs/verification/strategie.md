@@ -52,8 +52,13 @@ l'interpréteur doit, **dans le même changement** :
 2. ✅ **Exporter** (HYP-025). La Core IR est traduite en indices de de Bruijn et sérialisée en
    JSON, selon un schéma versionné (`contracts/schemas/certificate-1.0.0.json`), ce qui
    réutilise l'ADR 0004. CLI : `hypomnesis check --emit-certificate`.
-3. **Vérifier.** Un exécutable Lean `hypomnesis-check` (via `lake exe`, avec `Lean.Json`)
-   relit le certificat et applique `typeOf`.
+3. ✅ **Vérifier** (HYP-026). L'exécutable Lean `hypomnesis-check` relit le certificat, le
+   traduit dans le fragment et applique `typeOf`. Le décodeur (`formal/Hypomnesis/Certificate.lean`)
+   n'est pas prouvé et n'a pas à l'être : il ne fait que construire des termes que `typeOf`
+   vérifie, il peut faire rejeter un bon programme mais jamais en faire accepter un mauvais. Il
+   monomorphise les définitions polymorphes atteignables et signale ce qui sort du fragment
+   (code 2) : flottants, chaînes, records, motifs alternatifs, polymorphisme local, récursion
+   mutuelle. Le même exécutable expose `eval` (sémantique de référence).
 4. **Intégrer.** `hypomnesis check --certify` appelle le vérificateur, et la CI certifie tous
    les exemples.
 5. **Tests différentiels.** Le même exécutable expose `eval`, et un test Hypothesis compare

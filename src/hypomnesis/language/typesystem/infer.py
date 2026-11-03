@@ -488,9 +488,13 @@ class Checker:
         info = self._lookup("ctors", e.path, e.span, "constructor")
         result, arg = self._instantiate_ctor(info, level)
         if arg is None:
-            return result, ir.Construct(info.name, info.index, None, type_args=result.args)
+            return result, ir.Construct(
+                info.name, info.index, None, type_args=result.args, owner=info.owner.qname
+            )
         name = self.gensym()
-        body = ir.Construct(info.name, info.index, ir.Local(name), type_args=result.args)
+        body = ir.Construct(
+            info.name, info.index, ir.Local(name), type_args=result.args, owner=info.owner.qname
+        )
         lam = ir.Lambda((name,), body, name=info.name, param_types=(arg,))
         return arrow(arg, result), lam
 
@@ -530,7 +534,9 @@ class Checker:
             raise TypeCheckError(f"constructor {ctor.path} expects no argument", ctor.span)
         at, arg_ir = self.infer(arg, env, level)
         expect(at, arg_t, arg.span, "This argument")
-        return result, ir.Construct(info.name, info.index, arg_ir, type_args=result.args)
+        return result, ir.Construct(
+            info.name, info.index, arg_ir, type_args=result.args, owner=info.owner.qname
+        )
 
     def _params(self, patterns: tuple[A.Pattern, ...], env: Env, level: int, span: Span | None):
         """Elaborate parameter patterns into plain names plus wrapping matches."""
@@ -681,21 +687,21 @@ class Checker:
 
     def _infer_ListLit(self, e: A.ListLit, env: Env, level: int):
         item_t: Type = TVar(level)
-        result: ir.Expr = ir.Construct("[]", 0, None, type_args=(item_t,))
+        result: ir.Expr = ir.Construct("[]", 0, None, type_args=(item_t,), owner="list")
         items = []
         for item in e.items:
             t, x = self.infer(item, env, level)
             expect(t, item_t, item.span, "This list element")
             items.append(x)
         for x in reversed(items):
-            result = ir.Construct("::", 1, ir.Tuple((x, result)), type_args=(item_t,))
+            result = ir.Construct("::", 1, ir.Tuple((x, result)), type_args=(item_t,), owner="list")
         return list_of(item_t), result
 
     def _infer_Cons(self, e: A.Cons, env: Env, level: int):
         ht, head = self.infer(e.head, env, level)
         tt, tail = self.infer(e.tail, env, level)
         expect(tt, list_of(ht), e.tail.span)
-        return tt, ir.Construct("::", 1, ir.Tuple((head, tail)), type_args=(ht,))
+        return tt, ir.Construct("::", 1, ir.Tuple((head, tail)), type_args=(ht,), owner="list")
 
     def _record_owner(self, t: Type, name: str, span: Span | None) -> TypeInfo:
         """Find the record type owning field ``name``, preferring the known type of ``t``."""
@@ -809,20 +815,20 @@ class Checker:
             return tuple_of([t for t, _ in pairs]), ir.PTuple(tuple(x for _, x in pairs))
         if isinstance(p, A.PList):
             item_t: Type = TVar(level)
-            result: ir.Pattern = ir.PCtor("[]", None)
+            result: ir.Pattern = ir.PCtor("[]", None, index=0)
             subs = []
             for item in p.items:
                 t, x = self._infer_pattern(item, level, binds)
                 expect(t, item_t, item.span, "This pattern")
                 subs.append(x)
             for x in reversed(subs):
-                result = ir.PCtor("::", ir.PTuple((x, result)))
+                result = ir.PCtor("::", ir.PTuple((x, result)), index=1)
             return list_of(item_t), result
         if isinstance(p, A.PCons):
             ht, head = self._infer_pattern(p.head, level, binds)
             tt, tail = self._infer_pattern(p.tail, level, binds)
             expect(tt, list_of(ht), p.tail.span, "This pattern")
-            return tt, ir.PCtor("::", ir.PTuple((head, tail)))
+            return tt, ir.PCtor("::", ir.PTuple((head, tail)), index=1)
         if isinstance(p, A.PRecord):
             owner = self._lookup("fields", p.fields[0][0], p.span, "record field").owner
             args = [TVar(level) for _ in range(owner.arity)]
@@ -868,12 +874,12 @@ class Checker:
         if arg is None:
             if arg_t is not None:
                 raise TypeCheckError(f"constructor {path} expects an argument", span)
-            return result, ir.PCtor(info.name, None)
+            return result, ir.PCtor(info.name, None, index=info.index)
         if arg_t is None:
             raise TypeCheckError(f"constructor {path} expects no argument", span)
         t, x = self._infer_pattern(arg, level, binds)
         expect(t, arg_t, arg.span, "This pattern")
-        return result, ir.PCtor(info.name, x)
+        return result, ir.PCtor(info.name, x, index=info.index)
 
     @staticmethod
     def _bind(name: str, t: Type, binds: dict[str, Type], span: Span | None) -> Type:

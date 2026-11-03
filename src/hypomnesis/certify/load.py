@@ -208,7 +208,11 @@ class _Loader:
         if kind == "construct":
             arg = None if p["arg"] is None else self.expr(p["arg"], ctx)
             return ir.Construct(
-                _str(p["tag"]), _int(p["index"]), arg, type_args=self.types(p["type_args"])
+                _str(p["tag"]),
+                _int(p["index"]),
+                arg,
+                type_args=self.types(p["type_args"]),
+                owner=_str(p["type"]),
             )
         raise CertificateError(f"invalid expression {kind}")
 
@@ -247,7 +251,8 @@ class _Loader:
                 return ir.PRecord(fields)
             p = _obj(payload)
             if kind == "ctor":
-                return ir.PCtor(_str(p["tag"]), None if p["arg"] is None else go(p["arg"]))
+                arg = None if p["arg"] is None else go(p["arg"])
+                return ir.PCtor(_str(p["tag"]), arg, index=_int(p["index"]))
             if kind == "alias":
                 inner = go(p["pattern"])
                 return ir.PAlias(inner, slot(p["bind"]))
