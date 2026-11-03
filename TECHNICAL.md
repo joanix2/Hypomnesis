@@ -71,7 +71,7 @@ Pour enrichir les relations sémantiques des documents (spécification, notes, t
 | Commande | Rôle |
 |---|---|
 | `check` | format des tâches, couloirs, dépendances inconnues, cycles, tâche démarrée avant ses dépendances |
-| `status [--json]` | tâches prêtes (avec ce qu'elles débloquent), bloquées (avec ce qu'elles attendent), en cours |
+| `status [--json]` | tâches en cours, prêtes (avec ce qu'elles débloquent), bloquées (avec ce qu'elles attendent), en `qa` (à vérifier par l'utilisateur) |
 | `graph [--wait]` | injecte tâches et relations (`depends_on`, `touches`, `references`, `defined_in`, `contains`) dans `graphify-out/graph.json`, sous le verrou de reconstruction de Graphify ; idempotent |
 
 Les éléments injectés portent `_origin: "kanban"` et `source_file: .agentkanban/board.yaml`.

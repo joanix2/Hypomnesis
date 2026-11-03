@@ -28,5 +28,6 @@ Avant chaque commit :
 - ajoute chaque nouveau théorème principal à `formal/Audit.lean` et à
   `docs/verification/proprietes.md` (colonne ✅).
 
-Commits réguliers, message en français. À la fin, résume dans la tâche (`### agent`) les théorèmes
-prouvés, leur énoncé en clair et les axiomes utilisés, puis `### user`.
+Commits réguliers, message en français. Passe la tâche en `doing` en la commençant. À la fin,
+résume dans la tâche (`### agent`) les théorèmes prouvés, leur énoncé en clair et les axiomes
+utilisés, puis `### user`, et passe la tâche en `qa` (jamais en `done`).

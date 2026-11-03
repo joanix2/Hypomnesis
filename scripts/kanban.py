@@ -7,7 +7,10 @@ Usage :
 
 Bibliothèque standard uniquement : les hooks git l'exécutent avec n'importe quel python3.
 
-Une tâche est *prête* si son couloir est `todo` et que toutes ses dépendances sont `done`.
+Une tâche est *prête* si son couloir est `todo` et que toutes ses dépendances sont terminées,
+c'est-à-dire en `qa` (faites, en attente de vérification humaine) ou en `done` (vérifiées).
+Seul l'humain fait passer une tâche de `qa` à `done`, et une tâche ne peut être `done` que si
+ses dépendances le sont aussi.
 Les dépendances sont lues dans la ligne de métadonnées du premier message
 (`**Dépend de** HYP-001, HYP-002`).
 
@@ -49,6 +52,7 @@ ANCHOR = (
 )
 REQUIRED_FIELDS = ("title", "lane", "created", "updated", "description")
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+FINISHED = ("qa", "done")  # une dépendance dans ces couloirs ne bloque plus
 TASK_NAME = re.compile(r"task_\d{8}_hyp(\d{3})_[a-z0-9-]+\.md")
 HYP_ID = re.compile(r"HYP-\d{3}")
 
@@ -184,7 +188,10 @@ def validate(tasks: dict[str, Task], known_lanes: list[str]) -> list[str]:
                 errors.append(f"{t.id}: dépend de lui-même")
             elif dep not in tasks:
                 errors.append(f"{t.id}: dépendance inconnue {dep}")
-            elif t.lane in ("doing", "done") and tasks[dep].lane != "done":
+            elif t.lane == "done" and tasks[dep].lane != "done":
+                late = f"sa dépendance {dep} n'est pas vérifiée (`{tasks[dep].lane}`)"
+                errors.append(f"{t.id}: en `done` alors que {late}")
+            elif t.lane in ("doing", "qa") and tasks[dep].lane not in FINISHED:
                 late = f"sa dépendance {dep} est en `{tasks[dep].lane}`"
                 errors.append(f"{t.id}: en `{t.lane}` alors que {late}")
     errors.extend(cycles(tasks))
@@ -212,7 +219,7 @@ def cycles(tasks: dict[str, Task]) -> list[str]:
 
 
 def blockers(task: Task, tasks: dict[str, Task]) -> list[str]:
-    return [d for d in task.depends_on if d in tasks and tasks[d].lane != "done"]
+    return [d for d in task.depends_on if d in tasks and tasks[d].lane not in FINISHED]
 
 
 def is_ready(task: Task, tasks: dict[str, Task]) -> bool:
@@ -408,6 +415,7 @@ def status(tasks: dict[str, Task]) -> dict[str, list[dict]]:
             for t in ordered
             if t.lane == "todo" and blockers(t, tasks)
         ],
+        "qa": [asdict(t) for t in ordered if t.lane == "qa"],
         "done": [asdict(t) for t in ordered if t.lane == "done"],
     }
 
@@ -428,7 +436,10 @@ def _print_status(report: dict[str, list[dict]]) -> None:
     print(f"\nBloquées ({len(report['blocked'])})")
     for t in report["blocked"]:
         print(line(t, f"  ← attend {', '.join(t['blocked_by'])}"))
-    print(f"\nTerminées : {len(report['done'])}")
+    print(f"\nÀ vérifier — QA ({len(report['qa'])})")
+    for t in report["qa"]:
+        print(line(t))
+    print(f"\nTerminées et vérifiées : {len(report['done'])}")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -38,7 +38,9 @@ def board(tmp_path, monkeypatch):
     root = tmp_path
     tasks_dir = root / ".agentkanban" / "tasks"
     tasks_dir.mkdir(parents=True)
-    (root / ".agentkanban" / "board.yaml").write_text("lanes:\n  - todo\n  - doing\n  - done\n")
+    (root / ".agentkanban" / "board.yaml").write_text(
+        "lanes:\n  - todo\n  - doing\n  - qa\n  - done\n"
+    )
     monkeypatch.setattr(kanban, "ROOT", root)
     monkeypatch.setattr(kanban, "KANBAN", root / ".agentkanban")
     monkeypatch.setattr(kanban, "TASKS", tasks_dir)
@@ -85,6 +87,19 @@ def test_cycle_is_reported(board):
     board("002", deps="HYP-001")
     board("003", deps="HYP-002")
     assert any(e.startswith("cycle de dépendances") for e in errors_of())
+
+
+def test_qa_dependencies_unblock_but_done_requires_verified_dependencies(board):
+    board("001", lane="qa")
+    board("002", deps="HYP-001")
+    board("003", lane="qa", deps="HYP-001")
+    assert errors_of() == []
+    tasks = kanban.load([])
+    report = kanban.status(tasks)
+    assert [t["id"] for t in report["ready"]] == ["HYP-002"]
+    assert [t["id"] for t in report["qa"]] == ["HYP-001", "HYP-003"]
+    board("004", lane="done", deps="HYP-001")
+    assert any("HYP-004: en `done`" in e and "pas vérifiée" in e for e in errors_of())
 
 
 def test_started_before_dependencies(board):

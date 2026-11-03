@@ -21,6 +21,10 @@ Détails d'implémentation : `TECHNICAL.md`.
 - Les tâches portent un identifiant `HYP-NNN` dans leur titre ; priorité, taille, epic et
   dépendances sont en tête du premier message `### user` de chaque tâche.
 - Une tâche portant le label `humain` demande une décision de l'utilisateur.
+- **Couloirs** `todo → doing → qa → done`. L'agent met une tâche en `doing` quand il la commence
+  et en `qa` quand il l'a terminée et validée (`./scripts/validate.sh complet`). Seul l'utilisateur
+  passe une tâche de `qa` à `done` après vérification. Une dépendance en `qa` ne bloque plus : on
+  peut enchaîner. Une tâche ne peut être `done` que si ses dépendances le sont.
 - Tout besoin découvert hors périmètre devient une nouvelle tâche `HYP-NNN`.
 
 ## Outils

@@ -29,5 +29,8 @@ Boucle de travail :
 - Avant de rendre la tâche : `./scripts/validate.sh complet` (aucun hook git ne le fait pour toi).
 - Mets à jour `TECHNICAL.md` si l'architecture change.
 
+Couloirs : passe la tâche en `doing` (front-matter `lane`, et `updated`) en la commençant.
+
 À la fin : ajoute dans le fichier de tâche une entrée `### agent` résumant ce qui a été fait, les
-commits, ce qui reste et les écarts au plan, puis `### user`. Ne change pas le couloir.
+commits, ce qui reste et les écarts au plan, puis `### user`. Passe la tâche en `qa`, jamais en
+`done` : la vérification revient à l'utilisateur.

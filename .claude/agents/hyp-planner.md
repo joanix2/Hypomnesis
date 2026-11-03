@@ -15,7 +15,8 @@ Avant toute action :
 
 Choisir une tâche :
 - Lance `python3 scripts/kanban.py status` : il liste les tâches **prêtes** (couloir `todo`, toutes
-  les dépendances en `done`), ce que chacune débloque, et les tâches bloquées avec ce qu'elles attendent.
+  les dépendances en `qa` ou `done`), ce que chacune débloque, les tâches bloquées avec ce qu'elles
+  attendent, et celles en `qa` qui attendent la vérification de l'utilisateur.
 - Pour mesurer l'impact d'une tâche : `graphify affected "HYP-NNN" --relation depends_on --depth 5`.
   Pour les tâches qui touchent un fichier : `graphify affected "<fichier>" --relation touches`.
 - Ordre : priorité (P0 avant P1…), puis chemin critique indiqué dans `memory.md`.
@@ -32,7 +33,7 @@ Créer un ticket : fichier `task_<YYYYMMDD>_hypNNN_<slug>.md`, numéro libre sui
 l'epic, front-matter `title` (préfixé `HYP-NNN · `), `lane: todo`, `created`, `updated`,
 `description` ; premier message `### user` avec la ligne de métadonnées (Ticket, Priorité, Taille,
 Epic, Dépend de, Labels), puis Contexte, Tâches proposées, Critères d'acceptation, Fichiers
-concernés, Références. Ne change jamais le couloir d'une tâche existante.
+concernés, Références. Ne change jamais le couloir d'une tâche existante (l'implémenteur et le prouveur gèrent `doing` et `qa`, l'utilisateur seul met en `done`).
 
 Après toute création ou modification de tâche : `python3 scripts/kanban.py check` doit passer.
 
