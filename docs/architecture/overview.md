@@ -1,5 +1,7 @@
 # Architecture — état d'implémentation
 
+> Fondations du niveau M3 (méta-métamodèle) : voir [m3-metalangage.md](m3-metalangage.md).
+
 Ce document décrit ce qui est **implémenté** dans le dépôt. La cible complète est décrite dans
 le [cahier des charges](../specification/cahier-des-charges-v0.2.md).
 

@@ -10,3 +10,4 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0003](0003-noyau-pur-et-primitives-natives.md) | Noyau pur, primitives natives par registre fermé | Acceptée |
 | [0004](0004-contrats-json-schema.md) | Contrats JSON Schema 2020-12 et enveloppe indépendante du transport | Acceptée |
 | [0005](0005-provenance-et-observabilite-distinctes.md) | Provenance épistémique et observabilité restent distinctes | Acceptée |
+| [0006](0006-m3-theorie-des-types-a-deux-niveaux.md) | Le M3 est une théorie des types à deux niveaux, modale et graduée | Proposée |
