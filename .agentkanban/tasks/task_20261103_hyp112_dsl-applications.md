@@ -40,4 +40,3 @@ Une instance de DSL pour décrire des applications : modèle de données, écran
 - `docs/architecture/m3-metalangage.md` (§6.1, §6.2)
 - `docs/adr/0004-contrats-json-schema.md`
 - Conventions : `.agentkanban/memory.md`
-

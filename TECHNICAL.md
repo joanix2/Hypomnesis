@@ -37,8 +37,8 @@ semi-anneau. Propriétés : `docs/verification/proprietes.md`. Stratégie : `doc
 
 ```bash
 .venv/bin/pytest
-.venv/bin/ruff check . && .venv/bin/ruff format --check .
-.venv/bin/pyright --pythonpath .venv/bin/python
+.venv/bin/pre-commit install            # une fois : linters avant chaque commit
+.venv/bin/pre-commit run --all-files    # Ruff, Pyright, YAML/JSON/TOML, schémas, Lean
 .venv/bin/hypomnesis run examples/basics/tour.hyp
 cd formal && lake build && lake env lean Audit.lean
 ```

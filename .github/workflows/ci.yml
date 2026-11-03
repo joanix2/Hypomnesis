@@ -20,12 +20,9 @@ jobs:
           cache: pip
       - name: Install
         run: pip install -e '.[dev]'
-      - name: Lint
-        run: |
-          ruff check .
-          ruff format --check .
-      - name: Type-check
-        run: pyright
+      - name: Linters (pre-commit)
+        # lean-build s'exécute dans le job « proofs »
+        run: SKIP=lean-build pre-commit run --all-files --show-diff-on-failure
       - name: Test
         run: pytest
       - name: Run examples

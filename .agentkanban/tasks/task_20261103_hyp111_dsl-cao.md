@@ -42,4 +42,3 @@ Une instance de DSL pour la CAO paramétrique : esquisses, contraintes géométr
 - `docs/specification/cahier-des-charges-v0.2.md` (§4.2, §16.2)
 - `examples/mechanics/` (plaque et unités existantes)
 - Conventions : `.agentkanban/memory.md`
-

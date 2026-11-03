@@ -51,4 +51,3 @@ Une instance de DSL pour les domaines instruits par la DREAL (Direction régiona
 - `docs/architecture/m3-metalangage.md` (§4.2–4.3 connaissance et support, §6.4 provenance)
 - `docs/verification/proprietes.md`
 - Conventions : `.agentkanban/memory.md`
-

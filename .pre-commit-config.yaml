@@ -1,0 +1,70 @@
+# Linters et vérifications avant commit.
+#   Installation : .venv/bin/pre-commit install
+#   Tout vérifier : .venv/bin/pre-commit run --all-files
+# Les hooks Python utilisent l'environnement du projet (.venv en local,
+# l'interpréteur courant en CI) : mêmes versions que pyproject.toml.
+
+exclude: |
+  (?x)^(
+    docs/specification/.*|        # cahier des charges conservé à l'identique
+    \.agentkanban/INSTRUCTION\.md|  # géré par l'extension Agent Kanban
+    AGENTS\.md|
+    graphify-out/.*|
+    formal/\.lake/.*
+  )$
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-private-key
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.29.4
+    hooks:
+      - id: check-github-workflows
+      - id: check-metaschema
+        name: contrats JSON Schema valides (Draft 2020-12)
+        files: ^(src/hypomnesis/contracts/schemas|tests/contracts/fixtures)/.*\.json$
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff (lint)
+        entry: bash -c 'PY=.venv/bin/python; [ -x "$PY" ] || PY=python; exec "$PY" -m ruff check --fix "$@"' --
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff (format)
+        entry: bash -c 'PY=.venv/bin/python; [ -x "$PY" ] || PY=python; exec "$PY" -m ruff format "$@"' --
+        language: system
+        types_or: [python, pyi]
+      - id: pyright
+        name: pyright (types)
+        entry: bash -c 'PY=.venv/bin/python; [ -x "$PY" ] || PY=python; exec "$PY" -m pyright --pythonpath "$PY"'
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: lean-no-sorry
+        name: lean (aucun sorry)
+        entry: bash -c '! grep -rnwE "sorry|admit" formal/Hypomnesis'
+        language: system
+        files: ^formal/.*\.lean$
+        pass_filenames: false
+      - id: lean-build
+        name: lean (lake build)
+        entry: bash -c 'export PATH="$HOME/.elan/bin:$PATH"; cd formal && lake build'
+        language: system
+        files: ^formal/.*\.(lean|toml)$|^formal/lean-toolchain$
+        pass_filenames: false

@@ -41,4 +41,3 @@ Une instance de DSL (niveau M2) pour décrire et construire des systèmes d'IA :
 - `docs/architecture/m3-metalangage.md` (§4.4 capacités, §6.1 modèles de théories)
 - `docs/verification/proprietes.md`
 - Conventions : `.agentkanban/memory.md`
-

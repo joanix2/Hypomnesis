@@ -11,7 +11,11 @@ Détails d'implémentation : `TECHNICAL.md`.
 - Documentation et tickets en **français** ; code, identifiants et commentaires de code en **anglais**
   (sauf les exemples `.hyp` de domaines métiers francophones).
 - Python ≥ 3.11, environnement `.venv/` ; Lean 4.35 dans `formal/` (sans Mathlib).
-- Pas de commit ni d'ajout au contrôle de version sans demande explicite de l'utilisateur.
+- **Commits réguliers** (demande explicite de l'utilisateur, prioritaire sur la règle par défaut
+  d'`INSTRUCTION.md`) : un commit par étape logique terminée et vérifiée, message en français,
+  terminé par la ligne `Co-Authored-By` de l'agent.
+- Les hooks `pre-commit` (`.pre-commit-config.yaml`) doivent passer ; ne jamais les contourner
+  (`--no-verify` interdit).
 - Les tâches portent un identifiant `HYP-NNN` dans leur titre ; priorité, taille, epic et
   dépendances sont en tête du premier message `### user` de chaque tâche.
 - Une tâche portant le label `humain` demande une décision de l'utilisateur.
@@ -20,8 +24,8 @@ Détails d'implémentation : `TECHNICAL.md`.
 ## Définition de fini (toutes tâches)
 
 - Critères d'acceptation de la tâche satisfaits.
-- `.venv/bin/pytest`, `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
-  `.venv/bin/pyright --pythonpath .venv/bin/python` passent.
+- `.venv/bin/pytest` et `.venv/bin/pre-commit run --all-files` passent (Ruff, Pyright, YAML,
+  JSON, TOML, schémas, workflows, et build Lean si `formal/` change).
 - Si `formal/` est touché : `lake build` passe, aucun `sorry`, `lake env lean Audit.lean`
   n'affiche que `propext`, `Quot.sound`, `Classical.choice`.
 - Si la Core IR (`src/hypomnesis/ir/core.py`) ou la sémantique de l'interpréteur change : la
