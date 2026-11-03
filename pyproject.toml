@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hypomnesis"
+version = "0.1.0"
+description = "A language for programmable knowledge and reasoning."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "joanix" }]
+dependencies = [
+  "lark>=1.2",
+  "jsonschema[format-nongpl]>=4.21",
+  "referencing>=0.35",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "hypothesis>=6.100",
+  "ruff>=0.6",
+  "pyright>=1.1.380",
+]
+
+[project.scripts]
+hypomnesis = "hypomnesis.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hypomnesis"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = [
+  "E731",  # the interpreter compiles IR nodes to lambdas on purpose
+  "N802",  # _infer_<NodeName> dispatch methods
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"

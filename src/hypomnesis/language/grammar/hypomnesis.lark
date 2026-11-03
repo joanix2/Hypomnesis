@@ -1,0 +1,217 @@
+// Hypomnesis — grammar of the core language (Phase 1 subset).
+// Parsed with Lark LALR(1). Shift/reduce conflicts (nested `match`,
+// constructor application in patterns) resolve to shift, as in OCaml.
+
+start: _item*
+
+_item: let_item
+     | type_item
+     | module_item
+     | open_item
+     | external_item
+
+// ---------------------------------------------------------------- items
+
+let_item: "let" [REC] binding ("and" binding)*
+type_item: "type" type_def ("and" type_def)*
+module_item: "module" UPATH "=" "struct" _item* "end"
+open_item: "open" UPATH
+external_item: "external" value_name ":" type_expr "=" STRING
+
+value_name: LIDENT
+          | "(" operator ")"
+
+!operator: PIPE | ATAT | EQ | NEQ | LT | GT | LE | GE | AT | CARET
+         | PLUS | MINUS | PLUSDOT | MINUSDOT | STAR | SLASH | STARDOT | SLASHDOT
+         | MOD | STARSTAR
+
+binding: value_name pat_atom* [":" type_expr] "=" expr   -> fun_binding
+       | binding_pattern "=" expr                         -> pat_binding
+
+binding_pattern: "_"                                      -> pwild
+               | "(" ")"                                  -> punit
+               | "(" pattern ")"
+               | pat_cons ("," pat_cons)+                 -> ptuple
+               | "{" field_pat (";" field_pat)* ";"? "}"  -> precord
+
+// ---------------------------------------------------------- expressions
+
+?expr: "let" [REC] binding ("and" binding)* "in" expr     -> let_expr
+     | "fun" pat_atom+ "->" expr                          -> lambda_expr
+     | "function" match_arms                              -> function_expr
+     | "if" expr "then" expr "else" expr                  -> if_expr
+     | "match" expr "with" match_arms                     -> match_expr
+     | comma_expr
+
+?comma_expr: apply_op ("," apply_op)+                     -> tuple
+           | apply_op
+
+match_arms: BAR? arm (BAR arm)*
+arm: pattern ["when" expr] "->" expr
+
+?apply_op: pipe_expr ATAT apply_op                        -> binop
+         | pipe_expr
+
+?pipe_expr: pipe_expr PIPE or_expr                        -> binop
+          | or_expr
+
+?or_expr: and_expr OROR or_expr                           -> binop
+        | and_expr
+
+?and_expr: cmp_expr AMPAMP and_expr                       -> binop
+         | cmp_expr
+
+?cmp_expr: cmp_expr (EQ | NEQ | LT | GT | LE | GE) concat_expr -> binop
+         | concat_expr
+
+?concat_expr: add_expr CONS concat_expr                   -> cons_expr
+            | add_expr (AT | CARET) concat_expr           -> binop
+            | add_expr
+
+?add_expr: add_expr (PLUS | MINUS | PLUSDOT | MINUSDOT) mul_expr -> binop
+         | mul_expr
+
+?mul_expr: mul_expr (STAR | SLASH | STARDOT | SLASHDOT | MOD) pow_expr -> binop
+         | pow_expr
+
+?pow_expr: unary STARSTAR pow_expr                        -> binop
+         | unary
+
+?unary: MINUS unary                                       -> neg
+      | MINUSDOT unary                                    -> fneg
+      | app
+
+?app: app postfix                                         -> apply
+    | postfix
+
+?postfix: postfix "." field_name                          -> field
+        | atom
+
+?atom: INT                                                -> int_lit
+     | FLOAT                                              -> float_lit
+     | STRING                                             -> string_lit
+     | "true"                                             -> true_lit
+     | "false"                                            -> false_lit
+     | "(" ")"                                            -> unit_lit
+     | LIDENT                                             -> var
+     | QLIDENT                                            -> var
+     | UPATH                                              -> ctor
+     | "(" operator ")"                                   -> op_var
+     | "(" expr ")"
+     | "(" expr ":" type_expr ")"                         -> annot
+     | "[" "]"                                            -> nil
+     | "[" expr (";" expr)* ";"? "]"                      -> list_lit
+     | "{" field_assign (";" field_assign)* ";"? "}"      -> record
+     | "{" postfix "with" field_assign (";" field_assign)* ";"? "}" -> record_update
+
+field_assign: field_name "=" expr
+field_name: LIDENT | QLIDENT
+
+// ------------------------------------------------------------- patterns
+
+?pattern: pattern "as" LIDENT                             -> palias
+        | pat_or
+
+?pat_or: pat_or BAR pat_tuple                             -> por
+       | pat_tuple
+
+?pat_tuple: pat_cons ("," pat_cons)+                      -> ptuple
+          | pat_cons
+
+?pat_cons: pat_app CONS pat_cons                          -> pcons
+         | pat_app
+
+?pat_app: UPATH pat_atom                                  -> pctor_arg
+        | pat_atom
+
+?pat_atom: "_"                                            -> pwild
+         | LIDENT                                         -> pvar
+         | UPATH                                          -> pctor
+         | INT                                            -> pint
+         | MINUS INT                                      -> pnegint
+         | FLOAT                                          -> pfloat
+         | MINUS FLOAT                                    -> pnegfloat
+         | STRING                                         -> pstring
+         | "true"                                         -> ptrue
+         | "false"                                        -> pfalse
+         | "(" ")"                                        -> punit
+         | "(" pattern ")"
+         | "(" pattern ":" type_expr ")"                  -> pannot
+         | "[" "]"                                        -> pnil
+         | "[" pattern (";" pattern)* ";"? "]"            -> plist
+         | "{" field_pat (";" field_pat)* ";"? "}"        -> precord
+
+field_pat: field_name ["=" pattern]
+
+// ---------------------------------------------------------------- types
+
+?type_expr: type_tuple ARROW type_expr                    -> tarrow
+          | type_tuple
+
+?type_tuple: type_app (STAR type_app)+                    -> ttuple
+           | type_app
+
+?type_app: type_app type_name                             -> tapp
+         | "(" type_expr ("," type_expr)+ ")" type_name   -> tappn
+         | type_atom
+
+?type_atom: TYVAR                                         -> tvar
+          | type_name                                     -> tcon
+          | "(" type_expr ")"
+
+type_name: LIDENT | QLIDENT
+
+type_def: [type_params] LIDENT "=" type_rhs
+type_params: TYVAR
+           | "(" TYVAR ("," TYVAR)* ")"
+
+type_rhs: type_expr                                       -> alias_rhs
+        | "{" field_decl (";" field_decl)* ";"? "}"       -> record_rhs
+        | BAR? ctor_decl (BAR ctor_decl)*                 -> variant_rhs
+
+field_decl: LIDENT ":" type_expr
+ctor_decl: UPATH ["of" type_expr]
+
+// ---------------------------------------------------------------- lexer
+
+REC: "rec"
+
+ARROW: "->"
+PIPE: "|>"
+ATAT: "@@"
+OROR: "||"
+AMPAMP: "&&"
+BAR: "|"
+EQ: "="
+NEQ: "<>"
+LE: "<="
+GE: ">="
+LT: "<"
+GT: ">"
+CONS: "::"
+AT: "@"
+CARET: "^"
+PLUSDOT: "+."
+MINUSDOT: "-."
+STARDOT: "*."
+SLASHDOT: "/."
+STARSTAR: "**"
+PLUS: "+"
+MINUS: "-"
+STAR: "*"
+SLASH: "/"
+MOD: "mod"
+
+QLIDENT.2: /([A-Z][A-Za-z0-9_']*\.)+[a-z_][A-Za-z0-9_']*/
+UPATH: /[A-Z][A-Za-z0-9_']*(\.[A-Z][A-Za-z0-9_']*)*/
+LIDENT: /[a-z][A-Za-z0-9_']*|_[A-Za-z0-9_']+/
+TYVAR: /'[a-z_][A-Za-z0-9_']*/
+
+FLOAT.2: /\d[\d_]*\.[\d_]*([eE][+-]?\d+)?|\d[\d_]*[eE][+-]?\d+/
+INT: /\d[\d_]*/
+STRING: /"(\\.|[^"\\])*"/
+
+COMMENT: /\(\*[\s\S]*?\*\)/
+%ignore COMMENT
+%import common.WS
+%ignore WS

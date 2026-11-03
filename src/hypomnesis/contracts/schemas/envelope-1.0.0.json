@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/envelope/1.0.0",
+  "title": "MessageEnvelope",
+  "description": "Transport-independent envelope for every message exchanged with an extension, sensor or actuator (specification §9.6). The payload is validated separately against the schema named by schema_id.",
+  "type": "object",
+  "properties": {
+    "message_id": { "type": "string", "minLength": 1 },
+    "schema_id": { "type": "string", "format": "uri", "minLength": 1 },
+    "schema_version": { "$ref": "#/$defs/semver" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "correlation_id": { "type": "string", "minLength": 1 },
+    "trace_context": {
+      "description": "W3C Trace Context propagated for observability; never a proof of anything.",
+      "type": "object",
+      "properties": {
+        "traceparent": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$"
+        },
+        "tracestate": { "type": "string" }
+      },
+      "required": ["traceparent"],
+      "additionalProperties": false
+    },
+    "payload": {}
+  },
+  "required": ["message_id", "schema_id", "schema_version", "timestamp", "payload"],
+  "additionalProperties": false,
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z.-]+)?$"
+    }
+  }
+}

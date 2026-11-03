@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/extension-manifest/1.0.0",
+  "title": "ExtensionManifest",
+  "description": "Static description of an extension (specification §6.1). It must be inspectable without running the extension's code.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "Unique dotted identifier, e.g. 'motor.move'.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$"
+    },
+    "version": { "$ref": "https://schemas.example.org/hypomnesis/envelope/1.0.0#/$defs/semver" },
+    "role": {
+      "enum": [
+        "Observer", "Generator", "Estimator", "Transpiler", "Solver",
+        "Validator", "KnowledgeBase", "Actuator", "Resolver"
+      ]
+    },
+    "description": { "type": "string" },
+    "signature": {
+      "description": "Hypomnesis types of the operation, checked statically against call sites.",
+      "type": "object",
+      "properties": {
+        "input": { "type": "string", "minLength": 1 },
+        "output": { "type": "string", "minLength": 1 }
+      },
+      "required": ["input", "output"],
+      "additionalProperties": false
+    },
+    "input_schema": { "type": "string", "format": "uri" },
+    "output_schema": { "type": "string", "format": "uri" },
+    "preconditions": { "type": "array", "items": { "type": "string" } },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "version": { "type": "string", "description": "Version constraint, e.g. '>=1.0.0,<2'." }
+        },
+        "required": ["id", "version"],
+        "additionalProperties": false
+      }
+    },
+    "capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "permissions": {
+      "description": "Permissions the runtime must grant before any invocation.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]*$" },
+      "uniqueItems": true
+    },
+    "backend": {
+      "type": "object",
+      "properties": {
+        "kind": { "enum": ["python", "process", "http", "builtin"] },
+        "entry_point": { "type": "string", "minLength": 1 }
+      },
+      "required": ["kind", "entry_point"],
+      "additionalProperties": false
+    },
+    "guarantees": { "type": "array", "items": { "type": "string" } },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "error_policy": {
+      "type": "object",
+      "properties": {
+        "idempotent": { "type": "boolean" },
+        "timeout_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "max_attempts": { "type": "integer", "minimum": 1 },
+        "backoff_seconds": { "type": "number", "minimum": 0 }
+      },
+      "required": ["idempotent", "timeout_seconds", "max_attempts"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id", "version", "role", "signature", "input_schema", "output_schema",
+    "permissions", "backend", "error_policy"
+  ],
+  "additionalProperties": false,
+  "if": {
+    "properties": { "error_policy": { "properties": { "idempotent": { "const": false } } } }
+  },
+  "then": {
+    "description": "Non-idempotent operations must not be retried automatically (§9.7).",
+    "properties": { "error_policy": { "properties": { "max_attempts": { "const": 1 } } } }
+  }
+}

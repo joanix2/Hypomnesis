@@ -1,0 +1,30 @@
+(* Units as a library: the core knows nothing about metres.
+   Each dimension is a distinct nominal type, so mixing a length with an
+   area is a type error detected before execution. *)
+
+module Area = struct
+  type t = { square_metres : float }
+  let of_square_metres v = { square_metres = v }
+  let to_square_millimetres a = a.square_metres *. 1000000.0
+  let add a b = { square_metres = a.square_metres +. b.square_metres }
+end
+
+module Volume = struct
+  type t = { cubic_metres : float }
+  let to_cubic_millimetres v = v.cubic_metres *. 1000000000.0
+end
+
+module Length = struct
+  type t = { metres : float }
+  let m v = { metres = v }
+  let mm v = { metres = v /. 1000.0 }
+  let cm v = { metres = v /. 100.0 }
+  let to_mm l = l.metres *. 1000.0
+  let add a b = { metres = a.metres +. b.metres }
+  let compare a b = compare a.metres b.metres
+  let multiply a b = Area.of_square_metres (a.metres *. b.metres)
+end
+
+module Dimensions = struct
+  let multiply_area_length a l = { Volume.cubic_metres = a.Area.square_metres *. l.Length.metres }
+end

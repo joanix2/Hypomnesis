@@ -1,0 +1,179 @@
+(* Hypomnesis prelude — loaded before every program.
+
+   Only primitives are native (declared with `external` and bound to the
+   closed registry of hypomnesis.runtime.natives). Everything else is
+   written in Hypomnesis itself. *)
+
+type 'a option = None | Some of 'a
+type ('a, 'e) result = Ok of 'a | Error of 'e
+
+(* ------------------------------------------------------------ operators *)
+
+external ( + ) : int -> int -> int = "int.add"
+external ( - ) : int -> int -> int = "int.sub"
+external ( * ) : int -> int -> int = "int.mul"
+external ( / ) : int -> int -> int = "int.div"
+external ( mod ) : int -> int -> int = "int.mod"
+
+external ( +. ) : float -> float -> float = "float.add"
+external ( -. ) : float -> float -> float = "float.sub"
+external ( *. ) : float -> float -> float = "float.mul"
+external ( /. ) : float -> float -> float = "float.div"
+external ( ** ) : float -> float -> float = "float.pow"
+
+external ( ^ ) : string -> string -> string = "string.concat"
+
+external ( = ) : 'a -> 'a -> bool = "poly.eq"
+external ( <> ) : 'a -> 'a -> bool = "poly.neq"
+external ( < ) : 'a -> 'a -> bool = "poly.lt"
+external ( <= ) : 'a -> 'a -> bool = "poly.le"
+external ( > ) : 'a -> 'a -> bool = "poly.gt"
+external ( >= ) : 'a -> 'a -> bool = "poly.ge"
+external compare : 'a -> 'a -> int = "poly.compare"
+
+external failwith : string -> 'a = "core.failwith"
+external ignore : 'a -> unit = "core.ignore"
+
+let rec ( @ ) l1 l2 =
+  match l1 with
+  | [] -> l2
+  | x :: rest -> x :: (rest @ l2)
+
+(* ------------------------------------------------------------ basics *)
+
+let not b = if b then false else true
+let id x = x
+let const x _ = x
+let flip f x y = f y x
+let compose f g x = f (g x)
+let fst (a, _) = a
+let snd (_, b) = b
+let min a b = if a <= b then a else b
+let max a b = if a >= b then a else b
+
+external string_of_int : int -> string = "int.to_string"
+external int_of_string : string -> int = "int.of_string"
+external float_of_int : int -> float = "int.to_float"
+external int_of_float : float -> int = "float.to_int"
+external string_of_float : float -> string = "float.to_string"
+external float_of_string : string -> float = "float.of_string"
+
+let string_of_bool b = if b then "true" else "false"
+
+(* ------------------------------------------------------------ modules *)
+
+module Int = struct
+  let abs n = if n < 0 then 0 - n else n
+  let to_string = string_of_int
+  let to_float = float_of_int
+  let of_string = int_of_string
+end
+
+module Float = struct
+  external sqrt : float -> float = "float.sqrt"
+  external floor : float -> int = "float.floor"
+  external ceil : float -> int = "float.ceil"
+  external abs : float -> float = "float.abs"
+  external pi : float = "float.pi"
+  let of_int = float_of_int
+  let to_int = int_of_float
+  let to_string = string_of_float
+  let of_string = float_of_string
+end
+
+module String = struct
+  external length : string -> int = "string.length"
+  external sub : string -> int -> int -> string = "string.sub"
+  external get : string -> int -> string = "string.get"
+  external uppercase : string -> string = "string.uppercase"
+  external lowercase : string -> string = "string.lowercase"
+
+  let rec concat sep l =
+    match l with
+    | [] -> ""
+    | [x] -> x
+    | x :: rest -> x ^ sep ^ concat sep rest
+end
+
+module Option = struct
+  let map f o = match o with None -> None | Some x -> Some (f x)
+  let bind o f = match o with None -> None | Some x -> f x
+  let value o default = match o with None -> default | Some x -> x
+  let is_some o = match o with None -> false | Some _ -> true
+  let is_none o = match o with None -> true | Some _ -> false
+  let get o = match o with None -> failwith "Option.get" | Some x -> x
+end
+
+module Result = struct
+  let map f r = match r with Ok x -> Ok (f x) | Error e -> Error e
+  let bind r f = match r with Ok x -> f x | Error e -> Error e
+  let is_ok r = match r with Ok _ -> true | Error _ -> false
+end
+
+module List = struct
+  let rec length_aux acc l = match l with [] -> acc | _ :: t -> length_aux (acc + 1) t
+  let length l = length_aux 0 l
+
+  let rec rev_append l1 l2 = match l1 with [] -> l2 | x :: t -> rev_append t (x :: l2)
+  let rev l = rev_append l []
+  let append l1 l2 = l1 @ l2
+
+  let rec fold_left f acc l = match l with [] -> acc | x :: t -> fold_left f (f acc x) t
+  let fold_right f l acc = fold_left (fun a x -> f x a) acc (rev l)
+
+  let map f l = rev (fold_left (fun acc x -> f x :: acc) [] l)
+  let mapi f l =
+    let step (i, acc) x = (i + 1, f i x :: acc) in
+    rev (snd (fold_left step (0, []) l))
+  let filter p l = rev (fold_left (fun acc x -> if p x then x :: acc else acc) [] l)
+  let filter_map f l =
+    rev (fold_left (fun acc x -> match f x with Some y -> y :: acc | None -> acc) [] l)
+  let concat_map f l = rev (fold_left (fun acc x -> rev_append (f x) acc) [] l)
+  let flatten l = concat_map id l
+
+  let rec exists p l = match l with [] -> false | x :: t -> p x || exists p t
+  let rec for_all p l = match l with [] -> true | x :: t -> p x && for_all p t
+  let mem x l = exists (fun y -> y = x) l
+
+  let rec find_opt p l =
+    match l with [] -> None | x :: t -> if p x then Some x else find_opt p t
+
+  let rec assoc_opt k l =
+    match l with [] -> None | (k', v) :: t -> if k = k' then Some v else assoc_opt k t
+
+  let rec nth_opt l n =
+    match l with [] -> None | x :: t -> if n = 0 then Some x else nth_opt t (n - 1)
+
+  let hd_opt l = match l with [] -> None | x :: _ -> Some x
+
+  let rec range_aux acc a b = if b < a then acc else range_aux (b :: acc) a (b - 1)
+  let range a b = range_aux [] a (b - 1)
+  let init n f = map f (range 0 n)
+
+  let sum l = fold_left ( + ) 0 l
+  let sum_float l = fold_left ( +. ) 0.0 l
+
+  let rec zip l1 l2 =
+    match (l1, l2) with
+    | (x :: t1, y :: t2) -> (x, y) :: zip t1 t2
+    | _ -> []
+
+  let rec merge cmp l1 l2 =
+    match (l1, l2) with
+    | ([], l) -> l
+    | (l, []) -> l
+    | (x :: t1, y :: t2) ->
+      if cmp x y <= 0 then x :: merge cmp t1 l2 else y :: merge cmp l1 t2
+
+  let rec split l =
+    match l with
+    | [] -> ([], [])
+    | [x] -> ([x], [])
+    | x :: y :: t -> let (a, b) = split t in (x :: a, y :: b)
+
+  let rec sort cmp l =
+    match l with
+    | [] -> []
+    | [x] -> [x]
+    | _ -> let (a, b) = split l in merge cmp (sort cmp a) (sort cmp b)
+end

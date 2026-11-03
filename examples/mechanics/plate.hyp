@@ -1,0 +1,40 @@
+(* Section 4.2 of the specification: a plate described in a domain module.
+   Requires units.hyp:  hypomnesis run examples/mechanics/units.hyp examples/mechanics/plate.hyp *)
+
+module Mechanics = struct
+
+  type plate = {
+    width : Length.t;
+    height : Length.t;
+    thickness : Length.t option;
+  }
+
+  let area p =
+    Length.multiply p.width p.height
+
+  let volume p thickness =
+    Dimensions.multiply_area_length (area p) thickness
+
+  (* Missing knowledge stays explicit: a plate may not know its thickness. *)
+  let volume_if_known p =
+    Option.map (volume p) p.thickness
+
+  let is_valid p =
+    match p.thickness with
+    | None -> false
+    | Some t -> Length.to_mm t > 0.0 && Length.compare t p.width < 0
+
+end
+
+let plate = {
+  Mechanics.width = Length.mm 120.0;
+  height = Length.mm 80.0;
+  thickness = None;
+}
+
+let area_mm2 = Area.to_square_millimetres (Mechanics.area plate)
+let unknown_volume = Mechanics.volume_if_known plate
+
+let completed = { plate with Mechanics.thickness = Some (Length.mm 4.0) }
+let volume_mm3 = Option.map Volume.to_cubic_millimetres (Mechanics.volume_if_known completed)
+let valid = Mechanics.is_valid completed

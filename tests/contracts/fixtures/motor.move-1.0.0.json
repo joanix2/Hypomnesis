@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/motor.move/1.0.0",
+  "title": "MotorMoveCommand",
+  "type": "object",
+  "properties": {
+    "command_id": { "type": "string", "minLength": 1 },
+    "motor_id": { "type": "string", "minLength": 1 },
+    "position_deg": { "type": "number", "minimum": 0, "maximum": 180 },
+    "speed_deg_s": { "type": "number", "exclusiveMinimum": 0 }
+  },
+  "required": ["command_id", "motor_id", "position_deg", "speed_deg_s"],
+  "additionalProperties": false
+}

@@ -1,0 +1,45 @@
+(* A short tour of the core language. Run: hypomnesis run examples/basics/tour.hyp *)
+
+(* Algebraic data types and pattern matching *)
+type expr =
+  | Num of float
+  | Var of string
+  | Add of expr * expr
+  | Mul of expr * expr
+
+let rec eval env e =
+  match e with
+  | Num x -> x
+  | Var name -> Option.value (List.assoc_opt name env) 0.0
+  | Add (a, b) -> eval env a +. eval env b
+  | Mul (a, b) -> eval env a *. eval env b
+
+let rec simplify e =
+  match e with
+  | Add (Num 0.0, x) | Add (x, Num 0.0) -> simplify x
+  | Mul (Num 1.0, x) -> simplify x
+  | Add (a, b) -> Add (simplify a, simplify b)
+  | Mul (a, b) -> Mul (simplify a, simplify b)
+  | _ -> e
+
+let formula = Add (Num 0.0, Mul (Num 1.0, Add (Var "x", Num 2.0)))
+let simplified = simplify formula
+let result = eval [("x", 40.0)] simplified
+
+(* Higher-order functions, pipes and inferred polymorphism *)
+let squares_of_evens xs =
+  xs
+  |> List.filter (fun x -> x mod 2 = 0)
+  |> List.map (fun x -> x * x)
+
+let total = List.sum (squares_of_evens (List.range 1 11))
+
+(* Records and functional update *)
+type account = { owner : string; balance : int }
+
+let deposit amount acc = { acc with balance = acc.balance + amount }
+let alice = deposit 50 { owner = "alice"; balance = 100 }
+
+(* Results make failure explicit *)
+let safe_div a b = if b = 0 then Error "division by zero" else Ok (a / b)
+let outcomes = List.map (safe_div 10) [2; 0; 5]
