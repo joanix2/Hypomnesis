@@ -1,0 +1,74 @@
+"""Traduction langage naturel → programme M1 et banc d'essai, avec un faux LLM."""
+
+import shutil
+from pathlib import Path
+
+from hypomnesis.engine.language import load_language
+from hypomnesis.llm.benchmark import run_benchmark, semantic_errors, summary
+from hypomnesis.llm.ollama import Reply
+from hypomnesis.llm.translation import extract_code, translate
+
+ROOT = Path(__file__).resolve().parents[2]
+MECANIQUE = ROOT / "languages" / "mecanique"
+GOOD = (
+    'let demande = { Plaque.nom = "p"; largeur = 120.0; hauteur = 80.0; '
+    "epaisseur = Some 4.0; masse_max = 0.5 }\n"
+    "let procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+)
+
+
+class FakeLLM:
+    """Rend les réponses prévues, dans l'ordre, et garde les messages reçus."""
+
+    def __init__(self, *answers: str) -> None:
+        self.answers = list(answers)
+        self.calls: list[list[dict[str, str]]] = []
+
+    def chat(self, model, messages, *, num_ctx=16384):
+        self.calls.append(messages)
+        return Reply(self.answers.pop(0), 0.1, 10, 100.0)
+
+
+def test_extract_code_drops_markdown_and_reasoning():
+    assert extract_code("```ocaml\nlet x = 1\n```\nVoilà.") == "let x = 1\n"
+    assert extract_code("Okay, let's think…\n</think>\n\nlet x = 1") == "let x = 1\n"
+
+
+def test_prompt_is_built_from_the_language():
+    llm = FakeLLM(GOOD)
+    translate(llm, "m", load_language(MECANIQUE), "plaque", examples=["(* exemple *)"])
+    system = llm.calls[0][0]["content"]
+    assert "module Plaque" in system and "(* exemple *)" in system and "let procedure" in system
+
+
+def test_compiler_diagnostics_drive_the_repair():
+    llm = FakeLLM("let demande = { Plaque.nom = 1 }", GOOD)
+    result = translate(llm, "m", load_language(MECANIQUE), "plaque", examples=[])
+    assert result.accepted and len(result.attempts) == 2
+    assert "type error" in result.attempts[0].stage
+    assert "Le compilateur refuse" in llm.calls[1][-1]["content"]
+
+
+def test_repairs_are_bounded():
+    llm = FakeLLM("n'importe quoi", "toujours pas", "encore")
+    result = translate(llm, "m", load_language(MECANIQUE), "plaque", examples=[], max_repairs=2)
+    assert not result.accepted and len(result.attempts) == 3
+
+
+def test_semantic_check_catches_invented_values():
+    errors = semantic_errors(MECANIQUE, GOOD, {"bindings": {"demande": {"epaisseur": None}}})
+    assert errors == ["demande.epaisseur = 4.0, attendu None"]
+
+
+def test_benchmark_end_to_end_with_a_fake_model(tmp_path, monkeypatch):
+    spec = (
+        '{"examples": [], "cases": [{"id": "c1", "request": "plaque", '
+        '"expect": {"bindings": {"demande": {"largeur": 120.0, "epaisseur": 4.0}}}}]}'
+    )
+    language = tmp_path / "mecanique"
+    shutil.copytree(MECANIQUE, language)  # copie réelle : les adaptateurs restent dans le paquet
+    (language / "benchmark.json").write_text(spec)
+    monkeypatch.chdir(tmp_path)
+    results = run_benchmark(FakeLLM(GOOD), ["faux"], [language], log=lambda _: None)
+    assert results[0].correct and results[0].executed
+    assert "| faux | 1 |" in summary(results)

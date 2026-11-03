@@ -82,6 +82,25 @@ def _lancer(args: argparse.Namespace) -> int:
         return 1
 
 
+def _benchmark(args: argparse.Namespace) -> int:
+    from datetime import datetime
+
+    from hypomnesis.llm.benchmark import run_benchmark, summary
+    from hypomnesis.llm.ollama import OllamaClient
+
+    models = [m.strip() for m in args.modeles.split(",") if m.strip()]
+    results = run_benchmark(OllamaClient(), models, args.langages, repairs=args.reparations)
+    table = summary(results)
+    args.sortie.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    (args.sortie / f"resultats-{stamp}.json").write_text(
+        json.dumps([r.to_json() for r in results], indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    (args.sortie / f"resume-{stamp}.md").write_text(table + "\n", encoding="utf-8")
+    print("\n" + table)
+    return 0
+
+
 def _repl(session: Session) -> int:
     print(f"Hypomnesis {__version__} — enter items or expressions, end with ';;'. Ctrl-D to quit.")
     buffer: list[str] = []
@@ -149,10 +168,21 @@ def main(argv: list[str] | None = None) -> int:
     lancer.add_argument(
         "--sans-permission", action="store_true", help="n'accorder aucune permission"
     )
+    bench = commands.add_parser(
+        "benchmark-llm", help="mesurer la traduction langage naturel → programme M1 par des LLM"
+    )
+    bench.add_argument(
+        "langages", type=Path, nargs="+", help="dossiers de langages (benchmark.json)"
+    )
+    bench.add_argument("--modeles", required=True, help="modèles Ollama, séparés par des virgules")
+    bench.add_argument("--reparations", type=int, default=2, help="réparations par les diagnostics")
+    bench.add_argument("--sortie", type=Path, default=Path("sortie/benchmark-llm"))
     args = parser.parse_args(argv)
 
     if args.command == "lancer":
         return _lancer(args)
+    if args.command == "benchmark-llm":
+        return _benchmark(args)
     session = Session()
     if args.command == "repl":
         return _repl(session)

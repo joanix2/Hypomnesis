@@ -1,0 +1,25 @@
+{
+  "description": "Traduction langage naturel → programme M1 du langage « ventilation ».",
+  "examples": ["../../programs/ventilation/salle_serveurs.hyp"],
+  "cases": [
+    {
+      "id": "v01-base",
+      "request": "Régule la température avec le capteur thermo-1 et le ventilateur fan-1, au maximum 4 itérations.",
+      "expect": {
+        "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-1", "budget": 4 } },
+        "calls": ["Ventilation.reguler"]
+      }
+    },
+    {
+      "id": "v02-autre-ventilateur",
+      "request": "Surveille le capteur thermo-1 et pilote le ventilateur fan-2, pas plus de 3 tentatives.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-2", "budget": 3 } } }
+    },
+    {
+      "id": "v03-une-action",
+      "request": "Lance une régulation (capteur thermo-1, ventilateur fan-1) limitée à une seule action.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-1", "budget": 1 } } },
+      "environment": { "temperature": "33" }
+    }
+  ]
+}

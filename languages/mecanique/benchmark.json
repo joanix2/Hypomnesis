@@ -1,0 +1,83 @@
+{
+  "description": "Traduction langage naturel → programme M1 du langage « mécanique ». Unités du langage : mm et kg. « * » : toute valeur acceptée.",
+  "examples": ["../../programs/mecanique/plaque_120x80.hyp"],
+  "cases": [
+    {
+      "id": "m01-base",
+      "request": "Crée une plaque de 160 × 90 mm, estime son épaisseur, vérifie sa validité et exporte sa géométrie. Masse maximale : 0,6 kg.",
+      "expect": {
+        "bindings": { "demande": { "largeur": 160.0, "hauteur": 90.0, "epaisseur": null, "masse_max": 0.6 } },
+        "calls": ["Plaque.concevoir demande"], "not_calls": ["concevoir_puis_mesurer"]
+      }
+    },
+    {
+      "id": "m02-par",
+      "request": "Je veux une plaque de 200 par 150 millimètres, masse maximale 1 kg.",
+      "expect": { "bindings": { "demande": { "largeur": 200.0, "hauteur": 150.0, "epaisseur": null, "masse_max": 1.0 } } }
+    },
+    {
+      "id": "m03-cm-grammes",
+      "request": "Plaque de 12 cm sur 8 cm, épaisseur 4 mm, pas plus de 500 grammes.",
+      "expect": { "bindings": { "demande": { "largeur": 120.0, "hauteur": 80.0, "epaisseur": 4.0, "masse_max": 0.5 } } }
+    },
+    {
+      "id": "m04-carree-abaque",
+      "request": "Une plaque carrée de 10 cm de côté, au plus 0,3 kg ; utilise l'abaque pour estimer l'épaisseur.",
+      "expect": {
+        "bindings": { "demande": { "largeur": 100.0, "hauteur": 100.0, "epaisseur": null, "masse_max": 0.3 } },
+        "calls": ["Plaque.estimateur_abaque"]
+      }
+    },
+    {
+      "id": "m05-mesure",
+      "request": "Conçois une plaque de 300 × 200 mm limitée à 2 kg, puis mesure-la et révise la conception.",
+      "expect": {
+        "bindings": { "demande": { "largeur": 300.0, "hauteur": 200.0, "epaisseur": null, "masse_max": 2.0 } },
+        "calls": ["Plaque.concevoir_puis_mesurer"]
+      },
+      "environment": { "mesure": "6" }
+    },
+    {
+      "id": "m06-metres-nom",
+      "request": "Plaque support-moteur de 0,25 m × 0,15 m, 1,5 kg maximum.",
+      "expect": { "bindings": { "demande": { "nom": "support-moteur", "largeur": 250.0, "hauteur": 150.0, "epaisseur": null, "masse_max": 1.5 } } }
+    },
+    {
+      "id": "m07-large-haut",
+      "request": "J'ai besoin d'une plaque de 80 mm de large et 120 mm de haut avec une épaisseur de 3 mm, masse limitée à 400 g.",
+      "expect": { "bindings": { "demande": { "largeur": 80.0, "hauteur": 120.0, "epaisseur": 3.0, "masse_max": 0.4 } } }
+    },
+    {
+      "id": "m08-sans-masse",
+      "request": "Fais une plaque de 50 × 50 mm.",
+      "expect": { "bindings": { "demande": { "largeur": 50.0, "hauteur": 50.0, "epaisseur": null, "masse_max": "*" } } }
+    },
+    {
+      "id": "m09-telegraphique",
+      "request": "plaque 150x100mm ep. 2mm 0.3kg max",
+      "expect": { "bindings": { "demande": { "largeur": 150.0, "hauteur": 100.0, "epaisseur": 2.0, "masse_max": 0.3 } } }
+    },
+    {
+      "id": "m10-regle",
+      "request": "Avec l'estimateur par règle, dimensionne une plaque de 180 × 120 mm de moins de 800 g.",
+      "expect": {
+        "bindings": { "demande": { "largeur": 180.0, "hauteur": 120.0, "epaisseur": null, "masse_max": 0.8 } },
+        "calls": ["Plaque.estimateur_regle"]
+      }
+    },
+    {
+      "id": "m11-mesure-implicite",
+      "request": "Une plaque de 400 mm sur 250 mm qui ne doit pas dépasser 3 kg ; ensuite contrôle son épaisseur réelle au pied à coulisse.",
+      "expect": {
+        "bindings": { "demande": { "largeur": 400.0, "hauteur": 250.0, "epaisseur": null, "masse_max": 3.0 } },
+        "calls": ["Plaque.concevoir_puis_mesurer"]
+      },
+      "environment": { "mesure": "8" }
+    },
+    {
+      "id": "m12-piege-epaisseur",
+      "request": "Plaque de 120 × 120 mm, 0,5 kg maximum. Je ne connais pas encore l'épaisseur.",
+      "expect": { "bindings": { "demande": { "largeur": 120.0, "hauteur": 120.0, "epaisseur": null, "masse_max": 0.5 } } }
+    }
+  ]
+}
