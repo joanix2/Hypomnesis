@@ -87,7 +87,9 @@ class Dispatcher:
         self.actuators[actuator.id] = actuator
 
     def command(self, actuator: str, payload: Payload) -> Command:
-        return Command(f"cmd-{next(self._ids)}", actuator, dict(payload))
+        """A new command; its identifier (§9.7) is added to the payload if absent."""
+        command_id = f"cmd-{next(self._ids)}"
+        return Command(command_id, actuator, {"command_id": command_id, **payload})
 
     def dispatch(self, command: Command) -> Outcome:
         outcome = Outcome(command)

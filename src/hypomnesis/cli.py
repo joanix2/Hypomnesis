@@ -47,6 +47,11 @@ def _emit_certificate(session: Session, path: Path) -> int:
 
 
 def _demo(args: argparse.Namespace) -> int:
+    if args.scenario == "ventilation":
+        from hypomnesis.demos.ventilation import pipeline as ventilation
+
+        print(ventilation.render(ventilation.run(args.temperature, broken=args.panne)))
+        return 0
     from hypomnesis.demos.plaque.pipeline import EXPORT_PERMISSION, TranscriptionError, render, run
 
     permissions = frozenset() if args.sans_permission else frozenset({EXPORT_PERMISSION})
@@ -116,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     commands.add_parser("repl", help="interactive toplevel")
     demo = commands.add_parser("demo", help="démonstrateurs de bout en bout")
-    demo.add_argument("scenario", choices=["plaque"])
+    demo.add_argument("scenario", choices=["plaque", "ventilation"])
     demo.add_argument(
         "--demande",
         default="Crée une plaque de 120 × 80 mm, estime son épaisseur, "
@@ -128,6 +133,8 @@ def main(argv: list[str] | None = None) -> int:
     demo.add_argument("--masse-max", type=float, default=0.5, help="kg")
     demo.add_argument("--mesure", type=float, help="épaisseur mesurée ensuite (mm) : révision")
     demo.add_argument("--sans-permission", action="store_true", help="refuser l'export")
+    demo.add_argument("--temperature", type=float, default=31.0, help="ventilation : °C initiaux")
+    demo.add_argument("--panne", action="store_true", help="ventilation : ventilateur en panne")
     args = parser.parse_args(argv)
 
     if args.command == "demo":

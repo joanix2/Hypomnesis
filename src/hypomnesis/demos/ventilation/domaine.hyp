@@ -1,0 +1,19 @@
+(* Domaine « ventilation » (scénario MVP secondaire, cahier des charges §16.3).
+   Règles pures : le programme décrit les commandes, il ne les exécute jamais. *)
+
+module Ventilation = struct
+  type commande = Arret | Vitesse of int        (* vitesse en % *)
+
+  let seuil = 28.0                                (* °C *)
+  let baisse_attendue = 1.0                       (* °C, après action *)
+
+  (* Règle de décision : vitesse proportionnelle au dépassement, plafonnée à 100 %. *)
+  let decider temperature =
+    if temperature <= seuil then Arret
+    else
+      let v = 40 + int_of_float ((temperature -. seuil) *. 20.0) in
+      Vitesse (if v > 100 then 100 else v)
+
+  (* Effet attendu : la température a baissé d'au moins baisse_attendue. *)
+  let effet_confirme avant apres = avant -. apres >= baisse_attendue
+end

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/fan.set/1.0.0",
+  "title": "FanSetCommand",
+  "type": "object",
+  "properties": {
+    "command_id": { "type": "string", "minLength": 1 },
+    "fan_id": { "type": "string", "minLength": 1 },
+    "speed_percent": { "type": "integer", "minimum": 0, "maximum": 100 }
+  },
+  "required": ["command_id", "fan_id", "speed_percent"],
+  "additionalProperties": false
+}

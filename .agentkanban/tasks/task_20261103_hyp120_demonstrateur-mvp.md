@@ -73,3 +73,17 @@ Limites honnêtes :
 `./scripts/validate.sh complet` vert. Passée en `qa`.
 
 ### user
+
+### agent
+
+Ajout : le scénario secondaire du §16.3, `hypomnesis demo ventilation [--panne]` (`src/hypomnesis/demos/ventilation/`).
+
+- Le capteur simulé envoie ses relevés dans l'enveloppe de message, validée puis contrôlée contre son contrat (§9.6).
+- La règle `Ventilation.decider` (Hypomnesis, pure) décide la commande ; le dispatcher l'exécute.
+- L'effet attendu dépend explicitement de l'hypothèse « le ventilateur fonctionne » (support « hypothèse »).
+- Le second relevé confirme l'effet, ou le réfute : l'hypothèse est alors retirée, l'effet attendu invalidé, et la panne conclue des seules observations (support « observé »).
+- La boucle est bornée par un budget (§11).
+
+7 tests (`tests/integration/test_demo_ventilation.py`), dont le rejet d'un relevé hors contrat. Le ticket détaillé HYP-068 reste ouvert pour la version complète (transport fichiers, rejeu).
+
+### user

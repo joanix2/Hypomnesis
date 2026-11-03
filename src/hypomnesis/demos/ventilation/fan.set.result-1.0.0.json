@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/fan.set.result/1.0.0",
+  "title": "FanSetResult",
+  "type": "object",
+  "properties": {
+    "status": { "enum": ["accepted", "simulated"] },
+    "speed_percent": { "type": "integer", "minimum": 0, "maximum": 100 }
+  },
+  "required": ["status"],
+  "additionalProperties": false
+}

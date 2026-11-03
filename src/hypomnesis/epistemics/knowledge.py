@@ -103,6 +103,17 @@ class KnowledgeBase:
     def estimate(self, key: str, value: Any, origin: str, confidence: float) -> Fact:
         return self._record("estimation", "estimated", key, value, origin, confidence, "estimé")
 
+    def hypothesis(self, key: str, value: Any, origin: str, confidence: float) -> Fact:
+        """An assumption: usable as a premise, withdrawn if contradicted."""
+        return self._record("hypothesis", "hypothesis", key, value, origin, confidence, "hypothèse")
+
+    def source_id(self, key: str) -> str:
+        """The source of a fact recorded directly (observed, estimated, hypothesis)."""
+        ids = list(dict.fromkeys(self.facts[key].provenance.observations()))
+        if len(ids) != 1:
+            raise ValueError(f"{key} n'a pas de source unique")
+        return ids[0]
+
     def _record(self, kind, event, key, value, origin, confidence, method) -> Fact:
         source = self._source(kind, origin, confidence)
         fact = Fact(key, value, obs(source.id), f"{method} ({origin})")

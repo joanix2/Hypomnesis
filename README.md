@@ -29,6 +29,8 @@ hypomnesis demo plaque                              # dry-run : rien n'est expor
 hypomnesis demo plaque --mode production --mesure 5 # export SVG/JSON, puis révision par une mesure
 hypomnesis demo plaque --estimateur abaque --masse-max 0.2
 hypomnesis demo plaque --sans-permission --mode production
+hypomnesis demo ventilation             # §16.3 : capteur → règle → actionneur → capteur
+hypomnesis demo ventilation --panne     # l'effet attendu est réfuté, l'hypothèse retirée
 ```
 
 Demande en français → programme Hypomnesis typé → connaissances avec provenance → épaisseur
