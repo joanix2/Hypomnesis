@@ -28,6 +28,8 @@ jobs:
         run: pyright
       - name: Test
         run: pytest
+      - name: Kanban board
+        run: python kanban/board.py --check
       - name: Run examples
         run: |
           hypomnesis run examples/basics/tour.hyp
