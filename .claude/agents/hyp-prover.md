@@ -23,8 +23,8 @@ Règles :
   `induction` ne gère pas les inductifs mutuels).
 
 Avant chaque commit :
-- `cd formal && lake build` ;
-- `lake env lean Audit.lean` : seuls `propext`, `Quot.sound`, `Classical.choice` sont admis ;
+- `./scripts/validate.sh lean` (build, absence de `sorry`, audit : seuls `propext`, `Quot.sound`,
+  `Classical.choice` sont admis) ;
 - ajoute chaque nouveau théorème principal à `formal/Audit.lean` et à
   `docs/verification/proprietes.md` (colonne ✅).
 

@@ -24,9 +24,9 @@ Règles :
 
 Boucle de travail :
 - Coche les cases du fichier `todo_` au fur et à mesure.
-- **Commit après chaque étape logique vérifiée** : `.venv/bin/pytest` puis `git commit` (les hooks
-  pre-commit s'exécutent ; ne jamais utiliser `--no-verify`). Message en français, terminé par la
-  ligne `Co-Authored-By` habituelle.
+- **Commit après chaque étape logique vérifiée** : `./scripts/validate.sh` (mode rapide) puis
+  `git commit`. Message en français, terminé par la ligne `Co-Authored-By` habituelle.
+- Avant de rendre la tâche : `./scripts/validate.sh complet` (aucun hook git ne le fait pour toi).
 - Mets à jour `TECHNICAL.md` si l'architecture change.
 
 À la fin : ajoute dans le fichier de tâche une entrée `### agent` résumant ce qui a été fait, les

@@ -35,9 +35,9 @@ semi-anneau. Propriétés : `docs/verification/proprietes.md`. Stratégie : `doc
 
 ## Graphe de connaissances (Graphify)
 
-`graphify-out/` (non versionné) contient le graphe du dépôt : code, docs, tickets. Il est
-régénéré après chaque commit par le hook `post-commit` installé par `graphify hook install`.
-`CLAUDE.md` demande aux agents de l'interroger avant d'explorer le code.
+`graphify-out/` (non versionné) contient le graphe du dépôt : code, docs, tickets. Il n'est
+reconstruit qu'à la demande : `./scripts/validate.sh graphe` (Graphify puis réinjection du
+Kanban). `CLAUDE.md` demande aux agents de l'interroger avant d'explorer le code.
 
 ```bash
 graphify update .                     # reconstruire le graphe du code (sans LLM)
@@ -55,22 +55,36 @@ Pour enrichir les relations sémantiques des documents (spécification, notes, t
 
 | Commande | Rôle |
 |---|---|
-| `check` | format des tâches, couloirs, dépendances inconnues, cycles, tâche démarrée avant ses dépendances (hook pre-commit `kanban-check`) |
+| `check` | format des tâches, couloirs, dépendances inconnues, cycles, tâche démarrée avant ses dépendances |
 | `status [--json]` | tâches prêtes (avec ce qu'elles débloquent), bloquées (avec ce qu'elles attendent), en cours |
 | `graph [--wait]` | injecte tâches et relations (`depends_on`, `touches`, `references`, `defined_in`, `contains`) dans `graphify-out/graph.json`, sous le verrou de reconstruction de Graphify ; idempotent |
 
-Les éléments injectés portent `_origin: "kanban"` et `source_file: .agentkanban/board.yaml`,
-un fichier stable : la reconstruction incrémentale de Graphify les conserve donc. Les hooks
-post-commit et post-checkout, installés par `scripts/install-git-hooks.sh`, les réinjectent après
-chaque reconstruction (`--wait` attend la fin de celle-ci).
+Les éléments injectés portent `_origin: "kanban"` et `source_file: .agentkanban/board.yaml`.
+Une reconstruction incrémentale de Graphify conserve les nœuds mais perd les relations vers les
+fichiers qu'elle réextrait : réinjecter après chaque `graphify update .`, ce que fait
+`./scripts/validate.sh graphe`. L'injection prend le verrou de reconstruction de Graphify ;
+`--wait` attend la fin d'une reconstruction en cours.
+
+## Validation
+
+Aucun hook git : les validateurs se lancent à la demande, via la skill `/valider`
+(`.claude/skills/valider/`) ou `./scripts/validate.sh <mode>` :
+
+| Mode | Contenu |
+|---|---|
+| `rapide` (défaut) | Ruff (lint, format), Kanban, tests |
+| `complet` | pre-commit sur tout le dépôt (linters, Pyright, schémas, workflows, Lean), tests, audit des axiomes |
+| `lean` | `lake build`, aucun `sorry`, audit des axiomes |
+| `graphe` | `graphify update .` puis réinjection du Kanban |
+
+La CI exécute les mêmes linters à chaque push.
 
 ## Commandes
 
 ```bash
-.venv/bin/pytest
-.venv/bin/pre-commit install            # ou ./scripts/install-git-hooks.sh (tous les hooks)
+./scripts/validate.sh                   # rapide : Ruff, Kanban, tests
+./scripts/validate.sh complet           # tous les validateurs
+./scripts/validate.sh graphe            # reconstruire le graphe Graphify + Kanban
 python3 scripts/kanban.py status        # tâches prêtes et bloquées
-.venv/bin/pre-commit run --all-files    # Ruff, Pyright, YAML/JSON/TOML, schémas, Lean
 .venv/bin/hypomnesis run examples/basics/tour.hyp
-cd formal && lake build && lake env lean Audit.lean
 ```

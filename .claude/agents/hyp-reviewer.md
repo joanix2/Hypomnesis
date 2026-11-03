@@ -12,9 +12,9 @@ Méthode :
    commits concernés (`git log`, `git show`).
 2. Pour chaque critère d'acceptation : établi, partiellement établi ou non établi, avec la preuve
    (test, théorème, commande et sa sortie).
-3. Exécute les vérifications : `.venv/bin/pytest`, `.venv/bin/pre-commit run --all-files`, et si
-   `formal/` est touché `cd formal && lake build && lake env lean Audit.lean` (avec
-   `export PATH="$HOME/.elan/bin:$PATH"`).
+3. Exécute `./scripts/validate.sh complet` (linters, tests, preuves Lean et audit des axiomes).
+   Il peut corriger des détails de forme : si `git diff` n'est pas vide ensuite, signale-le sans
+   committer.
 4. Cherche les défauts de correction : cas limites, erreurs avalées, divergence entre la Core IR
    Python et la formalisation Lean, énoncés de théorèmes plus faibles que l'exigence annoncée.
 5. Vérifie que rien n'a été fait hors périmètre et que la documentation est à jour.

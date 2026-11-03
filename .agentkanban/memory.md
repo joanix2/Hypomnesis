@@ -14,8 +14,10 @@ Détails d'implémentation : `TECHNICAL.md`.
 - **Commits réguliers** (demande explicite de l'utilisateur, prioritaire sur la règle par défaut
   d'`INSTRUCTION.md`) : un commit par étape logique terminée et vérifiée, message en français,
   terminé par la ligne `Co-Authored-By` de l'agent.
-- Les hooks `pre-commit` (`.pre-commit-config.yaml`) doivent passer ; ne jamais les contourner
-  (`--no-verify` interdit).
+- **Validation à la demande** (aucun hook git) : skill `/valider` ou `./scripts/validate.sh <mode>`
+  (`rapide` avant chaque commit, `complet` avant de déclarer une tâche finie ou de pousser, `lean`
+  après une modification de `formal/`, `graphe` pour rafraîchir Graphify). Ne jamais contourner
+  un validateur (`noqa`, `type: ignore`, test désactivé, `sorry`).
 - Les tâches portent un identifiant `HYP-NNN` dans leur titre ; priorité, taille, epic et
   dépendances sont en tête du premier message `### user` de chaque tâche.
 - Une tâche portant le label `humain` demande une décision de l'utilisateur.
@@ -23,19 +25,17 @@ Détails d'implémentation : `TECHNICAL.md`.
 
 ## Outils
 
-- Graphe de connaissances : `graphify query|path|explain` sur `graphify-out/` (voir `CLAUDE.md`),
-  reconstruit après chaque commit ; `graphify update .` après des changements non commités.
-- Kanban : `python3 scripts/kanban.py status` (tâches prêtes ou bloquées), `check` (validation,
-  aussi en pre-commit), `graph` (injection dans Graphify ; voir `CLAUDE.md`).
+- Graphe de connaissances : `graphify query|path|explain|affected` sur `graphify-out/` (voir
+  `CLAUDE.md`) ; il n'est pas reconstruit automatiquement : `./scripts/validate.sh graphe`.
+- Kanban : `python3 scripts/kanban.py status` (tâches prêtes ou bloquées), `check` (validation),
+  `graph` (injection dans Graphify ; voir `CLAUDE.md`).
 - Sous-agents : `.claude/agents/` (`hyp-planner`, `hyp-implementer`, `hyp-prover`, `hyp-reviewer`), voir `AGENTS.md`.
 
 ## Définition de fini (toutes tâches)
 
 - Critères d'acceptation de la tâche satisfaits.
-- `.venv/bin/pytest` et `.venv/bin/pre-commit run --all-files` passent (Ruff, Pyright, YAML,
-  JSON, TOML, schémas, workflows, et build Lean si `formal/` change).
-- Si `formal/` est touché : `lake build` passe, aucun `sorry`, `lake env lean Audit.lean`
-  n'affiche que `propext`, `Quot.sound`, `Classical.choice`.
+- `./scripts/validate.sh complet` passe (linters, Pyright, schémas, workflows, tests, Lean et
+  audit des axiomes).
 - Si la Core IR (`src/hypomnesis/ir/core.py`) ou la sémantique de l'interpréteur change : la
   formalisation Lean est mise à jour dans le même changement (`docs/verification/strategie.md`).
 - Toute propriété nouvellement prouvée est ajoutée à `docs/verification/proprietes.md` et à

@@ -1,6 +1,7 @@
-# Linters et vérifications avant commit.
-#   Installation : .venv/bin/pre-commit install
-#   Tout vérifier : .venv/bin/pre-commit run --all-files
+# Définition des linters du projet. Ils ne sont PAS installés comme hook git :
+# on les lance à la demande via scripts/validate.sh complet (skill /valider),
+# et la CI les exécute à chaque push.
+#   Lancer seul : .venv/bin/pre-commit run --all-files
 # Les hooks Python utilisent l'environnement du projet (.venv en local,
 # l'interpréteur courant en CI) : mêmes versions que pyproject.toml.
 
