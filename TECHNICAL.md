@@ -49,11 +49,27 @@ graphify explain "Session"
 Pour enrichir les relations sémantiques des documents (spécification, notes, tickets), lancer
 `/graphify . --update` dans Claude Code : cette étape utilise des sous-agents.
 
+## Kanban
+
+`scripts/kanban.py` (bibliothèque standard uniquement) lit `.agentkanban/tasks/` :
+
+| Commande | Rôle |
+|---|---|
+| `check` | format des tâches, couloirs, dépendances inconnues, cycles, tâche démarrée avant ses dépendances (hook pre-commit `kanban-check`) |
+| `status [--json]` | tâches prêtes (avec ce qu'elles débloquent), bloquées (avec ce qu'elles attendent), en cours |
+| `graph [--wait]` | injecte tâches et relations (`depends_on`, `touches`, `references`, `defined_in`, `contains`) dans `graphify-out/graph.json`, sous le verrou de reconstruction de Graphify ; idempotent |
+
+Les éléments injectés portent `_origin: "kanban"` et `source_file: .agentkanban/board.yaml`,
+un fichier stable : la reconstruction incrémentale de Graphify les conserve donc. Les hooks
+post-commit et post-checkout, installés par `scripts/install-git-hooks.sh`, les réinjectent après
+chaque reconstruction (`--wait` attend la fin de celle-ci).
+
 ## Commandes
 
 ```bash
 .venv/bin/pytest
-.venv/bin/pre-commit install            # une fois : linters avant chaque commit
+.venv/bin/pre-commit install            # ou ./scripts/install-git-hooks.sh (tous les hooks)
+python3 scripts/kanban.py status        # tâches prêtes et bloquées
 .venv/bin/pre-commit run --all-files    # Ruff, Pyright, YAML/JSON/TOML, schémas, Lean
 .venv/bin/hypomnesis run examples/basics/tour.hyp
 cd formal && lake build && lake env lean Audit.lean

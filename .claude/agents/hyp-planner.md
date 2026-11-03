@@ -14,8 +14,10 @@ Avant toute action :
 3. Lis `TECHNICAL.md` si la tâche touche à l'implémentation.
 
 Choisir une tâche :
-- Une tâche est **prête** si son couloir est `todo` et que toutes les tâches citées dans « Dépend de »
-  sont en couloir `done`. Vérifie-le en lisant le front-matter des fichiers concernés.
+- Lance `python3 scripts/kanban.py status` : il liste les tâches **prêtes** (couloir `todo`, toutes
+  les dépendances en `done`), ce que chacune débloque, et les tâches bloquées avec ce qu'elles attendent.
+- Pour mesurer l'impact d'une tâche : `graphify affected "HYP-NNN" --relation depends_on --depth 5`.
+  Pour les tâches qui touchent un fichier : `graphify affected "<fichier>" --relation touches`.
 - Ordre : priorité (P0 avant P1…), puis chemin critique indiqué dans `memory.md`.
 - Ignore les tâches portant le label `humain` : signale-les à l'utilisateur.
 
@@ -31,5 +33,7 @@ l'epic, front-matter `title` (préfixé `HYP-NNN · `), `lane: todo`, `created`,
 `description` ; premier message `### user` avec la ligne de métadonnées (Ticket, Priorité, Taille,
 Epic, Dépend de, Labels), puis Contexte, Tâches proposées, Critères d'acceptation, Fichiers
 concernés, Références. Ne change jamais le couloir d'une tâche existante.
+
+Après toute création ou modification de tâche : `python3 scripts/kanban.py check` doit passer.
 
 Tu peux committer tes modifications de `.agentkanban/` (commits réguliers, message en français).

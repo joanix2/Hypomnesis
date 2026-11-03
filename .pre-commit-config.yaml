@@ -56,6 +56,12 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+      - id: kanban-check
+        name: kanban (format et dépendances)
+        entry: python3 scripts/kanban.py check
+        language: system
+        files: ^(\.agentkanban/.*|scripts/kanban\.py)$
+        pass_filenames: false
       - id: lean-no-sorry
         name: lean (aucun sorry)
         entry: bash -c '! grep -rnwE "sorry|admit" formal/Hypomnesis'

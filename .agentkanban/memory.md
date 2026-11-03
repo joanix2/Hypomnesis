@@ -25,6 +25,8 @@ Détails d'implémentation : `TECHNICAL.md`.
 
 - Graphe de connaissances : `graphify query|path|explain` sur `graphify-out/` (voir `CLAUDE.md`),
   reconstruit après chaque commit ; `graphify update .` après des changements non commités.
+- Kanban : `python3 scripts/kanban.py status` (tâches prêtes ou bloquées), `check` (validation,
+  aussi en pre-commit), `graph` (injection dans Graphify ; voir `CLAUDE.md`).
 - Sous-agents : `.claude/agents/` (`hyp-planner`, `hyp-implementer`, `hyp-prover`, `hyp-reviewer`), voir `AGENTS.md`.
 
 ## Définition de fini (toutes tâches)
