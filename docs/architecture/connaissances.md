@@ -14,7 +14,8 @@ sans changer les signatures des opérations `observe`, `estimate` et `derive`.
 - `Observation(source, fact)` exige une source de genre `observation`, une
   provenance directe `obs(source.id)` et aucune prémisse.
 - `Unknown(key, description)` est une métavariable non résolue, jamais une valeur
-  concrète. Propositions, contraintes et résolution relèvent de HYP-032.
+  concrète. `MetaVar` (HYP-032, ci-dessous) complète ce marqueur par les
+  propositions typées, contraintes et résolution persistante.
 
 Suivant la spécification v0.3 §7.1, le support est calculé depuis la provenance :
 `Observed`, `Estimated`, `Defaulted`, `Hypothesis`. `Derived` désigne la méthode
@@ -118,6 +119,68 @@ assert from_json(document, codec) == observation
 ```
 
 Le décodage ne modifie aucune base et ne lance aucune règle ou extension.
+
+## Métavariables et propositions (HYP-032)
+
+`epistemics.metavariables.MetaVar(id, codec, constraints=())` représente
+un trou typé. Son `TypeCodec` fermé vient de l'hôte ; la propriété `type`
+expose ce type sans créer un second système de typage. Cette API Python
+n'ajoute ni sentinelle au runtime ni nouvelle forme de Core IR.
+
+Les trois axes restent séparés :
+
+- `state` vaut `unresolved`, `proposed` ou `resolved`.
+- `grade` est le support de la proposition sélectionnée, ou `None` avant
+  résolution. `proposals` conserve chaque instantané Fact, support et provenance.
+- `coherence` vaut `consistent` ou `conflict`. Ici un conflit signifie des
+  valeurs typées inégales pour le même trou ; ce n'est pas encore le détecteur
+  logique général HYP-035 ni une théorie d'égalité propre à un domaine.
+
+`Constraint(name, accepts)` impose un prédicat pur fourni par l'hôte,
+retournant exactement `True` pour une valeur admissible. Les noms sont
+distincts. Type et contraintes sont vérifiés avant acceptation d'une proposition.
+Les erreurs de prédicat sont remontées ; aucun état existant n'est modifié.
+Les opérations suivantes retournent un nouvel état :
+
+- `propose(meta, value, grade, provenance)` ajoute une proposition et rouvre
+  la résolution, même si `meta` était résolue.
+- `best(meta)` choisit le meilleur support. Des valeurs incompatibles au même
+  meilleur grade produisent `ResolutionConflict`, jamais un gagnant arbitraire.
+- `conflict(meta)` reste vrai si **n'importe quelles** propositions diffèrent,
+  même si une observation a un meilleur support qu'une estimation.
+- `resolve(meta)` sélectionne la meilleure proposition si elles sont cohérentes.
+  En présence de conflit, un `choice=<index>` explicite est requis. Ce choix
+  ne supprime ni les autres propositions ni le constat de conflit.
+
+Lire `meta.value` sans résolution lève `UnresolvedMetaVar`. Une métavariable
+ne peut pas être stockée directement comme valeur d'un Fact, même résolue :
+l'appelant doit demander explicitement sa valeur. Les propositions vides,
+mauvais types, contraintes violées, grades non typés ou Unsupported et indices
+invalides sont refusés sans valeur de secours.
+
+```python
+from hypomnesis.epistemics.metavariables import MetaVar, best, conflict, propose, resolve
+from hypomnesis.epistemics.provenance import Support, obs
+
+hole = MetaVar("demande.epaisseur", codec)  # codec int de l'exemple ci-dessus
+estimated = propose(hole, 3, Support.ESTIMATED, obs("estimateur"))
+measured = propose(estimated, 4, Support.OBSERVED, obs("capteur"))
+assert best(measured).grade == Support.OBSERVED
+assert conflict(measured)
+chosen = resolve(measured, choice=1)  # décision explicite de l'hôte
+assert chosen.value == 4 and chosen.coherence == "conflict"
+assert hole.state == "unresolved" and estimated.state == "proposed"
+```
+
+Le grade d'une **proposition** est un jugement fourni par l'hôte, pas une
+preuve reconstruite à partir d'un identifiant de source inconnu. Pour une
+proposition issue d'une base existante, passer `base.support(key)` et
+`base.facts[key].provenance` ; les dérivations de la base continuent à calculer
+leur support depuis les sources, sans accepter ce grade comme une promotion.
+Une future sortie LLM doit être estampillée Hypothesis à sa frontière de
+confiance, jamais autorisée à se déclarer Observed elle-même (HYP-082).
+Ni ces propositions ni leur résolution ne changent automatiquement une
+KnowledgeBase ou son journal ; l'intégration des stratégies revient aux capacités.
 La provenance seule ne contient pas les déclarations de toutes ses sources :
 les faits dérivés nécessitent le contexte de sources de leur base pour évaluer
 support et confiance. Ce format est un instantané typé, pas l'export complet

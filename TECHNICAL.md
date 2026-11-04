@@ -154,6 +154,14 @@ source et laisse les conclusions invalidées inconnues jusqu'à nouvelle
 dérivation ; aucun libellé de méthode n'est exécuté comme du code. Les
 alternatives survivantes recalculent support et confiance sans sources retirées.
 
+HYP-032 : `epistemics/metavariables.py` ajoute `MetaVar` (TypeCodec fermé,
+contraintes nommées), `Proposal`, `propose`, `best`, `resolve` et `conflict`.
+Opérations persistantes ; toute nouvelle proposition rouvre la résolution.
+Pas de lecture concrète avant résolution ; les conflits exigent un choix
+explicite et restent visibles après ce choix. Le support d'une proposition
+est un jugement hôte conservé avec sa provenance, pas une promotion automatique
+d'un fait de la base. Guide : [connaissances.md](docs/architecture/connaissances.md).
+
 Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
 révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une
