@@ -16,13 +16,13 @@ Choix de bibliothèque : pas d'intervalle écrit à la main. `scipy.stats.binomt
 
 Fichiers : `src/hypomnesis/llm/benchmark.py`, `src/hypomnesis/llm/translation.py` et `src/hypomnesis/llm/ollama.py` (paramètre de température), `pyproject.toml` (`scipy`), `tests/unit/test_llm.py`, `tests/unit/test_benchmark.py` (nouveau). **Ne pas** toucher `cli.py` sans vérifier qu'HYP-016 est terminé (il y ajoute `--graphiques`) ; une option `--essais` y sera ajoutée en dernier.
 
-- [ ] Fonction `wilson(k, n, confidence=0.95) -> tuple[float, float]` au-dessus de `scipy.stats.binomtest` ; tests sur des cas connus (0/10, 10/10, 5/10) et `n = 0`
-- [ ] `summary()` : afficher les intervalles de Wilson pour « Correct (1er essai) » et « Correct » ; tableau existant inchangé pour le reste
-- [ ] Temps sans chargement : somme des `reply.seconds - reply.load_seconds` par cas ; deux colonnes, « Temps moy. » et « Temps moy. hors chargement »
-- [ ] Répétitions : paramètre `temperature` (défaut 0) passé de `run_benchmark` à `translate` puis à `ChatClient.chat` ; quand `essais > 1`, la température par défaut des répétitions est > 0 (valeur consignée dans la fiche), et le résumé distingue les essais d'un même cas
-- [ ] Faux client : mettre à jour le faux `ChatClient` de `test_llm.py` pour accepter `temperature` (signature compatible, test existant inchangé dans ses attentes)
-- [ ] Test : avec un faux client déterministe, `essais=3` produit 3 fois plus de lignes et des intervalles cohérents avec les comptes
-- [ ] Test existant de non-recoupement exemples / jeu réservé toujours vert
-- [ ] Documenter dans `TECHNICAL.md` (section Banc LLM) : intervalles de Wilson, temps hors chargement
-- [ ] Noter dans la fiche que la remesure des modèles reste à faire par l'utilisateur (GPU) ; ne pas la lancer
-- [ ] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`
+- [x] Fonction `wilson(k, n, confidence=0.95) -> tuple[float, float]` au-dessus de `scipy.stats.binomtest` ; tests sur des cas connus (0/10, 10/10, 5/10) et `n = 0`
+- [x] `summary()` : afficher les intervalles de Wilson pour « Correct (1er essai) » et « Correct » ; tableau existant inchangé pour le reste
+- [x] Temps sans chargement : somme des `reply.seconds - reply.load_seconds` par cas ; deux colonnes, « Temps moy. » et « Temps moy. hors chargement »
+- [x] Répétitions : paramètre `temperature` (défaut 0) passé de `run_benchmark` à `translate` puis à `ChatClient.chat` ; quand `essais > 1`, la température par défaut des répétitions est > 0 (valeur consignée dans la fiche), et le résumé distingue les essais d'un même cas
+- [x] Faux client : mettre à jour le faux `ChatClient` de `test_llm.py` pour accepter `temperature` (signature compatible, test existant inchangé dans ses attentes)
+- [x] Test : avec un faux client déterministe, `essais=3` produit 3 fois plus de lignes et des intervalles cohérents avec les comptes
+- [x] Test existant de non-recoupement exemples / jeu réservé toujours vert
+- [x] Documenter dans `TECHNICAL.md` (section Banc LLM) : intervalles de Wilson, temps hors chargement
+- [x] Noter dans la fiche que la remesure des modèles reste à faire par l'utilisateur (GPU) ; ne pas la lancer
+- [ ] (reste : complet vert, puis qa) `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`
