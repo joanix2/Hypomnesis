@@ -37,6 +37,8 @@ la manière dont on peut en établir la validité.
 | P14 | `Core.matchPat_sound` | un motif bien typé qui filtre une valeur bien typée lie des valeurs des types annoncés | §4.1 (filtrage) |
 | P15 | `Core.patTypeOf_sound`, `patTypeOf_complete` | le typage des motifs est décidé exactement par le vérificateur | §13.2 |
 | P16 | `Examples.program_typed` | un programme réel (longueur de liste) est typé **par calcul**, au moyen du vérificateur prouvé | démonstration du mécanisme de certificat |
+| P17 | `Effects.dispatch_ordered` | chaque occurrence de dispatch, relances comprises, possède une validation puis une autorisation antérieures dans le journal de la même commande | §9.8, §16.4 ; modèle de traces HYP-065 |
+| P18 | `Effects.dispatch_permitted`, `no_dispatch_without_permission` | aucun dispatch dans le modèle sans permission hôte accordée à la commande | §16.4 ; modèle HYP-065 |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -121,13 +123,19 @@ C'est la partie où la preuve a le plus de valeur, car les erreurs y sont physiq
 | Exigence | Propriété | Statut |
 |---|---|---|
 | noyau pur (§9.1, H5) | **aucun terme du niveau objet n'exécute d'effet** ; il ne peut que le décrire | ✅ par construction pour le fragment (aucun constructeur d'effet) · 🎯 F5 avec la modalité `U` |
-| validation avant appel (§9.8, §16.4) | dans toute trace du runtime, chaque `dispatch(c)` est précédé de `validated(c)` puis `authorized(c)` pour le même `command_id` | 🎯 F5 |
-| action non autorisée (§16.4) | aucune trace ne contient `dispatch(c)` sans permission accordée pour `c` | 🎯 F5 |
+| validation avant appel (§9.8, §16.4) | chaque `dispatch(c)` est précédé de `validated(c)` puis `authorized(c)` pour le même `command_id` | ✅ P17 dans le modèle de traces ; correspondance Python documentée/testée, pas de raffinement prouvé |
+| action non autorisée (§16.4) | aucune trace ne contient `dispatch(c)` sans permission accordée pour `c` | ✅ P18 dans le modèle de traces ; correspondance Python documentée/testée |
 | états des commandes (§9.7) | l'automate n'autorise que les transitions spécifiées ; les états terminaux sont absorbants | 🎯 F5 · miroir Python : `TRANSITIONS` dans `effects/commands.py` (test exhaustif des paires, HYP-061) |
 | doubles commandes (§9.7, §19) | **au plus une exécution** d'une commande non idempotente, quelles que soient les relances et pannes de transport (modèle à journal et déduplication par `command_id`) | 🎯 F5 (HYP-066, à prouver) · miroir Python : `may_retry` et la déduplication du `Dispatcher`, propriété Hypothesis sur pannes simulées (HYP-061) |
 | simulation, dry-run, production (§10.3) | les trois modes exécutent **le même terme** ; le dry-run n'émet aucun `dispatch` | 🎯 F5 |
 | contrats JSON (§9.4, §13.4) | **aller-retour** : `decode (encode v) = v` ; et `encode v` est conforme à `schemaOf t` dès que `v : t` | 🎯 F5 |
 | sécurité physique d'une commande | — | ⛔ explicitement hors du champ du JSON Schema (§9.4) ; relève de contraintes métier et de capteurs |
+
+**HYP-065** : portée exacte, hypothèses de confiance et correspondance Python
+ligne à ligne dans [dispatch.md](dispatch.md). L'automate Lean et Python est
+comparé de manière exécutable sur les 144 paires d'états. Le modèle fixe un
+journal par commande et la permission accordée lors de son contrôle ;
+il ne certifie ni les callbacks Python, ni le matériel, ni la concurrence.
 
 ### §11 — Boucle épistémologique
 

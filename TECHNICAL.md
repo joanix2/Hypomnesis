@@ -542,6 +542,18 @@ manifestes restent descriptifs et les décorateurs restent le branchement I/O.
 Guide et exemple exécutable : [transports.md](docs/architecture/transports.md),
 `examples/robotics/transport.py`.
 
+## Preuves de dispatch (HYP-065)
+
+`formal/Hypomnesis/Effects/Dispatch.lean` modélise les états, la table de
+transitions et le journal par commande. `dispatch_ordered` prouve l'ordre
+validation puis autorisation avant chaque envoi, y compris les relances ;
+`dispatch_permitted` et `no_dispatch_without_permission` prouvent la permission
+nécessaire. Audit des axiomes : `propext` seulement pour ces trois théorèmes.
+Le test d'intégration `test_effects_model.py` calcule la table Lean et compare
+les 144 paires à Python. Il requiert Lean/Lake sans skip. Correspondance
+ligne à ligne et frontières : [dispatch.md](docs/verification/dispatch.md).
+Ce n'est pas une preuve de raffinement du Python ni de sécurité physique.
+
 ## Descriptions obligatoires (HYP-137)
 
 `language/docs.py` extrait les `(** … *)` en lexant la source (`parser.lex`, pas de regex) et les
