@@ -39,7 +39,7 @@ def board(tmp_path, monkeypatch):
     tasks_dir = root / ".agentkanban" / "tasks"
     tasks_dir.mkdir(parents=True)
     (root / ".agentkanban" / "board.yaml").write_text(
-        "lanes:\n  - todo\n  - doing\n  - qa\n  - done\n"
+        "lanes:\n  - hypothese\n  - todo\n  - doing\n  - qa\n  - done\n"
     )
     monkeypatch.setattr(kanban, "ROOT", root)
     monkeypatch.setattr(kanban, "KANBAN", root / ".agentkanban")
@@ -80,6 +80,23 @@ def test_unknown_dependency_and_self_dependency(board):
     errors = errors_of()
     assert any("dépendance inconnue HYP-404" in e for e in errors)
     assert any("dépend de lui-même" in e for e in errors)
+
+
+def test_hypothesis_is_visible_but_not_ready_or_finished(board, capsys):
+    board("001", lane="hypothese")
+    board("002", deps="HYP-001")
+    assert errors_of() == []
+    tasks = kanban.load([])
+    report = kanban.status(tasks)
+    assert [t["id"] for t in report["hypothese"]] == ["HYP-001"]
+    assert report["ready"] == []
+    assert report["done"] == []
+    assert report["blocked"][0]["blocked_by"] == ["HYP-001"]
+    assert not kanban.is_ready(tasks["HYP-001"], kanban.dependency_graph(tasks))
+    assert kanban.main(["status"]) == 0
+    assert "Hypothèses (1)" in capsys.readouterr().out
+    assert kanban.main(["status", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["hypothese"][0]["id"] == "HYP-001"
 
 
 def test_cycle_is_reported(board):

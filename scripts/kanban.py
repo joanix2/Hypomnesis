@@ -436,6 +436,7 @@ def status(tasks: dict[str, Task]) -> dict[str, list[dict]]:
     graph = dependency_graph(tasks)
     ordered = sorted(tasks.values(), key=_sort_key)
     return {
+        "hypothese": [asdict(t) for t in ordered if t.lane == "hypothese"],
         "doing": [asdict(t) for t in ordered if t.lane == "doing"],
         "ready": [
             {**asdict(t), "unblocks": unblocks(t.id, graph)} for t in ordered if is_ready(t, graph)
@@ -466,7 +467,10 @@ def _print_status(report: dict[str, list[dict]]) -> None:
             f"  {t['id']}  {t['priority'] or '--'}  {t['title'].split(' · ', 1)[-1]}{human}{extra}"
         )
 
-    print(f"En cours ({len(report['doing'])})")
+    print(f"Hypothèses ({len(report['hypothese'])})")
+    for t in report["hypothese"]:
+        print(line(t))
+    print(f"\nEn cours ({len(report['doing'])})")
     for t in report["doing"]:
         print(line(t))
     print(f"\nPrêtes ({len(report['ready'])})")

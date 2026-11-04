@@ -182,6 +182,11 @@ C'est la partie où la preuve a le plus de valeur, car les erreurs y sont physiq
 
 ## 4. Proposition d'amendement du cahier des charges (v0.3)
 
+Un [brouillon complet de la v0.3](../specification/cahier-des-charges-v0.3.md)
+reprend cette proposition, avec les axes épistémiques et un suivi des critères.
+Il attend l'arbitrage humain HYP-005 ; ni son existence ni les exigences
+ci-dessous n'étendent la couverture des preuves actuelles.
+
 Le cahier des charges ne mentionne pas la vérification formelle. Texte proposé :
 
 > **OBJ-11 — Vérification formelle.** Le noyau du langage, le vérificateur de types, le moteur

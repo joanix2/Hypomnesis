@@ -6,6 +6,10 @@ Métalangage fonctionnel (syntaxe OCaml) pour définir des DSL métiers : connai
 contraintes, effets contrôlés. Spécification : `docs/specification/cahier-des-charges-v0.2.md`.
 Détails d'implémentation : `TECHNICAL.md`.
 
+Le cahier v0.3 est un brouillon HYP-005 soumis à arbitrage humain : OBJ-11,
+trois axes épistémiques et décision sur l'ADR 0006 non adoptés à ce stade.
+La v0.2 reste la référence ; ne pas confondre exigences proposées et garanties prouvées.
+
 ## Niveaux d'abstraction (ADR 0008) — règle structurante
 
 - **M3** `src/hypomnesis/` : moteur, métalangage, bibliothèque standard, procédures génériques.
@@ -70,7 +74,10 @@ Détails d'implémentation : `TECHNICAL.md`.
   `lean`, `llm`, `dsl`, `outillage`, etc. Les checklists reprennent les tags et la priorité
   de leur ticket ; les labels historiques du corps restent conservés.
 - Une tâche portant le label `humain` demande une décision de l'utilisateur.
-- **Couloirs** `todo → doing → qa → done`. L'agent met une tâche en `doing` quand il la commence
+- **Hypothèses** : couloir `hypothese` avant `todo`, pour les propositions de recherche
+  non adoptées. Elles ne sont ni prêtes à implémenter ni des dépendances terminées ;
+  leur promotion en `todo` est une décision explicite.
+- **Couloirs d'exécution** `todo → doing → qa → done`. L'agent met une tâche en `doing` quand il la commence
   et en `qa` quand il l'a terminée et validée (`./scripts/validate.sh complet`). Seul l'utilisateur
   passe une tâche de `qa` à `done` après vérification. Une dépendance en `qa` ne bloque plus : on
   peut enchaîner. Une tâche ne peut être `done` que si ses dépendances le sont.

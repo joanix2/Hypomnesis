@@ -3,6 +3,11 @@
 Référence d'implémentation pour les agents et les humains. Les décisions sont dans
 `docs/adr/`, la vision dans `docs/specification/`, l'avancement dans `.agentkanban/tasks/`.
 
+La [v0.3 du cahier des charges](docs/specification/cahier-des-charges-v0.3.md)
+est un **brouillon** de HYP-005 : OBJ-11, axes épistémiques et critères formels
+attendent un arbitrage humain. La v0.2 reste la référence ; l'ADR 0006 reste
+proposée. Ce brouillon n'ajoute aucune garantie Lean au runtime existant.
+
 ## Pipeline du langage
 
 | Étape | Fichier | Rôle |
@@ -436,13 +441,16 @@ lancer avec `.venv/bin/python`) lit `.agentkanban/tasks/` :
 | Commande | Rôle |
 |---|---|
 | `check` | format des tâches, couloirs, dépendances inconnues, cycles (`nx.simple_cycles`), tâche démarrée avant ses dépendances |
-| `status [--json]` | tâches en cours, prêtes (avec ce qu'elles débloquent), bloquées (avec ce qu'elles attendent), en `qa` (à vérifier par l'utilisateur), et chemin critique vers les tâches P0 restantes (`critical_path`, `nx.dag_longest_path`) |
+| `status [--json]` | hypothèses (`hypothese`), tâches en cours, prêtes (avec ce qu'elles débloquent), bloquées (avec ce qu'elles attendent), en `qa` (à vérifier par l'utilisateur), et chemin critique vers les tâches P0 restantes (`critical_path`, `nx.dag_longest_path`) |
 | `graph [--wait]` | injecte tâches et relations (`depends_on`, `touches`, `references`, `defined_in`, `contains`) dans `graphify-out/graph.json`, sous le verrou de reconstruction de Graphify ; idempotent |
 
 Les éléments injectés portent `_origin: "kanban"` et `source_file: .agentkanban/board.yaml`.
 Le front-matter est lu par `yaml.safe_load` à une nuance près : les dates restent des chaînes
 (le résolveur de timestamps est retiré), car l'extension Agent Kanban les écrit sans guillemets.
 Le graphe des tâches est un `nx.DiGraph` tâche → dépendance (`dependency_graph`).
+Le couloir `hypothese`, placé avant `todo`, conserve les propositions non adoptées.
+Il n'est ni prêt à l'exécution ni terminé ; l'ordonnanceur parallèle l'exclut
+via la règle commune `is_ready`, sans promotion implicite en tâche de travail.
 Une reconstruction incrémentale de Graphify conserve les nœuds mais perd les relations vers les
 fichiers qu'elle réextrait : réinjecter après chaque `graphify update .`, ce que fait
 `./scripts/validate.sh graphe`. Ce mode réinjecte aussi avant la reconstruction si un graphe

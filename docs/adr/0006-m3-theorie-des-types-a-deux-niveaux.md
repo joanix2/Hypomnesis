@@ -4,6 +4,11 @@
 - **Date :** 2026-11-03
 - **Analyse détaillée :** [m3-metalangage.md](../architecture/m3-metalangage.md)
 
+Le [brouillon v0.3](../specification/cahier-des-charges-v0.3.md) expose les
+amendements associés, mais ne vaut pas acceptation de cette ADR. L'arbitrage
+humain HYP-005 reste ouvert ; le calcul méta décrit ici n'est pas présenté
+comme déjà implémenté.
+
 ## Contexte
 
 Le méta-métamodèle classique (MOF, Ecore) ne porte ni calcul, ni équations, ni connaissance,
