@@ -75,3 +75,13 @@ verts. README, TECHNICAL, guide des estimateurs et précision ADR 0012 à jour.
 Aucun sous-agent. Fermeture done laissée à l'utilisateur.
 
 ### user
+
+### agent
+
+Correction documentaire après intégration MVP : la précision scientifique
+ajoutée pendant cette tâche est déplacée vers ADR 0014, proposée pour revue.
+Le texte accepté de l'ADR 0012 est restauré, conformément à l'immutabilité
+des décisions acceptées. Ni dépendances ni comportement ne changent.
+L'acceptation humaine reste distincte de l'implémentation validée en QA.
+
+### user

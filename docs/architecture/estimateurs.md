@@ -5,7 +5,9 @@ ni NumPy, ni SciPy, ni scikit-learn ; le backend charge la bibliothèque
 seulement à sa construction. La suite `tests/optional/` exige cet extra.
 La CI core-only l'exclut et vérifie l'absence de ces bibliothèques ; la
 validation complète et le job de tests complet l'exécutent sans skip.
-Ce périmètre précise [ADR 0012](../adr/0012-codegen-separe-du-moteur.md) :
+Ce périmètre est consigné pour revue dans
+[ADR 0014](../adr/0014-backend-scientifique-optionnel.md), sans modifier
+le texte accepté de l'ADR 0012 :
 l'extra n'appartient ni à `dev` ni aux dépendances de base.
 
 ## Backend générique

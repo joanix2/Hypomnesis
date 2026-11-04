@@ -18,3 +18,4 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0011](0011-demonstrations-isolees.md) | Démonstrations isolées dans `demo/` | Acceptée |
 | [0012](0012-codegen-separe-du-moteur.md) | Génération de programmes séparée du moteur | Acceptée |
 | [0013](0013-couches-declarees-en-hypomnesis.md) | Couches déclarées en Hypomnesis, imports DAG et I/O décorées | Acceptée |
+| [0014](0014-backend-scientifique-optionnel.md) | Backend scientifique optionnel | Proposée pour revue (HYP-054 en QA) |
