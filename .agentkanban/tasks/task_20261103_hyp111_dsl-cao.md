@@ -1,8 +1,8 @@
 ---
 title: "HYP-111 · DSL CAO : un langage pour la conception assistée par ordinateur"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:50:18+01:00
-updated: 2026-11-03T17:50:18+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P2 · L · Instances de domaines · dépend de HYP-056, HYP-052, HYP-053 · idée à planifier"
 priority: P2
 tags: [cao, dsl, idee]
@@ -44,3 +44,11 @@ Une instance de DSL pour la CAO paramétrique : esquisses, contraintes géométr
 - `docs/specification/cahier-des-charges-v0.2.md` (§4.2, §16.2)
 - `examples/mechanics/` (plaque et unités existantes)
 - Conventions : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Le DSL CAO
+complet, ses backends et son périmètre restent une idée à évaluer, distincte
+du démonstrateur mécanique déjà prévu. Priorité et dépendances conservées.
+
+### user

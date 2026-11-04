@@ -1,8 +1,8 @@
 ---
 title: "HYP-046 · Théories : signatures avec lois, modèles et tests de lois"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-03T17:42:26+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P1 · L · Niveau M3 (méta-métamodèle) · dépend de HYP-012"
 priority: P1
 tags: [architecture, capacites, dsl, metalangage, moteur-symbolique, python, tests]
@@ -38,3 +38,13 @@ tags: [architecture, capacites, dsl, metalangage, moteur-symbolique, python, tes
 
 - `docs/architecture/m3-metalangage.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Les théories
+en style GAT et la syntaxe des lois sont une piste de prototypage de la note
+M3, dont l'architecture reste proposée. Le périmètre, la priorité et les
+dépendances sont conservés ; ce ticket n'est plus une tâche d'implémentation
+automatiquement prête. Aucun résultat de recherche n'est déclaré acquis.
+
+### user

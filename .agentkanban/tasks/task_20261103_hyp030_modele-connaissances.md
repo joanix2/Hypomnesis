@@ -93,3 +93,31 @@ locaux à la base, et un fait dérivé exige le contexte de ses sources pour
 de métavariables ni une preuve Lean nouvelle. HYP-030 passe en QA, pas en done.
 
 ### user
+
+tout les ticket en todo qui sont des hypothèses met les dans hypothèses
+
+### agent
+
+Revue des tickets en `todo` : déplacement de **11 propositions** dans
+`hypothese`, sans changement de priorité, dépendances ou critères historiques.
+
+- HYP-046 : théories GAT et lois, piste de prototypage M3 non adoptée.
+- HYP-100 à HYP-103 : grades dans le typeur, staging typé, noyau méta et
+  substituabilité des modèles ; architecture de l'ADR 0006 encore proposée.
+- HYP-110 à HYP-113 : idées de DSL IA, CAO, Applications et DREAL dont les
+  périmètres et choix restent ouverts.
+- HYP-141 et HYP-142 : distillation et expérience de fine-tuning, étiquetées
+  idées, dont le bénéfice et l'adoption restent à établir.
+
+HYP-149 y était déjà : **12 hypothèses au total**. Aucune checklist associée
+aux onze tickets déplacés n'existe, donc aucun couloir de checklist à modifier.
+Les tâches d'implémentation, de test et les obligations de preuve déjà retenues
+restent en todo ; parler d'une hypothèse épistémique dans leur contenu ne suffit
+pas à en faire une proposition architecturale non adoptée.
+
+Vérifications : 103 tickets valides, aucune de ces propositions dans les tâches
+prêtes, dépendances conservées. HYP-092 reste notamment bloqué par HYP-046 :
+son déplacement ne vaut pas achèvement ni adoption. Aucun ticket en cours
+ou validé n'a changé de couloir.
+
+### user

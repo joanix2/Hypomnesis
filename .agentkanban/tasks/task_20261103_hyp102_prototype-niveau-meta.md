@@ -1,8 +1,8 @@
 ---
 title: "HYP-102 · Prototype du niveau méta (λΠ-modulo, `Desc`) en Lean"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-03T17:42:26+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P3 · L · Niveau M3 (méta-métamodèle) · dépend de HYP-023, HYP-005"
 priority: P3
 tags: [architecture, lean, metalangage, recherche]
@@ -36,3 +36,12 @@ tags: [architecture, lean, metalangage, recherche]
 
 - `docs/architecture/m3-metalangage.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Le noyau méta
+λΠ-modulo et Desc sont explicitement un chantier de recherche, maintenu en
+expérimentation par HYP-005. Priorité et dépendances conservées ; aucune
+preuve ni adoption de cette architecture n'est supposée.
+
+### user

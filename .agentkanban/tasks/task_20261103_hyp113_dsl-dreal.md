@@ -1,8 +1,8 @@
 ---
 title: "HYP-113 · DSL DREAL : un langage pour la règlementation environnementale"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:50:18+01:00
-updated: 2026-11-03T17:50:18+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P2 · L · Instances de domaines · dépend de HYP-050, HYP-031, HYP-056 · idée à planifier"
 priority: P2
 tags: [dsl, humain, idee, reglementation]
@@ -53,3 +53,12 @@ Une instance de DSL pour les domaines instruits par la DREAL (Direction régiona
 - `docs/architecture/m3-metalangage.md` (§4.2–4.3 connaissance et support, §6.4 provenance)
 - `docs/verification/proprietes.md`
 - Conventions : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Le sens de
+DREAL, les utilisateurs et le périmètre réglementaire restent à confirmer.
+Les réserves sur la validation experte sont conservées, ainsi que priorité
+et dépendances ; aucune règle réglementaire n'est adoptée.
+
+### user

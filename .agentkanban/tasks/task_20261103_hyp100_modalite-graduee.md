@@ -1,8 +1,8 @@
 ---
 title: "HYP-100 · Modalité graduée `[g]` dans le typeur"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-03T17:42:26+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P2 · L · Niveau M3 (méta-métamodèle) · dépend de HYP-031"
 priority: P2
 tags: [architecture, compilateur, epistemique, metalangage, moteur-symbolique, python]
@@ -36,3 +36,12 @@ tags: [architecture, compilateur, epistemique, metalangage, moteur-symbolique, p
 
 - `docs/architecture/m3-metalangage.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Porter les
+grades dans le typeur reste une piste architecturale de l'ADR 0006 proposée ;
+l'adoption des trois axes épistémiques ne vaut pas adoption de ce mécanisme.
+Priorité et dépendances conservées ; aucune implémentation lancée.
+
+### user

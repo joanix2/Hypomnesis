@@ -1,8 +1,8 @@
 ---
 title: "HYP-142 · Fine-tuning de petits modèles sur un langage"
-lane: todo
+lane: hypothese
 created: 2026-11-04T08:56:00+01:00
-updated: 2026-11-04T08:56:00+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P3 · L · Phase 7 — Intégration LLM · dépend de HYP-141"
 priority: P3
 tags: [fine-tuning, idee, llm, python]
@@ -40,3 +40,11 @@ Tester si un petit modèle affiné égale, sur un langage donné, un modèle plu
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. L'expérience
+de fine-tuning peut conclure à l'abandon ; son bénéfice n'est pas établi.
+Priorité et dépendances conservées, sans entraînement ni nouvelle dépendance.
+
+### user

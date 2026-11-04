@@ -1,8 +1,8 @@
 ---
 title: "HYP-110 · DSL IA : un langage pour construire des IA"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:50:18+01:00
-updated: 2026-11-03T17:50:18+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P2 · L · Instances de domaines · dépend de HYP-046, HYP-056 · idée à planifier"
 priority: P2
 tags: [dsl, ia, idee]
@@ -43,3 +43,12 @@ Une instance de DSL (niveau M2) pour décrire et construire des systèmes d'IA :
 - `docs/architecture/m3-metalangage.md` (§4.4 capacités, §6.1 modèles de théories)
 - `docs/verification/proprietes.md`
 - Conventions : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Cette idée
+de DSL IA conserve ses pistes et questions de périmètre ; elle n'est pas
+une architecture adoptée ni une implémentation à lancer automatiquement.
+Priorité et dépendances conservées.
+
+### user

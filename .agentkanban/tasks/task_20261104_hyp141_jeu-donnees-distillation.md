@@ -1,8 +1,8 @@
 ---
 title: "HYP-141 · Jeu de données de distillation validé par le compilateur"
-lane: todo
+lane: hypothese
 created: 2026-11-04T08:56:00+01:00
-updated: 2026-11-04T08:56:00+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P2 · M · Phase 7 — Intégration LLM · dépend de HYP-139, HYP-140"
 priority: P2
 tags: [compilateur, fine-tuning, idee, llm, python, tests]
@@ -38,3 +38,12 @@ Première étape de la branche fine-tuning : un grand modèle (professeur) produ
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. La branche
+distillation est étiquetée idée et prépare l'expérience de HYP-142 ; son
+adoption et les licences restent à évaluer. Priorité et dépendances conservées.
+La validation par compilateur ne devient pas une preuve de conformité au sens.
+
+### user

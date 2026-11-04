@@ -1,8 +1,8 @@
 ---
 title: "HYP-101 · Code typé `⇑A` pour la frontière LLM"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-03T17:42:26+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P3 · L · Niveau M3 (méta-métamodèle) · dépend de HYP-081, HYP-012"
 priority: P3
 tags: [architecture, compilateur, llm, metalangage, python]
@@ -36,3 +36,12 @@ tags: [architecture, compilateur, llm, metalangage, python]
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Le staging
+modal par code typé reste une piste de l'ADR 0006 proposée, pas un engagement
+sur cette API. L'obligation existante de vérifier les programmes avant
+exécution reste inchangée. Priorité et dépendances conservées.
+
+### user

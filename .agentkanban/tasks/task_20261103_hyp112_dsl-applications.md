@@ -1,8 +1,8 @@
 ---
 title: "HYP-112 · DSL Applications : un langage pour construire des applications"
-lane: todo
+lane: hypothese
 created: 2026-11-03T17:50:18+01:00
-updated: 2026-11-03T17:50:18+01:00
+updated: 2026-11-04T19:36:05+01:00
 description: "P2 · L · Instances de domaines · dépend de HYP-046, HYP-042, HYP-062 · idée à planifier"
 priority: P2
 tags: [applications, dsl, idee]
@@ -42,3 +42,12 @@ Une instance de DSL pour décrire des applications : modèle de données, écran
 - `docs/architecture/m3-metalangage.md` (§6.1, §6.2)
 - `docs/adr/0004-contrats-json-schema.md`
 - Conventions : `.agentkanban/memory.md`
+
+### agent
+
+Reclassement demandé par l'utilisateur : `todo` → `hypothese`. Le DSL
+Applications et ses cibles de génération restent une piste avec périmètre
+à décider, cohérente avec l'hypothèse HYP-149 mais non adoptée par elle.
+Priorité et dépendances conservées.
+
+### user
