@@ -12,7 +12,7 @@ Reste à faire (voir l'entrée `### agent` de la fiche) : répétitions avec int
 
 État du code : `llm/ollama.py::Reply` porte déjà `load_seconds` (ajouté par HYP-014) ; `llm/benchmark.py::summary` n'affiche pas encore le temps sans chargement ni d'intervalle ; l'appel `chat` fixe `temperature: 0`, donc deux essais d'un même cas sont identiques.
 
-Choix de bibliothèque : pas d'intervalle écrit à la main. `scipy.stats.binomtest(k, n).proportion_ci(method="wilson")` ; SciPy est déjà installé par scikit-learn, le déclarer dans l'extra `llm` et `dev`. Le tableau Markdown de `summary()` reste maison.
+Choix de bibliothèque : pas d'intervalle écrit à la main. `scipy.stats.binomtest(k, n).proportion_ci(method="wilson")` ; SciPy est déjà installé par scikit-learn. **Autorisé par l'utilisateur** : ce ticket édite **cette seule ligne** de `pyproject.toml`, l'ajout de `scipy>=1.11` aux extras `llm` et `dev` (aucune autre modification de ce fichier). Le tableau Markdown de `summary()` reste maison.
 
 Fichiers : `src/hypomnesis/llm/benchmark.py`, `src/hypomnesis/llm/translation.py` et `src/hypomnesis/llm/ollama.py` (paramètre de température), `pyproject.toml` (`scipy`), `tests/unit/test_llm.py`, `tests/unit/test_benchmark.py` (nouveau). **Ne pas** toucher `cli.py` sans vérifier qu'HYP-016 est terminé (il y ajoute `--graphiques`) ; une option `--essais` y sera ajoutée en dernier.
 

@@ -3,14 +3,14 @@ title: "HYP-138 · Générer le prompt LLM depuis la description du langage"
 lane: todo
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T08:56:00+01:00
-description: "P1 · M · Phase 7 — Intégration LLM · dépend de HYP-080, HYP-137, HYP-139"
+description: "P1 · M · Phase 7 — Intégration LLM · dépend de HYP-137, HYP-139"
 ---
 
 ## Conversation
 
 ### user
 
-**Ticket** HYP-138 · **Priorité** P1 · **Taille** M · **Epic** Phase 7 — Intégration LLM · **Dépend de** HYP-080, HYP-137, HYP-139 · **Labels** python, llm
+**Ticket** HYP-138 · **Priorité** P1 · **Taille** M · **Epic** Phase 7 — Intégration LLM · **Dépend de** HYP-137, HYP-139 · **Labels** python, llm
 
 #### Contexte
 
@@ -46,5 +46,9 @@ description: "P1 · M · Phase 7 — Intégration LLM · dépend de HYP-080, HYP
 Critères : pas de corps de fonction ni d'élément non public ✓ (`test_undocumented_items_stay_out_of_the_catalogue`) ; un nouveau langage obtient son prompt sans code spécifique ✓ (`test_catalogue_is_generic_across_languages`) ; au banc, au moins aussi bon et plus court ✓ : qwen3:4b-instruct 98 % contre 85 % au premier essai, prompt 25 % plus court (détail dans l'ADR 0009).
 
 Reste : la commande `hypomnesis describe` (export JSON et Markdown, HYP-080) et l'affichage du budget de taille.
+
+### agent
+
+**Décision de l'utilisateur (2026-11-04).** La dépendance à HYP-080 est retirée : le catalogue de prompt existe déjà (`llm/describe.py`, commande `decrire`). HYP-138 ne dépend plus que de HYP-137 et HYP-139. Reste réel : l'affichage du budget de taille du prompt, et la prise en compte de la balise `@interne` (voir HYP-137 : un élément documenté mais non publié dans le catalogue).
 
 ### user

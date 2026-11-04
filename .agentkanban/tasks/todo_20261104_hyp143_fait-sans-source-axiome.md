@@ -12,8 +12,8 @@ Fichiers : `src/hypomnesis/epistemics/knowledge.py`, `tests/unit/test_knowledge.
 
 - [ ] Test rouge : `derive("c.k", 1, "constante", [])` puis `support`, `confidence`, `graph()` / export JSON → `KeyError: 'axiome'`
 - [ ] Test rouge : même fait, puis `observe("a", …)` et `retract_source` de `a` → `c.k` ne doit pas être invalidé
-- [ ] Trancher entre l'option A (source `axiome` déclarée, support `Defaulted`, jamais rétractée) et l'option B (refus explicite) ; inscrire le choix dans la fiche
-- [ ] Implémenter l'option retenue dans `derive` (et, pour A, déclarer la source une seule fois par base ; identifiant stable `axiome`)
+- [ ] Option A retenue par l'utilisateur : inscrire le choix dans la fiche et la docstring de `derive`
+- [ ] Implémenter l'option A dans `derive` : source `axiome` (type `default`, support « par défaut », confiance 1,0) déclarée une fois par base, jamais rétractée ; ajouter une garde : `retract_source("axiome", …)` refusé avec une erreur claire
 - [ ] Vérifier `_holds` : une source déclarée non rétractée tient ; une source inconnue ne doit plus faire disparaître un fait en silence
 - [ ] Les deux tests rouges passent ; `explain` d'un fait sans prémisse donne une ligne lisible
 - [ ] Test de propriétés : rétracter une source ne touche aucun fait dont la provenance ne la mentionne pas

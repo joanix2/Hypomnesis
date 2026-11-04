@@ -3,14 +3,14 @@ title: "HYP-143 · KnowledgeBase : un fait sans source déclarée (axiome) fait 
 lane: todo
 created: 2026-11-04T14:45:00+01:00
 updated: 2026-11-04T14:45:00+01:00
-description: "P2 · S · Phase 2 — Moteur épistémique · dépend de HYP-008 · bug"
+description: "P1 · S · Phase 2 — Moteur épistémique · dépend de HYP-008 · bug"
 ---
 
 ## Conversation
 
 ### user
 
-**Ticket** HYP-143 · **Priorité** P2 · **Taille** S · **Epic** Phase 2 — Moteur épistémique · **Dépend de** HYP-008 · **Labels** python, bug
+**Ticket** HYP-143 · **Priorité** P1 · **Taille** S · **Epic** Phase 2 — Moteur épistémique · **Dépend de** HYP-008 · **Labels** python, bug
 
 #### Contexte
 
@@ -56,5 +56,8 @@ Recommandation de l'agent : A. Le §7.1 prévoit un support « par défaut » ; 
 - `docs/specification/cahier-des-charges-v0.2.md` §7.1
 - Conventions et définition de fini : `.agentkanban/memory.md`
 
-### user
+### agent
 
+**Décisions de l'utilisateur (2026-11-04).** Priorité portée à **P1**. Option **A** retenue : un fait sans prémisse est une constante du programme ; on déclare une source `axiome` (type `default`, support « par défaut », confiance 1,0, **jamais rétractée**). Le **second symptôme** (invalidation à tort au premier `retract_source`, même sans lien) est à corriger dans ce ticket : une source déclarée et non rétractée tient, et une rétractation ne doit toucher que les faits dont la provenance mentionne la source retirée. Critères d'acceptation complétés : le test rouge sur l'invalidation à tort passe ; `retract_source` d'une source sans rapport laisse le fait `axiome` intact.
+
+### user

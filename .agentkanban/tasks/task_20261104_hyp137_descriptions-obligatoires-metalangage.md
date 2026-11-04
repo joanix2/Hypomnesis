@@ -50,4 +50,10 @@ Pour générer un prompt à partir d'un langage (HYP-138), chaque mot de ce lang
 
 Reste : l'**erreur de compilation** quand un élément public n'a pas de description (il faut d'abord la notion de « public », HYP-012) et le test de propriétés « Core IR et certificats identiques avec ou sans descriptions » (vrai par construction, puisque ce sont des commentaires pour la grammaire, mais à prouver par un test).
 
+### agent
+
+**Décisions de l'utilisateur (2026-11-04).**
+- **« Public »** : tout élément déclaré dans un fichier source d'un langage M2 dont le nom ne commence pas par `_`, sans attendre HYP-012 (qui pourra restreindre la notion ensuite).
+- **Balise `@interne`** : un élément portant `@interne` est **documenté mais non publié** dans le catalogue du prompt. Il reste soumis à l'obligation de description (une description est exigée, y compris pour un élément `@interne`), mais `llm/describe.py` ne l'inclut pas dans le catalogue ni dans `decrire`. Un élément en `_nom` n'a pas d'obligation de description et n'est jamais publié. À consigner dans l'ADR 0009 et dans `docs/language/reference.md`. Conséquence pour HYP-138 : le catalogue filtre sur cette balise.
+
 ### user

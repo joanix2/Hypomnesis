@@ -18,7 +18,8 @@ Fichiers : `src/hypomnesis/language/docs.py`, `src/hypomnesis/engine/language.py
 
 - [ ] Ajouter `span: Span | None` à `Declaration` et le remplir pour chaque genre (module, valeur, type, champ, constructeur)
 - [ ] Constructeurs : décider comment les décrire (commentaire `(** … *)` sur la ligne précédant `| Ctor`) et étendre `declarations` en conséquence ; sinon, restreindre la règle aux constructeurs écrits un par ligne — consigner le choix dans la fiche
-- [ ] `docs.py` : fonction `missing_descriptions(source) -> list[Declaration]` (publics sans `doc`, noms commençant par `_` exclus)
+- [ ] `docs.py` : fonction `missing_descriptions(source) -> list[Declaration]` (publics sans `doc`, noms commençant par `_` exclus ; un élément `@interne` doit être décrit)
+- [ ] Balise `@interne` : `Doc.tag("interne")` détecté ; `llm/describe.py` n'inclut pas ces éléments dans le catalogue ni dans `decrire` ; test dédié (un élément décrit et `@interne` est absent du catalogue mais ne produit pas d'erreur de description manquante)
 - [ ] `load_language` : après le chargement des sources, lever `LanguageError` pour la première description manquante, avec le chemin qualifié (`Plaque.demande.largeur`), le fichier et la ligne:colonne ; option interne `strict=False` pour les tests de langages jouets
 - [ ] Test : retirer la description d'un champ de `languages/mecanique/plaque.hyp` (copie temporaire) donne une erreur qui nomme ce champ, à sa position
 - [ ] Test : un langage dont tous les éléments sont décrits charge sans erreur ; un M1 sans description passe (`session.check`)
