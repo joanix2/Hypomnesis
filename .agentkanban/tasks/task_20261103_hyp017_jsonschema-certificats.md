@@ -1,8 +1,8 @@
 ---
 title: "HYP-017 · Certificats : valider avec jsonschema au lieu d'accesseurs écrits à la main"
-lane: todo
+lane: qa
 created: 2026-11-03T21:36:21+01:00
-updated: 2026-11-04T08:55:00+01:00
+updated: 2026-11-04T14:15:00+01:00
 description: "P2 · S · Fondations et gouvernance · dépend de HYP-002 · migration vers bibliothèque"
 ---
 
@@ -45,3 +45,24 @@ Décision de l'utilisateur : le JSON Schema reste l'unique description de la str
 - Ticket de coordination : HYP-007
 - Schéma : `src/hypomnesis/contracts/schemas/certificate-1.0.0.json`
 - Conventions et définition de fini : `.agentkanban/memory.md` (« bibliothèques plutôt que code maison »)
+
+### agent
+
+Fait (commit `3ac747e`) :
+
+- `certify/load.py` : `load_definitions` valide le certificat entier une seule fois (`SchemaRegistry.with_builtin_schemas()` mis en cache, `CERTIFICATE_SCHEMA_ID`) et lève `CertificateError("invalid certificate: $.chemin: message; …")` en gardant le chemin JSON. `_obj/_list/_int/_str` sont supprimés ; `_single` et `_literal` ne font plus que déconstruire/convertir. Contrôles sémantiques conservés avec leurs messages (`out of scope`, `unbound type variable`, cible non liée, numérotation des emplacements, liaison récursive non fonctionnelle).
+- Le schéma couvrait déjà « objet à une seule clé » (`minProperties/maxProperties`) et la version (`const`) : aucun changement de schéma, `pyproject.toml` intact, `formal/` non touché.
+- Référence avant/après (certificat de `let id x = x`) : champ manquant `KeyError` → `CertificateError` ; champ en trop et version inconnue acceptés → rejetés ; mauvais type et plusieurs clés rejetés mais sans chemin → avec chemin (ex. `$.definitions[110].value.expr.lam.body.local.index: '0' is not of type 'integer'`).
+- Tests : 5 cas invalides paramétrés dans `tests/unit/test_certificate.py` (message et chemin JSON vérifiés) ; tous les anciens tests inchangés.
+- Coût mesuré (prélude + tour + units + plate : 103 Kio, 143 définitions) : validation ≈ 0,26 s, chargement d'un registre ≈ 0,09 s (une fois), chargement total ≈ 0,24 s. Acceptable pour un outil de vérification/test.
+- `cahier-des-charges-v0.2.md` §15.1 et `TECHNICAL.md` (section certificats) mis à jour.
+
+Écarts / vigilance :
+
+- Un littéral `int` de valeur `1.0` est désormais accepté (le schéma le tient pour entier) et converti par `int()`.
+- Pour un `oneOf` en échec (types, littéraux), jsonschema ne donne que le chemin du `oneOf`, pas du champ le plus profond.
+- `./scripts/validate.sh complet` : ÉCHEC dû au travail en cours d'autres agents, pas à ce ticket : `cli.py` (migration Typer, HYP-006 : `click`/`typer` non résolus) casse l'import de `hypomnesis.cli`, donc `pytest` (collecte), l'étape Lean (via `hypomnesis.cli`) et pyright ; `observability/trace.py` a deux erreurs pyright. Mon dernier run complet de `pytest` (avant ces changements) était vert (202 tests), ruff et pyright de `certify/` sont propres. Le `complet` est à relancer une fois HYP-006/HYP-015 stabilisés.
+- Les modifications non commitées de `TECHNICAL.md` d'un autre agent (section Kanban) n'ont pas été incluses dans mon commit : seul mon paragraphe l'est.
+
+### user
+
