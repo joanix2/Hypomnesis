@@ -86,4 +86,3 @@ Bug découvert pendant HYP-008 : HYP-143 (fait sans source déclarée `axiome`).
 Pour la clôture, l'inventaire du code maison encore présent (avec bibliothèque candidate ou raison de le garder) est dans la checklist `todo_20261103_hyp007_…`, itération 2. Résumé : aucune autre migration ne s'impose ; trois examens restent ouverts (intervalles de confiance du banc avec `scipy.stats`, collecte des commentaires de doc par les callbacks du lexeur Lark, bibliothèque d'automate ou de relance pour HYP-061) et sont rattachés à leurs tickets plutôt qu'à un nouveau ticket.
 
 ### user
-

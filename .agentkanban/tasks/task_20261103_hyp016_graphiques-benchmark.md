@@ -53,4 +53,3 @@ HYP-016 implémenté (commit `a884a1c`).
 Vigilance : le défaut `--graphiques` actif change légèrement la sortie du banc (6 fichiers en plus). La figure « par jeu » devient large avec beaucoup de stratégies.
 
 ### user
-

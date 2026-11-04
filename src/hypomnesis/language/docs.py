@@ -83,13 +83,21 @@ def _doc_index(tokens: list[Token]) -> dict[int, Doc]:
     index: dict[int, Doc] = {}
     for token, following in pairwise(tokens):
         text = str(token)
-        if token.type == "COMMENT" and text.startswith("(**") and not text.startswith("(**)"):
+        is_doc = token.type == "COMMENT" and text.startswith("(**") and not text.startswith("(**)")
+        if is_doc and following.line is not None:
             index[following.line] = parse_doc(text[3:-2])
     return index
 
 
-def _token_span(token: Token) -> Span:
-    return Span(token.line, token.column, token.end_line, token.end_column)
+def _token_span(token: Token) -> Span | None:
+    if None in (token.line, token.column, token.end_line, token.end_column):
+        return None
+    return Span(
+        int(token.line or 0),
+        int(token.column or 0),
+        int(token.end_line or 0),
+        int(token.end_column or 0),
+    )
 
 
 def _members(code: list[Token], rhs: A.RecordRhs | A.VariantRhs) -> list[Token | None]:
@@ -130,7 +138,7 @@ def declarations(source: str, program: A.Program | None = None) -> list[Declarat
 
     def member(kind: str, path: str, name: Token | None, on_line: int | None, text: str | None):
         # a member written on the line of its type cannot own the description before it
-        doc = docs.get(name.line) if name and name.line != on_line else None
+        doc = docs.get(name.line) if name and name.line not in (None, on_line) else None
         found.append(Declaration(kind, path, doc, text, _token_span(name) if name else None))
 
     def walk(items: tuple[A.Item, ...], prefix: str) -> None:

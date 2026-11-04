@@ -1,6 +1,6 @@
 ---
 title: "HYP-040 · Interfaces des capacités (Observer … Resolver)"
-lane: doing
+lane: qa
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-04T14:55:00+01:00
 description: "P0 · M · Phase 3 — Extensions et contrats · dépend de HYP-002"

@@ -1,6 +1,6 @@
 ---
 title: "HYP-061 · Automate d'états des commandes, délais, relances"
-lane: doing
+lane: qa
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · M · Phase 5 — Effets et actionneurs · dépend de HYP-060"
@@ -53,4 +53,3 @@ Commits : aa29350 (code + tests) ; docs et fiche dans le commit suivant.
 Reste à faire : relancer `./scripts/validate.sh complet` ; dernier état : seul échec = pyright sur `src/hypomnesis/language/docs.py` (l.83-132, `int | None`, chantier HYP-130/137, pas ce ticket) ; ruff, tests (tout `tests/`) et Lean sont verts. Quand `complet` est vert : cocher la dernière case du todo, passer la fiche en `qa`.
 
 ### user
-
