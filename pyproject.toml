@@ -21,16 +21,25 @@ dependencies = [
   "jsonschema[format-nongpl]>=4.21",
   "referencing>=0.35",
   "z3-solver>=4.12",
+  "typer>=0.12",
+  "networkx>=3.2",
+  "opentelemetry-api>=1.25",
+  "opentelemetry-sdk>=1.25",
 ]
 
 [project.optional-dependencies]
 llm = [
   "jinja2>=3.1",
   "scikit-learn>=1.5",
+  "ollama>=0.3",
+  "matplotlib>=3.8",
 ]
 dev = [
   "jinja2>=3.1",
   "scikit-learn>=1.5",
+  "ollama>=0.3",
+  "matplotlib>=3.8",
+  "pyyaml>=6",
   "pytest>=8",
   "hypothesis>=6.100",
   "ruff>=0.6",
