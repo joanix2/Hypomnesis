@@ -2,8 +2,9 @@
 
 The catalogue is built from what the language says about itself: its documentation
 comments and ``@tags`` (see ``hypomnesis.language.docs``) and the types the checker
-infers. Only documented items are published, like the public schema of an API: an
-undocumented helper stays out of the prompt. The wording lives in a template
+infers. Only documented public items are published, like the public schema of an API: an
+undocumented or ``_``-prefixed helper, and anything tagged ``@interne``, stays out of the
+prompt. The wording lives in a template
 (``templates/catalogue.md.j2``) so that it can be tuned without touching the code.
 """
 
@@ -15,7 +16,7 @@ from dataclasses import dataclass
 from jinja2 import Environment, PackageLoader
 
 from hypomnesis.engine.language import Language
-from hypomnesis.language.docs import Declaration, Doc, declarations
+from hypomnesis.language.docs import Declaration, Doc, declarations, is_public, published
 
 # Display labels of the tag vocabulary; an unknown tag is shown under its own name.
 TAG_LABELS = {
@@ -87,8 +88,11 @@ def _environment() -> Environment:
     return env
 
 
-def _parts(doc: Doc | None) -> tuple[str, tuple[tuple[str, str], ...]]:
-    return (doc.summary, doc.tags) if doc else ("", ())
+def _parts(doc: Doc | None, member: bool = False) -> tuple[str, tuple[tuple[str, str], ...]]:
+    """Summary and tags to print. A ``@discret`` member is listed without its description."""
+    if doc is None or (member and doc.tag("discret")):
+        return "", ()
+    return doc.summary, doc.tags
 
 
 def catalogue(language: Language) -> Catalogue:
@@ -98,7 +102,8 @@ def catalogue(language: Language) -> Catalogue:
         found += declarations((language.root / source).read_text(encoding="utf-8"))
 
     modules: list[ModuleDoc] = []
-    for module in (d for d in found if d.kind == "module" and d.doc):
+    shown = published(found)
+    for module in (d for d in shown if d.kind == "module"):
         summary, tags = _parts(module.doc)
         prefix = module.path + "."
 
@@ -106,16 +111,20 @@ def catalogue(language: Language) -> Catalogue:
             return d.path.startswith(prefix) and "." not in d.path[len(prefix) :]
 
         types = []
-        for t in (d for d in found if d.kind == "type" and d.doc and direct(d)):
+        for t in (d for d in shown if d.kind == "type" and direct(d)):
             t_summary, t_tags = _parts(t.doc)
-            members = [d for d in found if d.path.startswith(t.path + ".")]
+            members = [
+                d
+                for d in found
+                if d.path.startswith(t.path + ".") and is_public(d) and not d.internal
+            ]
             types.append(
                 TypeDoc(
                     t.path,
                     t_summary,
                     t_tags,
                     tuple(
-                        FieldDoc(d.path, *_parts(d.doc), d.type_text or "")
+                        FieldDoc(d.path, *_parts(d.doc, member=True), d.type_text or "")
                         for d in members
                         if d.kind == "field"
                     ),
@@ -128,8 +137,8 @@ def catalogue(language: Language) -> Catalogue:
             )
         values = tuple(
             ValueDoc(d.path, *_parts(d.doc), language.session.type_of(d.path))
-            for d in found
-            if d.kind == "value" and d.doc and direct(d)
+            for d in shown
+            if d.kind == "value" and direct(d)
         )
         modules.append(ModuleDoc(module.path, summary, tags, tuple(types), values))
     return Catalogue(

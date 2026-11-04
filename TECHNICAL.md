@@ -297,6 +297,17 @@ relance si idempotent, sinon `UnknownOutcome`. Une réponse tardive donne `Timed
 la table mais n'est émis que par un transport asynchrone (HYP-063). Miroir de la propriété Lean HYP-066
 (`docs/verification/proprietes.md`) ; tests : `tests/unit/test_commands.py`.
 
+## Descriptions obligatoires (HYP-137)
+
+`language/docs.py` extrait les `(** … *)` en lexant la source (`parser.lex`, pas de regex) et les
+rattache par position ; `declarations` rend aussi la position de chaque élément (nom du membre pour un
+champ ou un constructeur). `missing_descriptions` liste les éléments publics (aucun `_` dans le nom
+qualifié) sans description ; `load_language(root, strict=True)` lève `MissingDescriptionError`
+(`engine/language.py`) pour le premier. `@interne` : décrit mais hors catalogue ; `@discret` : membre
+listé sans sa description (`llm/describe.py`). Règles complètes : ADR 0009 (décisions 6 et 7). Tests :
+`tests/unit/test_language_docs.py` (règle, propriétés « Core IR et certificat identiques avec ou sans
+descriptions ») et instantanés `tests/unit/snapshots/` (catalogue rendu, octet pour octet).
+
 ## Commandes
 
 ```bash

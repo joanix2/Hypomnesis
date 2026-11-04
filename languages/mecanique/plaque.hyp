@@ -46,22 +46,41 @@ module Plaque = struct
   }
 
   (* Paramètres des règles : une seule source de vérité. *)
+  (** Masse volumique de l'acier, en kg/mm³.
+      @interne *)
   let densite_acier = 0.00000785                       (* kg/mm³ *)
+  (** Épaisseur minimale admise, en mm.
+      @interne *)
   let epaisseur_min = 1.0                               (* mm *)
+  (** Élancement maximal admis (petit côté / épaisseur).
+      @interne *)
   let elancement_max = 40.0                             (* petit côté / épaisseur *)
+  (** Épaisseurs standard disponibles, en mm.
+      @interne *)
   let epaisseurs_standard = [1.0; 1.5; 2.0; 3.0; 4.0; 5.0; 6.0; 8.0; 10.0; 12.0]
 
+  (** Le plus petit des deux côtés de la plaque, en mm.
+      @interne *)
   let petit_cote (d : demande) = if d.largeur < d.hauteur then d.largeur else d.hauteur
+  (** Masse de la plaque en kg pour l'épaisseur `e` (mm).
+      @interne *)
   let masse (d : demande) e = d.largeur *. d.hauteur *. e *. densite_acier
 
   (* Estimateurs : deux heuristiques métier interchangeables. *)
+  (** Estimation de l'épaisseur par règle : petit côté / 25, en mm.
+      @interne *)
   let estimer_regle (d : demande) = petit_cote d /. 25.0
+  (** Estimation de l'épaisseur par abaque, selon la surface, en mm.
+      @interne *)
   let estimer_abaque (d : demande) =
     let surface = d.largeur *. d.hauteur in
     if surface < 5000.0 then 2.0 else if surface < 15000.0 then 3.0 else 5.0
 
   (* Problème de contraintes (bibliothèque standard Problem) : épaisseur standard
      la plus proche de l'estimation, respectant élancement et masse. *)
+  (** Problème de contraintes sur l'épaisseur : standard la plus proche de l'estimation,
+      sous les limites d'élancement et de masse.
+      @interne *)
   let probleme (d : demande) estimation = {
     Problem.variables = [{
       Problem.name = "epaisseur";
@@ -81,6 +100,8 @@ module Plaque = struct
   }
 
   (* Règles de validation : la liste des violations (vide = valide). *)
+  (** Violations de l'épaisseur `e` (mm) pour la demande `d` : liste vide si la plaque est valide.
+      @interne *)
   let verifier (d : demande) e =
     let r1 = if e < epaisseur_min then ["épaisseur inférieure au minimum"] else [] in
     let r2 = if petit_cote d /. e > elancement_max then ["plaque trop élancée"] else [] in
@@ -88,9 +109,15 @@ module Plaque = struct
     r1 @ r2 @ r3
 
   (* Commande d'export : contenu typé, validé ensuite par le contrat geometry.export. *)
+  (** Géométrie d'une plaque, telle que l'attend le contrat `geometry.export`.
+      @interne *)
   type piece = { name : string; width_mm : float; height_mm : float; thickness_mm : float }
+  (** Commande d'export d'une pièce : format et chemin du fichier produit.
+      @interne *)
   type export = { part : piece; format : string; path : string }
 
+  (** Commande d'export de la plaque `d` d'épaisseur `e` (mm) au format `format`.
+      @interne *)
   let commande_export (d : demande) e format = {
     part = { name = d.nom; width_mm = d.largeur; height_mm = d.hauteur; thickness_mm = e };
     format = format;
@@ -101,7 +128,17 @@ module Plaque = struct
   (* Effets comme valeurs (type 'a Effect.t) : décrits ici, exécutés par le moteur. *)
 
   (** Un estimateur d'épaisseur : une heuristique métier interchangeable. *)
-  type estimateur = { id : string; confiance : float; estimer : demande -> float }
+  type estimateur = {
+    (** Nom de l'estimateur, repris dans la trace.
+        @discret *)
+    id : string;
+    (** Confiance accordée à l'estimation, entre 0 et 1.
+        @discret *)
+    confiance : float;
+    (** Fonction qui estime l'épaisseur (mm) d'une demande.
+        @discret *)
+    estimer : demande -> float;
+  }
 
   (** Estimateur par règle : épaisseur ≈ petit côté / 25.
       @quand la demande dit « règle » ou « estimateur par règle »
@@ -112,8 +149,12 @@ module Plaque = struct
       @quand la demande dit « abaque » *)
   let estimateur_abaque = { id = "abaque v1"; confiance = 0.7; estimer = estimer_abaque }
 
+  (** Noms des faits déjà connus de la demande, utilisés comme prémisses des faits dérivés.
+      @interne *)
   let connus = ["demande.nom"; "demande.largeur"; "demande.hauteur"; "demande.masse_max"]
 
+  (** Enregistre les données de la demande comme faits donnés.
+      @interne *)
   let donnees (d : demande) =
     Effect.record "demande.nom" d.nom "demande" Effect.Given >>= fun () ->
     Effect.record "demande.largeur" d.largeur "demande" Effect.Given >>= fun () ->
@@ -121,6 +162,9 @@ module Plaque = struct
     Effect.record "demande.masse_max" d.masse_max "demande" Effect.Given
 
   (* Valider, puis exporter si la plaque est valide. Rend le verdict. *)
+  (** Valide la plaque d'épaisseur `e` (mm), puis exporte sa géométrie (SVG et JSON) si elle est
+      valide. Rend le verdict. Étape interne de `concevoir` : ne jamais l'appeler seule.
+      @interne *)
   let valider_et_exporter (d : demande) e =
     let erreurs = verifier d e in
     let premisses = "demande.epaisseur" :: connus in
@@ -165,6 +209,9 @@ module Plaque = struct
         valider_et_exporter d e
 
   (* Révision : mesurer l'épaisseur réelle, retirer l'estimation, revalider. *)
+  (** Mesure l'épaisseur réelle au pied à coulisse, retire l'estimation et revalide la plaque.
+      Étape interne de `concevoir_puis_mesurer` : ne jamais l'appeler seule.
+      @interne *)
   let reviser_par_mesure (d : demande) =
     Effect.observe "pied-a-coulisse" >>= fun (cle, releve) ->
     let mesure = Option.value (Json.num_field "thickness_mm" releve) 0.0 in

@@ -28,25 +28,47 @@ module Ventilation = struct
     budget : int;
   }
 
+  (** Température au-dessus de laquelle on agit, en °C.
+      @interne *)
   let seuil = 28.0                 (* °C *)
+  (** Baisse de température attendue après une action, en °C.
+      @interne *)
   let baisse_attendue = 1.0        (* °C après une action *)
 
   (* Décision : None = rien à faire ; Some v = vitesse en %. *)
+  (** Vitesse de ventilation (%) pour une température (°C) : `None` si elle ne dépasse pas le
+      seuil, `Some v` sinon.
+      @interne *)
   let decider temperature =
     if temperature <= seuil then None
     else
       let v = 40 + int_of_float ((temperature -. seuil) *. 20.0) in
       Some (if v > 100 then 100 else v)
 
-  type commande = { fan_id : string; speed_percent : int }
+  (** Commande de vitesse envoyée au ventilateur.
+      @interne *)
+  type commande = {
+    (** Identifiant du ventilateur.
+        @interne *)
+    fan_id : string;
+    (** Vitesse demandée, en %.
+        @interne *)
+    speed_percent : int;
+  }
 
+  (** Vrai si la température a baissé d'au moins la baisse attendue (°C).
+      @interne *)
   let effet_confirme avant apres = avant -. apres >= baisse_attendue
 
+  (** Température en °C lue dans un relevé du capteur (0.0 si absente).
+      @interne *)
   let celsius releve = Option.value (Json.num_field "celsius" releve) 0.0
 
   (* Procédure de régulation : observer, décider, agir, vérifier l'effet sous
      l'hypothèse explicite que le ventilateur fonctionne ; recommencer au plus
      `budget` fois. Rend la conclusion. *)
+  (** Boucle de régulation, itération `i` ; étape interne de `reguler`.
+      @interne *)
   let rec boucle i budget (inst : installation) cle_avant avant =
     if i > budget then Effect.return "budget épuisé"
     else

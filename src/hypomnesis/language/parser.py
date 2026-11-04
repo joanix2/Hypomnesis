@@ -41,6 +41,16 @@ def parse_expression(source: str) -> A.Expr:
     return _parse(source, "expr")
 
 
+def lex(source: str) -> list[Token]:
+    """Every token of a source, whitespace and comments included (the parser drops them).
+
+    Lexing is the only reliable way to tell a comment from a string that looks like one."""
+    try:
+        return list(_parser().lex(source, dont_ignore=True))
+    except UnexpectedInput as exc:
+        raise _convert_error(exc) from None
+
+
 def _parse(source: str, start: str):
     try:
         tree = _parser().parse(source, start=start)

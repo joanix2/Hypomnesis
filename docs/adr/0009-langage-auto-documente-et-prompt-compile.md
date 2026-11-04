@@ -38,6 +38,22 @@ dans sa syntaxe), et le moteur **compile** cette documentation en prompt.
    caractères, insensible aux nombres) sous forme de tours de conversation.
 5. **Stratégies composables** (`llm/prompting.py`, `--strategie`) : `source`, `catalogue`,
    `programmes`, `tirsN`, `ragN`. `base` = prompt historique. **Défaut : `catalogue+rag5`.**
+6. **Description obligatoire** (HYP-137). `load_language` (langages M2 seulement, pas les programmes
+   M1) refuse un langage dont un élément **public** (module, type, champ, constructeur, valeur) n'a
+   pas de description : `MissingDescriptionError` (`engine/language.py`, sous-classe de
+   `HypomnesisError` et de `LanguageError`) nomme l'élément qualifié, le fichier et la position
+   (`strict=False` pour les langages jouets des tests). *Public* = aucun composant du nom qualifié ne
+   commence par `_` (sans attendre les signatures de modules, HYP-012, qui pourront restreindre).
+   - Balise **`@interne`** : élément décrit mais **non publié** dans le catalogue ni dans `decrire`.
+     Il doit être décrit ; ses membres (champs, constructeurs, éléments d'un module) ne le sont pas.
+   - Balise **`@discret`** (membre de type) : le champ ou constructeur reste listé (nom et type) sans
+     sa description. Elle permet de décrire un champ sans changer le texte du prompt mesuré.
+   - Un constructeur se décrit par un `(** … *)` placé avant `| Ctor`, sur une ligne distincte de
+     celle de son type ; un membre écrit sur la ligne du type ne peut pas porter de description.
+7. **Détection des commentaires par le lexeur** (`parser.lex`, `Lark.lex(dont_ignore=True)`) et non
+   par regex : un `(**` dans une chaîne ou dans un commentaire ordinaire n'est pas une description.
+   Les commentaires restent non imbriqués (comme le lexeur). `lexer_callbacks` a été écarté : l'état
+   par analyse serait partagé par l'analyseur mis en cache ; `lex` n'a pas d'état.
 
 ## Mesures
 
@@ -80,7 +96,7 @@ Un modèle « thinking » (`qwen3:4b`, variante 2507-thinking) ne peut pas désa
 ## Conséquences
 
 - Écrire un langage M2 demande de le documenter ; la qualité du prompt devient celle de ces
-  descriptions. Rendre la description **obligatoire** (erreur de compilation) reste à faire : HYP-137.
+  descriptions. La description est **obligatoire** (HYP-137, voir la décision 6).
 - Les exemples publiés par un langage doivent rester justes : ils sont rejoués par la suite de tests.
 - Dépendances ajoutées : `jinja2`, `scikit-learn` (extra `llm`, inclus dans `dev`).
 - Le retrieval lexical suffit ici ; des plongements Ollama ne se justifient que si un langage montre

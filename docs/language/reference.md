@@ -90,6 +90,16 @@ Types de base : `int`, `float`, `string`, `bool`, `unit`, `'a list`. Le prélude
 
 Le prélude est écrit en Hypomnesis : [`src/hypomnesis/stdlib/prelude.hyp`](../../src/hypomnesis/stdlib/prelude.hyp).
 
+## Descriptions (langages M2)
+
+Un commentaire `(** … *)` placé juste avant une déclaration (module, type, champ, constructeur,
+valeur) la décrit ; les lignes `@nom texte` sont des balises (`@quand`, `@unité`, `@exemple`,
+`@interne`, `@discret`, …). Pour la grammaire c'est un commentaire : aucun effet sémantique.
+Un langage M2 est refusé au chargement si un élément **public** (aucun composant du nom ne commence
+par `_`) n'a pas de description ; `@interne` retire un élément décrit du catalogue du prompt, et
+`@discret` garde un champ dans le catalogue sans sa description. Les programmes M1 en sont exempts.
+Voir l'ADR 0009.
+
 ## Pas encore implémenté
 
 Signatures de modules et foncteurs, import entre fichiers (la CLI charge les fichiers dans

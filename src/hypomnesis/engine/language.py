@@ -26,6 +26,8 @@ from pathlib import Path
 from typing import Any
 
 from hypomnesis.contracts.registry import SchemaRegistry
+from hypomnesis.language.docs import Declaration, missing_descriptions
+from hypomnesis.language.errors import HypomnesisError
 from hypomnesis.runtime.values import Value
 from hypomnesis.session import Session
 
@@ -35,6 +37,28 @@ MANIFEST_SCHEMA = "https://schemas.example.org/hypomnesis/language-manifest/1.0.
 
 class LanguageError(ValueError):
     pass
+
+
+class MissingDescriptionError(HypomnesisError, LanguageError):
+    """A public declaration of a language has no ``(** … *)`` description (ADR 0009)."""
+
+    stage = "description error"
+
+    def __init__(self, declaration: Declaration, filename: str) -> None:
+        super().__init__(
+            f"{declaration.kind} {declaration.path} has no description: "
+            "add a (** … *) comment before it, tag it @interne or prefix its name with _",
+            declaration.span,
+        )
+        self.declaration = declaration
+        self.filename = filename
+
+    def __str__(self) -> str:
+        where = f"{self.filename}:{self.span}" if self.span else self.filename
+        return f"{where}: {self.stage}: {self.message}"
+
+    def render(self, source: str | None = None, filename: str | None = None) -> str:
+        return super().render(source, filename or self.filename)
 
 
 @dataclass
@@ -81,7 +105,9 @@ class Language:
         self.session.load(source)
 
 
-def load_language(root: Path) -> Language:
+def load_language(root: Path, *, strict: bool = True) -> Language:
+    """Load a language package. ``strict`` demands a description for every public declaration
+    of its sources (``strict=False`` is for toy languages in tests); M1 programs are exempt."""
     root = root.resolve()
     manifest_path = root / MANIFEST
     if not manifest_path.exists():
@@ -95,5 +121,9 @@ def load_language(root: Path) -> Language:
         schemas.add(json.loads((root / contract).read_text(encoding="utf-8")))
     language = Language(root, manifest, schemas)
     for source in manifest["sources"]:
-        language.session.load((root / source).read_text(encoding="utf-8"))
+        text = (root / source).read_text(encoding="utf-8")
+        language.session.load(text)
+        missing = missing_descriptions(text) if strict else []
+        if missing:
+            raise MissingDescriptionError(missing[0], source)
     return language

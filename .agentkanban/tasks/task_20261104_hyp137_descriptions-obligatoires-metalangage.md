@@ -56,4 +56,30 @@ Reste : l'**erreur de compilation** quand un élément public n'a pas de descrip
 - **« Public »** : tout élément déclaré dans un fichier source d'un langage M2 dont le nom ne commence pas par `_`, sans attendre HYP-012 (qui pourra restreindre la notion ensuite).
 - **Balise `@interne`** : un élément portant `@interne` est **documenté mais non publié** dans le catalogue du prompt. Il reste soumis à l'obligation de description (une description est exigée, y compris pour un élément `@interne`), mais `llm/describe.py` ne l'inclut pas dans le catalogue ni dans `decrire`. Un élément en `_nom` n'a pas d'obligation de description et n'est jamais publié. À consigner dans l'ADR 0009 et dans `docs/language/reference.md`. Conséquence pour HYP-138 : le catalogue filtre sur cette balise.
 
+### agent
+
+**Compte rendu (2026-11-04, WIP — `validate.sh rapide`/`complet` non relancés, voir « Reste »).**
+
+Fait :
+- Instantanés du catalogue rendu (`tests/unit/snapshots/catalogue_{mecanique,ventilation}.md`, test dans `test_describe.py`), écrits **avant** de toucher aux langages : octet pour octet identiques après les changements (test vert). Commit `2c3908c`.
+- `language/docs.py` : extraction par **lexage** (`parser.lex` = `Lark.lex(dont_ignore=True)`) au lieu de la regex `_DOC` ; `Declaration.span`, `Declaration.internal`, descriptions de constructeurs (`(** … *)` avant `| Ctor`), `is_public`, `published`, `missing_descriptions`.
+- `engine/language.py` : `MissingDescriptionError(HypomnesisError, LanguageError)` (nomme l'élément, le fichier, la position ; `render` souligne le nom), `load_language(root, *, strict=True)`. `errors.py` et `cli.py` non touchés (la double héritance fait que `decrire` l'attrape comme `LanguageError`).
+- `llm/describe.py` : `@interne` exclu du catalogue (et ses membres) ; `@discret` : membre listé sans description.
+- `plaque.hyp`, `ventilation.hyp` : tout élément non publié porte `@interne` (+ description), les champs de `Plaque.estimateur` portent `@discret` (pour que le prompt reste identique), type `estimateur` reformaté sur plusieurs lignes.
+- Tests : `tests/unit/test_language_docs.py` (règle, position, `_`, `@interne`, `@discret`, lexage, propriétés Core IR + certificat identiques avec/sans descriptions sur langages et exemples). `test_llm.py` : le test « langage non documenté » utilise `strict=False` (+ vérifie l'erreur en strict).
+- Docs : ADR 0009 (décisions 6 et 7), `docs/language/reference.md`, `TECHNICAL.md` (section HYP-137).
+- Lancés et verts : `test_language_docs`, `test_docs`, `test_describe`, `test_prompting`, `test_llm`, `tests/integration/test_languages`, `test_examples` ; `ruff check`/`format` sur mes fichiers.
+
+Écarts / décisions :
+- Item 6 : `lexer_callbacks` écarté au profit de `Lark.lex(dont_ignore=True)` (pas d'état partagé avec l'analyseur mis en cache). Les commentaires restent non imbriqués (comme le lexeur) : `(* … (** … *) … *)` est une erreur de syntaxe, pas un cas à gérer.
+- Ajout de `@discret` (non demandé) : les trois champs publics de `Plaque.estimateur` devaient être décrits mais listés sans description dans le prompt mesuré.
+- Les membres d'un élément `@interne` (champs, éléments d'un module) sont **exemptés** de description (l'élément `@interne` lui-même doit être décrit) ; un nom `_` exempte aussi ses membres. À valider par l'utilisateur.
+- Un champ/constructeur écrit sur la même ligne que son type ne peut pas être décrit (limite du rattachement positionnel).
+- `tests/unit/test_llm.py` est aussi touché par HYP-139 : seul mon hunk (import `pytest`/`MissingDescriptionError`, `strict=False`) est à moi.
+
+Reste :
+- Lancer `./scripts/validate.sh rapide` puis `complet` (test d'architecture non lancé explicitement), corriger si besoin.
+- Passer la fiche en `qa` une fois `complet` vert ; cocher la dernière case de la checklist.
+- `cli.py` (HYP-130) : si une commande charge un langage, vérifier qu'elle affiche `str(exc)`/`exc.render()` de `MissingDescriptionError`.
+
 ### user

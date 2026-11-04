@@ -4,7 +4,9 @@ import re
 import shutil
 from pathlib import Path
 
-from hypomnesis.engine.language import load_language
+import pytest
+
+from hypomnesis.engine.language import MissingDescriptionError, load_language
 from hypomnesis.llm.benchmark import run_benchmark, semantic_errors, summary
 from hypomnesis.llm.ollama import Reply
 from hypomnesis.llm.prompting import BASE
@@ -63,8 +65,10 @@ def test_an_undocumented_language_falls_back_on_its_source(tmp_path):
     shutil.copytree(VENTILATION, tmp_path / "ventilation")
     source = tmp_path / "ventilation" / "ventilation.hyp"
     source.write_text(re.sub(r"\(\*\*.*?\*\)", "", source.read_text(encoding="utf-8"), flags=re.S))
-    language = load_language(tmp_path / "ventilation")
+    language = load_language(tmp_path / "ventilation", strict=False)
     assert "module Ventilation" in system_prompt(language, [])
+    with pytest.raises(MissingDescriptionError):
+        load_language(tmp_path / "ventilation")
 
 
 def test_compiler_diagnostics_drive_the_repair():
