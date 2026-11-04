@@ -1,8 +1,8 @@
 ---
 title: "HYP-026 · TODO"
-lane: todo
+lane: qa
 created: 2026-11-03T20:00:00+01:00
-updated: 2026-11-03T21:00:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-026"
 priority: P0
 tags: [certification, lean]

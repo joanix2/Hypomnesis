@@ -1,8 +1,8 @@
 ---
 title: "HYP-131 · Extension VS Code : coloration syntaxique"
-lane: todo
+lane: qa
 created: 2026-11-04T08:56:00+01:00
-updated: 2026-11-04T08:56:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "P2 · S · Outillage et visualisation · dépend de HYP-002"
 priority: P2
 tags: [dsl, metalangage, outillage, vscode]
@@ -62,5 +62,14 @@ Un test dans un hôte VS Code isolé confirme l'association du langage et les di
 Documentation d'installation ajoutée ; job CI de construction ajouté, non encore exécuté
 à distance. Validation complète Python/Lean verte (671 tests), graphe rafraîchi.
 Checklist complétée, couloir laissé à l'utilisateur, pas de push.
+
+### user
+
+### agent
+
+Mise à jour du Kanban demandée : passage en `qa`. Implémentation enregistrée dans
+`befd715`, puis adaptée aux déclarations natives dans `6e2962f`. Dernière validation
+intégrée : 735 tests Python, Python/Lean verts, sept tests TextMate et test réel
+d'hôte VS Code réussis. Validation humaine finale réservée à l'utilisateur.
 
 ### user

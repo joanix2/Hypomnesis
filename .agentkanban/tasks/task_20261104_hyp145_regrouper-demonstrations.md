@@ -1,8 +1,8 @@
 ---
 title: "HYP-145 · Regrouper les démonstrations et isoler les sorties"
-lane: todo
+lane: qa
 created: 2026-11-04T17:15:45+01:00
-updated: 2026-11-04T17:15:45+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "P2 · S · Outillage · rangement demandé par l'utilisateur"
 priority: P2
 tags: [documentation, outillage, tests]
@@ -72,5 +72,14 @@ L'utilisateur demande maintenant de tout committer : inclure le rangement des d�
 les correctifs d'outillage en attente, les tags et priorités et les comptes rendus du Kanban.
 Les caches, résultats d'exécution, dépendances installées et VSIX généré restent ignorés.
 Validation avant commit ; aucun push demandé.
+
+### user
+
+### agent
+
+Mise à jour du Kanban demandée : passage en `qa`. Rangement enregistré dans
+`9e70271`, puis démonstrations migrées aux déclarations natives dans `6e2962f`.
+Checklist complète ; dernière validation intégrée verte (735 tests et Lean),
+sans résultat généré versionné. Validation humaine finale laissée à l'utilisateur.
 
 ### user

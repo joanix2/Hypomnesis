@@ -1,8 +1,8 @@
 ---
 title: "TODO HYP-004 · Pousser et valider la CI"
-lane: todo
+lane: qa
 created: 2026-11-04T16:43:39+01:00
-updated: 2026-11-04T16:43:39+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist HYP-004 : décision humaine, CI distante et garde-fou sorry"
 priority: P0
 tags: [ci, humain, mvp, outillage]

@@ -1,8 +1,8 @@
 ---
 title: "TODO HYP-147 · Couches déclarées en .hyp et DAG d'imports"
-lane: todo
+lane: qa
 created: 2026-11-04T17:47:20+01:00
-updated: 2026-11-04T17:47:20+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Déclaration native du langage, composition et migration sans manifeste JSON"
 priority: P1
 tags: [architecture, dsl, metalangage, moteur-symbolique, tests]

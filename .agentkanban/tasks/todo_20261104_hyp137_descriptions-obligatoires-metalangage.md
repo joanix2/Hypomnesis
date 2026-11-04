@@ -1,8 +1,8 @@
 ---
 title: "HYP-137 · TODO"
-lane: doing
+lane: qa
 created: 2026-11-04T14:50:00+01:00
-updated: 2026-11-04T14:55:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-137"
 priority: P1
 tags: [documentation, dsl, llm, metalangage, python]
@@ -29,4 +29,4 @@ Fichiers : `src/hypomnesis/language/docs.py`, `src/hypomnesis/engine/language.py
 - [x] Test de propriétés (Hypothesis ou paramétré sur tous les fichiers `.hyp` des langages et exemples) : supprimer tous les commentaires de description d'une source ne change ni la Core IR élaborée ni le certificat exporté (`export_certificate`)
 - [x] Le test d'architecture (aucun domaine dans M3) passe toujours : la règle est générique
 - [x] `docs/language/reference.md` : syntaxe `(** … *)`, balises, règle « public », exception `_` ; mettre à jour l'ADR 0009
-- [ ] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`
+- [x] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`

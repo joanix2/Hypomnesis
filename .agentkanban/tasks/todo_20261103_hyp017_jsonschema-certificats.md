@@ -1,8 +1,8 @@
 ---
 title: "HYP-017 · TODO"
-lane: todo
+lane: qa
 created: 2026-11-04T15:00:00+01:00
-updated: 2026-11-04T15:00:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-017"
 priority: P2
 tags: [certification, contrats, dette, jsonschema, python]

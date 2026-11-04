@@ -1,8 +1,8 @@
 ---
 title: "HYP-130 · TODO"
-lane: todo
+lane: qa
 created: 2026-11-04T14:30:00+01:00
-updated: 2026-11-04T14:30:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-130"
 priority: P1
 tags: [compilateur, llm, metalangage, outillage, python]
@@ -27,4 +27,4 @@ Mise à jour 2026-11-04 : depuis HYP-006, `cli.py` est écrit avec **Typer** : `
 - [x] Test : programme correct → `{"version": ..., "diagnostics": []}` et code 0
 - [x] Test : validation du document par `SchemaRegistry.issues` sur chaque cas
 - [x] `docs/` : décrire le format (section dans `docs/language/` ou `TECHNICAL.md`) ; ajouter une note à HYP-132/133 sur le format à consommer
-- [ ] `./scripts/validate.sh complet`, commit en français, mettre la tâche en `qa`
+- [x] `./scripts/validate.sh complet`, commit en français, mettre la tâche en `qa`

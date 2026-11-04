@@ -1,8 +1,8 @@
 ---
 title: "HYP-004 · Pousser la branche et valider la CI (Python et preuves)"
-lane: todo
+lane: qa
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-03T17:42:26+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "P0 · S · Fondations et gouvernance · dépend de HYP-003"
 priority: P0
 tags: [ci, humain, mvp, outillage]
@@ -72,5 +72,14 @@ Checklist complétée ; couloir laissé à l'utilisateur.
 Validation finale après ajout des tests d'orchestration Graphify : 655 tests et
 `validate.sh complet` verts. La CI distante citée reste celle du commit antérieur publié ;
 aucune nouvelle exécution distante ni publication de ce lot n'est revendiquée.
+
+### user
+
+### agent
+
+Mise à jour du Kanban demandée par l'utilisateur : passage en `qa`, checklist
+complète et contrôles documentés ci-dessus. La CI distante attestée reste celle
+de `7d89099` ; les commits locaux suivants ne sont pas déclarés publiés ni validés
+à distance. Aucun passage en `done`.
 
 ### user

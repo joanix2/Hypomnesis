@@ -105,8 +105,15 @@ Détails d'implémentation : `TECHNICAL.md`.
 - ADR 0006 (proposée) : M3 = théorie des types à deux niveaux, modale et graduée (`docs/architecture/m3-metalangage.md`).
 - ADR 0007 : sémantique de référence Lean ; on prouve le vérificateur (certificats), pas le compilateur.
 
-## État (2026-11-03)
+## État (2026-11-04)
 
 - Faits : HYP-001 (fondations), HYP-002 (langage minimal), HYP-003 (preuves Lean initiales).
-- Chemin critique vers des garanties sur les vrais programmes : HYP-020 → HYP-024 → HYP-025 → HYP-026 → HYP-027.
-- Branche de travail : `phase-0-1-langage-minimal` (non poussée).
+- HYP-020, HYP-024, HYP-025 et HYP-026 sont en `qa` ; HYP-027 reste à traiter.
+- HYP-004, HYP-131, HYP-132 et HYP-144 à HYP-147 sont en `qa` : implémentations
+  et contrôles documentés, validation humaine finale encore requise.
+- HYP-007 reste en `todo`, bloqué pour clôture par HYP-014 (`doing`) et sa comparaison
+  réelle avant/après. HYP-139 reste `doing`, mesures GPU réelles non attestées.
+- Branche de travail : `main`, dernier commit d'implémentation `6e2962f`.
+  Dernière validation intégrée : 735 tests (658 moteur, 77 Codegen), Python/Lean verts.
+  Les derniers commits locaux ne sont pas poussés ; la CI distante attestée pour
+  HYP-004 concerne `7d89099`.

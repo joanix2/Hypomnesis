@@ -1,8 +1,8 @@
 ---
 title: "HYP-024 · TODO"
-lane: todo
+lane: qa
 created: 2026-11-03T18:30:00+01:00
-updated: 2026-11-03T18:30:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-024"
 priority: P0
 tags: [certification, compilateur, metalangage, python]

@@ -1,8 +1,8 @@
 ---
 title: "HYP-008 · TODO"
-lane: todo
+lane: qa
 created: 2026-11-04T15:00:00+01:00
-updated: 2026-11-04T15:00:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-008"
 priority: P1
 tags: [dette, epistemique, moteur-symbolique, networkx, python]
@@ -27,4 +27,4 @@ Fichiers : `src/hypomnesis/epistemics/knowledge.py`, `src/hypomnesis/engine/proc
 - [x] Test : le rapport M0 d'un run de la plaque contient `provenance_graph` avec les nœuds attendus ; l'export se recharge (`node_link_graph`)
 - [x] Pyright en mode basic : annoter `nx.DiGraph[str]` si nécessaire ; pas de `type: ignore`
 - [x] `TECHNICAL.md` : section Épistémique (graphe NetworkX, source de vérité = provenance)
-- [ ] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`
+- [x] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`

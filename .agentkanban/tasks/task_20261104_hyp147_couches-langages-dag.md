@@ -1,8 +1,8 @@
 ---
 title: "HYP-147 · Couches de langages réutilisables : imports et DAG de dépendances"
-lane: todo
+lane: qa
 created: 2026-11-04T17:37:30+01:00
-updated: 2026-11-04T17:37:30+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "P1 · L · Métalangage · composer des descriptions symboliques par imports explicites"
 priority: P1
 tags: [architecture, dsl, metalangage, moteur-symbolique, tests]
@@ -211,5 +211,35 @@ Autorisation de committer tous les changements en attente : extraction Codegen
 démonstrations, tests, extension VS Code, documentation et suivi Kanban.
 Validation complète avant commit ; caches, dépendances et résultats générés exclus.
 Aucun push ni lancement de sous-agents inclus dans cette demande.
+
+### user
+
+Peux-tu mettre le Kanban à jour ?
+
+### agent
+
+Réconciliation du tableau avec les implémentations et validations enregistrées :
+HYP-004, HYP-131, HYP-132, HYP-144, HYP-145, HYP-146 et HYP-147 passent de `todo`
+à `qa`, avec leurs checklists. HYP-147 et l'extraction Codegen sont committés dans
+`6e2962f` ; validation intégrée verte (735 tests, Python/Lean et extension VS Code).
+Les couloirs des anciennes checklists sont synchronisés avec leurs tickets et
+les cases de validation devenues obsolètes sont régularisées.
+
+HYP-007 reste bloqué par HYP-014 et sa comparaison réelle avant/après ; HYP-139
+reste en cours, ses mesures GPU et critères réels n'étant pas attestés.
+La CI distante attestée pour HYP-004 concerne le commit publié `7d89099`, pas les
+commits locaux suivants. Aucun ticket passé en `done`, aucun push ni exécution
+parallèle lancé. Le contrôle Kanban et la réinjection du graphe sont à vérifier
+sur cette mise à jour documentaire.
+
+### user
+
+### agent
+
+Vérifications de cette mise à jour réussies : 101 tickets valides, aucune
+désynchronisation ticket/checklist, `git diff --check` vert. Graphe Kanban
+réinjecté : 181 nœuds et 863 relations. Bilan du tableau : 70 `todo`, 2 `doing`,
+26 `qa`, 3 `done`. Seuls le suivi Kanban et la mémoire projet ont été modifiés ;
+aucun code ni test changé. Modifications non committées et non poussées.
 
 ### user

@@ -1,8 +1,8 @@
 ---
 title: "HYP-025 · TODO"
-lane: todo
+lane: qa
 created: 2026-11-03T19:00:00+01:00
-updated: 2026-11-03T19:00:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-025"
 priority: P0
 tags: [certification, compilateur, contrats, python]

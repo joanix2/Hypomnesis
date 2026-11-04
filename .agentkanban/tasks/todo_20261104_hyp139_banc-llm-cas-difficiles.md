@@ -1,8 +1,8 @@
 ---
 title: "HYP-139 · TODO"
-lane: todo
+lane: doing
 created: 2026-11-04T14:50:00+01:00
-updated: 2026-11-04T14:50:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-139"
 priority: P1
 tags: [llm, python, tests]

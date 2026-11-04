@@ -1,8 +1,8 @@
 ---
 title: "HYP-061 · TODO"
-lane: doing
+lane: qa
 created: 2026-11-04T14:30:00+01:00
-updated: 2026-11-04T14:30:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-061"
 priority: P0
 tags: [effets, moteur-symbolique, python, runtime]
@@ -28,4 +28,4 @@ Fichiers : `src/hypomnesis/effects/commands.py` (nouveau), `src/hypomnesis/effec
 - [x] Vérifier `tests/unit/test_effects.py` et `tests/integration/test_demo_plaque.py` inchangés et verts (en fait : `tests/integration/test_languages.py`, qui couvre le dispatcher ; `test_effects.py` ne concerne que la bibliothèque Effect)
 - [x] Documenter la correspondance avec la future preuve HYP-066 (au plus une exécution) dans `docs/verification/proprietes.md` (statut « à prouver », sans toucher à `formal/`)
 - [x] `TECHNICAL.md` : section Commandes (automate, idempotence, déduplication)
-- [ ] `./scripts/validate.sh complet`, commit en français, mettre la tâche en `qa`
+- [x] `./scripts/validate.sh complet`, commit en français, mettre la tâche en `qa`

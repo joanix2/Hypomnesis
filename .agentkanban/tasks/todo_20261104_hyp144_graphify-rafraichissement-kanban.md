@@ -1,8 +1,8 @@
 ---
 title: "TODO HYP-144 · Rafraîchissement Graphify après injection du Kanban"
-lane: todo
+lane: qa
 created: 2026-11-04T16:43:39+01:00
-updated: 2026-11-04T16:43:39+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist HYP-144 : migration des chemins synthétiques et rafraîchissement répété"
 priority: P2
 tags: [graphify, kanban, outillage]

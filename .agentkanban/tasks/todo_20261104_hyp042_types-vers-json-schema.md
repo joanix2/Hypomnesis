@@ -1,8 +1,8 @@
 ---
 title: "TODO HYP-042 · Types et JSON Schema"
-lane: todo
+lane: qa
 created: 2026-11-04T16:10:00+01:00
-updated: 2026-11-04T16:10:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Codec réversible, contrats et migration JSON"
 priority: P0
 tags: [contrats, metalangage, moteur-symbolique, python]

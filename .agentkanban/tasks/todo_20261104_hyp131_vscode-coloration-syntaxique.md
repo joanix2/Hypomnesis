@@ -1,8 +1,8 @@
 ---
 title: "TODO HYP-131 · Coloration syntaxique VS Code"
-lane: todo
+lane: qa
 created: 2026-11-04T16:54:00+01:00
-updated: 2026-11-04T16:54:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Grammaire TextMate, configuration du langage et paquet VSIX"
 priority: P2
 tags: [dsl, metalangage, outillage, vscode]

@@ -1,8 +1,8 @@
 ---
 title: "TODO HYP-146 · Séparer Codegen du moteur"
-lane: todo
+lane: qa
 created: 2026-11-04T17:27:16+01:00
-updated: 2026-11-04T17:27:16+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Extraction du paquet, CLI dédiée et vérification de l'indépendance"
 priority: P1
 tags: [architecture, llm, moteur-symbolique, outillage, tests]

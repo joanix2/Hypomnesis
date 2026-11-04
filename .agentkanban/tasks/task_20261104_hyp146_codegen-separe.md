@@ -1,8 +1,8 @@
 ---
 title: "HYP-146 · Séparer la génération de programmes du moteur symbolique"
-lane: todo
+lane: qa
 created: 2026-11-04T17:27:16+01:00
-updated: 2026-11-04T17:27:16+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "P1 · M · Architecture · paquet Codegen optionnel et CLI dédiée"
 priority: P1
 tags: [architecture, llm, moteur-symbolique, outillage, tests]
@@ -68,5 +68,14 @@ LLM réel, résultat généré dans le dépôt, commit ou push.
 La nouvelle demande de couches symboliques importables et de DAG de dépendances
 est suivie séparément dans HYP-147 ; elle n'est pas implémentée dans cette extraction.
 Couloir inchangé.
+
+### user
+
+### agent
+
+Mise à jour du Kanban demandée : passage en `qa`. Extraction et documentation
+enregistrées dans `6e2962f`, avec HYP-147. Dernière validation intégrée :
+735 tests (658 moteur, 77 Codegen), Python/Lean verts et paquets installés vérifiés
+séparément. Checklist complète ; aucun push ni passage en `done`.
 
 ### user

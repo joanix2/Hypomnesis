@@ -1,8 +1,8 @@
 ---
 title: "HYP-132 · Extension VS Code : linter du DSL par serveur de langage"
-lane: todo
+lane: qa
 created: 2026-11-04T08:56:00+01:00
-updated: 2026-11-04T08:56:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "P2 · M · Outillage et visualisation · dépend de HYP-130, HYP-131"
 priority: P2
 tags: [compilateur, dsl, metalangage, outillage, python, vscode]
@@ -92,5 +92,15 @@ Couloir conservé sous contrôle utilisateur ; changements non poussés.
 Commit demandé explicitement par l'utilisateur : enregistrement du lot HYP-131/132
 (extension, serveur, tests, dépendances, CI et documentation associée).
 Les autres changements Kanban et outillage restent séparés ; aucun push demandé ici.
+
+### user
+
+### agent
+
+Mise à jour du Kanban demandée : passage en `qa`. LSP enregistré dans `befd715`,
+puis raccordé aux déclarations natives et imports transitifs dans `6e2962f`.
+Le contexte se découvre désormais via `langage.hyp`, et non `langage.json`.
+Dernière validation intégrée verte : 735 tests Python, Python/Lean et hôte VS Code
+réel. Checklist complète ; validation humaine finale non effectuée par l'agent.
 
 ### user

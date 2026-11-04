@@ -1,8 +1,8 @@
 ---
 title: "HYP-143 · TODO"
-lane: doing
+lane: qa
 created: 2026-11-04T14:45:00+01:00
-updated: 2026-11-04T14:55:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Checklist de HYP-143"
 priority: P1
 tags: [bug, epistemique, moteur-symbolique, python]
@@ -21,4 +21,4 @@ Fichiers : `src/hypomnesis/epistemics/knowledge.py`, `tests/unit/test_knowledge.
 - [x] Test de propriétés : rétracter une source ne touche aucun fait dont la provenance ne la mentionne pas
 - [x] Documenter la décision (docstring de `derive`, note ou ADR courte) et la propriété correspondante dans `docs/verification/proprietes.md` si P10/P11 changent de formulation (formulation inchangée : fiche + `TECHNICAL.md`, section HYP-008)
 - [x] Les tests existants (révision par mesure, réfutation d'hypothèse, rapport M0) restent inchangés (deux tests de `test_knowledge_graph.py` qui figeaient le bug ont été réécrits, cf. fiche)
-- [ ] `./scripts/validate.sh rapide` (vert), puis `complet` (bloqué par des erreurs pyright/ruff d'autres agents hors périmètre : à relancer) ; mettre la tâche en `qa` ensuite
+- [x] `./scripts/validate.sh rapide` (vert), puis `complet` (blocages historiques résolus dans l'arbre intégré) ; mettre la tâche en `qa` ensuite

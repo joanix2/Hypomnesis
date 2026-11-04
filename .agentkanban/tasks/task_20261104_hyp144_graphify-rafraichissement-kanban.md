@@ -1,8 +1,8 @@
 ---
 title: "HYP-144 · Rafraîchissement Graphify après injection du Kanban"
-lane: todo
+lane: qa
 created: 2026-11-04T15:52:00+01:00
-updated: 2026-11-04T15:52:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "P2 · S · Outillage — défaut découvert pendant HYP-041"
 priority: P2
 tags: [graphify, kanban, outillage]
@@ -75,5 +75,14 @@ Couloir laissé à l'utilisateur ; aucun passage en `done`.
 Contrôle final : ajout de trois tests du mode `graphe` (graphe absent, migration avant
 reconstruction, arrêt si migration échoue). Le lot final passe 655 tests et l'intégralité
 de `validate.sh complet`. Le graphe final a été rafraîchi à nouveau avec succès.
+
+### user
+
+### agent
+
+Mise à jour du Kanban demandée : passage en `qa`. Correctif et tests enregistrés
+dans `9e70271`, rafraîchissements répétés réussis. La validation intégrée suivante
+sur `6e2962f` est également verte (735 tests et Lean). Checklist complète ;
+aucune clôture humaine ni publication distante revendiquée.
 
 ### user

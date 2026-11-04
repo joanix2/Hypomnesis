@@ -1,8 +1,8 @@
 ---
 title: "TODO HYP-132 · Diagnostics VS Code par LSP"
-lane: todo
+lane: qa
 created: 2026-11-04T16:54:00+01:00
-updated: 2026-11-04T16:54:00+01:00
+updated: 2026-11-04T18:19:29+01:00
 description: "Serveur pygls et client VS Code, diagnostics du compilateur"
 priority: P2
 tags: [compilateur, dsl, metalangage, outillage, python, vscode]
