@@ -55,6 +55,13 @@ la sémantique Lean, couverte par les tests différentiels (HYP-028).
 Ne sont **pas encore** couverts : records (F1b), motifs alternatifs et alias, exhaustivité
 (F1c) et polymorphisme (F2).
 
+**Frontière JSON (HYP-042, ADR 0010).** La primitive Python `core.to_json`, les conversions
+`Json.t` et les codecs/contrats JSON ne font pas partie des primitives entières du fragment
+prouvé. `Json.Int` est un constructeur de bibliothèque, pas une forme IR supplémentaire.
+La migration des options étiquetées et des entiers exacts est couverte par les tests
+Hypothesis et d'intégration, sans nouvelle garantie Lean revendiquée. Les preuves JSON
+dédiées restent HYP-043.
+
 ---
 
 ## 2. Relecture du cahier des charges

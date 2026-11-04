@@ -201,6 +201,12 @@ class Checker:
     def lookup_type(self, path: str) -> TypeInfo:
         return self._lookup("types", path, None, "type")
 
+    def resolve_type(self, source: str) -> Type:
+        """Resolve a standalone signature without extending the inference environment."""
+        from hypomnesis.language.parser import parse_type
+
+        return self._to_type(parse_type(source), tvars={})
+
     def _snapshot(self):
         namespaces = (self.root, self.frames[0].visible)
         tables = [{k: copy.copy(v) for k, v in ns.__dict__.items()} for ns in namespaces]

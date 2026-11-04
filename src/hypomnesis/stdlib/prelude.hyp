@@ -219,9 +219,11 @@ module Json = struct
     | Str of string
     | Arr of t list
     | Obj of (string * t) list
+    | Int of int
 
   let field k j = match j with Obj kvs -> List.assoc_opt k kvs | _ -> None
-  let num j = match j with Num x -> Some x | _ -> None
+  let num j = match j with Num x -> Some x | Int x -> Some (float_of_int x) | _ -> None
+  let int j = match j with Int x -> Some x | _ -> None
   let str j = match j with Str s -> Some s | _ -> None
   let bool j = match j with Bool b -> Some b | _ -> None
   let num_field k j = Option.bind (field k j) num

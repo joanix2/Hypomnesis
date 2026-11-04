@@ -33,6 +33,8 @@ def test_procedures_are_inert_values():
 
 
 def test_to_json():
-    assert value('to_json (1, "a", [true])') == 'Arr [Num 1.; Str "a"; Arr [Bool true]]'
-    assert value("to_json (Some 2.5, None)") == "Arr [Num 2.5; Null]"
+    assert value('to_json (1, "a", [true])') == 'Arr [Int 1; Str "a"; Arr [Bool true]]'
+    assert value("to_json (Some 2.5, None)") == (
+        'Arr [Obj [("tag", Str "Some"); ("arg", Num 2.5)]; Obj [("tag", Str "None")]]'
+    )
     assert value('Json.num_field "x" (Json.Obj [("x", Json.Num 3.0)])') == "Some 3."

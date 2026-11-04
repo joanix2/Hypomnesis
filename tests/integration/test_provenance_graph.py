@@ -79,11 +79,11 @@ def test_explanation_after_measurement_is_unchanged(tmp_path):
     )
     assert kb.explain("demande.valide") == [
         f"- demande.valide = True : Plaque.verifier {OBSERVED}",
-        f"  - demande.epaisseur = 5 : mesure directe {OBSERVED}",
+        f"  - demande.epaisseur = 5.0 : mesure directe {OBSERVED}",
         f"    - {sensor}",
         f"  - demande.nom = 'plaque-mesuree' : {DEMANDE} {OBSERVED}",
-        f"  - demande.largeur = 120 : {DEMANDE} {OBSERVED}",
-        f"  - demande.hauteur = 80 : {DEMANDE} {OBSERVED}",
+        f"  - demande.largeur = 120.0 : {DEMANDE} {OBSERVED}",
+        f"  - demande.hauteur = 80.0 : {DEMANDE} {OBSERVED}",
         f"  - demande.masse_max = 0.5 : {DEMANDE} {OBSERVED}",
     ]
 

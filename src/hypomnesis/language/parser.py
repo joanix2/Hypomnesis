@@ -25,7 +25,7 @@ def _parser() -> Lark:
     return Lark(
         grammar,
         parser="lalr",
-        start=["start", "expr"],
+        start=["start", "expr", "type_expr"],
         propagate_positions=True,
         maybe_placeholders=True,
     )
@@ -39,6 +39,11 @@ def parse_program(source: str) -> A.Program:
 def parse_expression(source: str) -> A.Expr:
     """Parse a single expression (used by the REPL and embedding hosts)."""
     return _parse(source, "expr")
+
+
+def parse_type(source: str) -> A.TypeExpr:
+    """Parse a type signature with the same grammar as program annotations."""
+    return _parse(source, "type_expr")
 
 
 def lex(source: str) -> list[Token]:

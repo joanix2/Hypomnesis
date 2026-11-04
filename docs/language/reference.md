@@ -90,6 +90,20 @@ Types de base : `int`, `float`, `string`, `bool`, `unit`, `'a list`. Le prélude
 
 Le prélude est écrit en Hypomnesis : [`src/hypomnesis/stdlib/prelude.hyp`](../../src/hypomnesis/stdlib/prelude.hyp).
 
+### Frontière JSON (HYP-042)
+
+`to_json` construit un `Json.t` : `Int of int` préserve les entiers exacts et `Num of float`
+les flottants finis. `Json.int` lit un entier sans conversion ; `Json.num` lit un flottant
+ou convertit explicitement un entier en flottant. `Some x` et `None` ne sont **plus effacés** :
+ils deviennent les objets étiquetés `{"tag":"Some","arg":...}` et `{"tag":"None"}`.
+Cela distingue `None`, `Some ()` et les options imbriquées. Les records deviennent des objets,
+les listes/tuples des tableaux et `()` devient `null`. Les fonctions et nombres non finis
+sont refusés.
+
+L'API Python `TypeCodec(checker, signature)` génère un JSON Schema et encode/décode les
+types clos avec contrôle strict ; voir l'[ADR 0010](../adr/0010-types-et-json-reversible.md)
+pour la migration et les limites de vérification statique des contrats.
+
 ## Descriptions (langages M2)
 
 Un commentaire `(** … *)` placé juste avant une déclaration (module, type, champ, constructeur,

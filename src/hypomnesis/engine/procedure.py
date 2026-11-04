@@ -33,7 +33,8 @@ from hypomnesis.engine.language import Language, LanguageError
 from hypomnesis.epistemics.knowledge import KnowledgeBase
 from hypomnesis.language.errors import EvaluationError
 from hypomnesis.observability.trace import Tracer
-from hypomnesis.runtime.natives import json_variant, to_json_value
+from hypomnesis.runtime.json import data_to_json, json_to_data
+from hypomnesis.runtime.natives import to_json_value
 from hypomnesis.runtime.values import UNIT, Value, Variant, from_iterable, iter_list
 
 Json = Any
@@ -41,35 +42,12 @@ Json = Any
 
 def json_to_python(v: Variant) -> Json:
     """``Json.t`` → Python."""
-    if v.tag == "Null":
-        return None
-    if v.tag in ("Bool", "Str"):
-        return v.arg
-    if v.tag == "Num":
-        x = v.arg
-        return int(x) if float(x).is_integer() and abs(x) < 2**53 else x
-    if v.tag == "Arr":
-        return [json_to_python(x) for x in iter_list(v.arg)]
-    if v.tag == "Obj":
-        return {k: json_to_python(x) for k, x in iter_list(v.arg)}
-    raise EvaluationError(f"Json.t attendu, reçu {v.tag}")
+    return json_to_data(v)
 
 
 def python_to_json(x: Json) -> Variant:
     """Python → ``Json.t``."""
-    if x is None:
-        return json_variant("Null")
-    if isinstance(x, bool):
-        return json_variant("Bool", x)
-    if isinstance(x, int | float):
-        return json_variant("Num", float(x))
-    if isinstance(x, str):
-        return json_variant("Str", x)
-    if isinstance(x, list | tuple):
-        return json_variant("Arr", from_iterable(python_to_json(i) for i in x))
-    if isinstance(x, dict):
-        return json_variant("Obj", from_iterable((str(k), python_to_json(v)) for k, v in x.items()))
-    raise EvaluationError(f"valeur sans équivalent JSON : {x!r}")
+    return data_to_json(x)
 
 
 def _some(v: Value) -> Variant:

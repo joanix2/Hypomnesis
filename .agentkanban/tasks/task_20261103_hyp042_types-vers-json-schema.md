@@ -37,3 +37,22 @@ description: "P0 · L · Phase 3 — Extensions et contrats · dépend de HYP-04
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Plan approuvé le 2026-11-04 : génération Draft 2020-12 et codec typé réversible,
+contrôle conservateur et directionnel des contrats (entrée : type inclus dans contrat ;
+sortie : contrat inclus dans type), sans chargement de backend. Le sous-ensemble non
+vérifiable sera refusé explicitement. Les options deviennent des objets étiquetés ; les
+ponts existants et leurs consommateurs seront migrés, conformément au choix explicite
+de l'utilisateur. Les grands entiers resteront exacts, y compris via `Json.t`.
+
+Prise en charge : scalaires finis, unit, tuples, records, variants, listes, options,
+alias, paramètres concrets et récursion régulière. Fonctions et types ouverts refusés.
+ADR, tests Hypothesis et validations Python/Lean avant publication. Aucune nouvelle
+fonctionnalité LLM. Le couloir reste inchangé.
+
+Le sous-agent d'implémentation n'avait pas accès aux outils et n'a rien modifié :
+reprise directe par l'agent principal sur `hyp-042-types-json-schema`.
+
+### user

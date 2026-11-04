@@ -2,8 +2,7 @@
 
 * :func:`to_json` turns a runtime value into JSON, so that a language (M2) builds
   command payloads as typed Hypomnesis records and the engine sends them through
-  the contracts: records become objects, lists and tuples arrays, ``Some x``
-  becomes ``x`` and ``None`` ``null``; other constructors become
+  the contracts: records become objects, lists and tuples arrays; constructors become
   ``{"tag": ..., "arg": ...}``.
 * :func:`to_problem` turns a ``Problem.problem`` value (standard library) into
   the solver-independent Problem IR.
@@ -15,7 +14,9 @@ from fractions import Fraction
 from typing import Any
 
 from hypomnesis.ir.problem import Constraint, Problem, Variable
-from hypomnesis.runtime.values import Function, RecordValue, Value, Variant, is_list, iter_list
+from hypomnesis.language.errors import EvaluationError
+from hypomnesis.runtime.json import value_to_data
+from hypomnesis.runtime.values import RecordValue, Value, Variant, iter_list
 
 
 class BridgeError(ValueError):
@@ -23,29 +24,10 @@ class BridgeError(ValueError):
 
 
 def to_json(value: Value) -> Any:
-    if isinstance(value, bool | int | float | str):
-        return value
-    if value == () and isinstance(value, tuple):
-        return None
-    if isinstance(value, tuple):
-        return [to_json(v) for v in value]
-    if isinstance(value, RecordValue):
-        return {k: to_json(v) for k, v in value.fields}
-    if is_list(value):
-        return [to_json(v) for v in iter_list(value)]
-    if isinstance(value, Variant):
-        if value.tag == "None":
-            return None
-        if value.tag == "Some":
-            return to_json(value.arg)
-        return (
-            {"tag": value.tag}
-            if value.arg is None
-            else {"tag": value.tag, "arg": to_json(value.arg)}
-        )
-    if isinstance(value, Function):
-        raise BridgeError("une fonction n'a pas de représentation JSON")
-    raise BridgeError(f"valeur inattendue {value!r}")
+    try:
+        return value_to_data(value)
+    except EvaluationError as exc:
+        raise BridgeError(str(exc)) from exc
 
 
 def option(value: Variant) -> Value | None:

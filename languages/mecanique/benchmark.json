@@ -6,25 +6,25 @@
       "id": "m01-base",
       "request": "Crée une plaque de 160 × 90 mm, estime son épaisseur, vérifie sa validité et exporte sa géométrie. Masse maximale : 0,6 kg.",
       "expect": {
-        "bindings": { "demande": { "largeur": 160.0, "hauteur": 90.0, "epaisseur": null, "masse_max": 0.6 } },
+        "bindings": { "demande": { "largeur": 160.0, "hauteur": 90.0, "epaisseur": { "tag": "None" }, "masse_max": 0.6 } },
         "calls": ["Plaque.concevoir demande"], "not_calls": ["concevoir_puis_mesurer"]
       }
     },
     {
       "id": "m02-par",
       "request": "Je veux une plaque de 200 par 150 millimètres, masse maximale 1 kg.",
-      "expect": { "bindings": { "demande": { "largeur": 200.0, "hauteur": 150.0, "epaisseur": null, "masse_max": 1.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 200.0, "hauteur": 150.0, "epaisseur": { "tag": "None" }, "masse_max": 1.0 } } }
     },
     {
       "id": "m03-cm-grammes",
       "request": "Plaque de 12 cm sur 8 cm, épaisseur 4 mm, pas plus de 500 grammes.",
-      "expect": { "bindings": { "demande": { "largeur": 120.0, "hauteur": 80.0, "epaisseur": 4.0, "masse_max": 0.5 } } }
+      "expect": { "bindings": { "demande": { "largeur": 120.0, "hauteur": 80.0, "epaisseur": { "tag": "Some", "arg": 4.0 }, "masse_max": 0.5 } } }
     },
     {
       "id": "m04-carree-abaque",
       "request": "Une plaque carrée de 10 cm de côté, au plus 0,3 kg ; utilise l'abaque pour estimer l'épaisseur.",
       "expect": {
-        "bindings": { "demande": { "largeur": 100.0, "hauteur": 100.0, "epaisseur": null, "masse_max": 0.3 } },
+        "bindings": { "demande": { "largeur": 100.0, "hauteur": 100.0, "epaisseur": { "tag": "None" }, "masse_max": 0.3 } },
         "calls": ["Plaque.estimateur_abaque"]
       }
     },
@@ -32,7 +32,7 @@
       "id": "m05-mesure",
       "request": "Conçois une plaque de 300 × 200 mm limitée à 2 kg, puis mesure-la et révise la conception.",
       "expect": {
-        "bindings": { "demande": { "largeur": 300.0, "hauteur": 200.0, "epaisseur": null, "masse_max": 2.0 } },
+        "bindings": { "demande": { "largeur": 300.0, "hauteur": 200.0, "epaisseur": { "tag": "None" }, "masse_max": 2.0 } },
         "calls": ["Plaque.concevoir_puis_mesurer"]
       },
       "environment": { "mesure": "6" }
@@ -40,28 +40,28 @@
     {
       "id": "m06-metres-nom",
       "request": "Plaque support-moteur de 0,25 m × 0,15 m, 1,5 kg maximum.",
-      "expect": { "bindings": { "demande": { "nom": "support-moteur", "largeur": 250.0, "hauteur": 150.0, "epaisseur": null, "masse_max": 1.5 } } }
+      "expect": { "bindings": { "demande": { "nom": "support-moteur", "largeur": 250.0, "hauteur": 150.0, "epaisseur": { "tag": "None" }, "masse_max": 1.5 } } }
     },
     {
       "id": "m07-large-haut",
       "request": "J'ai besoin d'une plaque de 80 mm de large et 120 mm de haut avec une épaisseur de 3 mm, masse limitée à 400 g.",
-      "expect": { "bindings": { "demande": { "largeur": 80.0, "hauteur": 120.0, "epaisseur": 3.0, "masse_max": 0.4 } } }
+      "expect": { "bindings": { "demande": { "largeur": 80.0, "hauteur": 120.0, "epaisseur": { "tag": "Some", "arg": 3.0 }, "masse_max": 0.4 } } }
     },
     {
       "id": "m08-sans-masse",
       "request": "Fais une plaque de 50 × 50 mm.",
-      "expect": { "bindings": { "demande": { "largeur": 50.0, "hauteur": 50.0, "epaisseur": null, "masse_max": "*" } } }
+      "expect": { "bindings": { "demande": { "largeur": 50.0, "hauteur": 50.0, "epaisseur": { "tag": "None" }, "masse_max": "*" } } }
     },
     {
       "id": "m09-telegraphique",
       "request": "plaque 150x100mm ep. 2mm 0.3kg max",
-      "expect": { "bindings": { "demande": { "largeur": 150.0, "hauteur": 100.0, "epaisseur": 2.0, "masse_max": 0.3 } } }
+      "expect": { "bindings": { "demande": { "largeur": 150.0, "hauteur": 100.0, "epaisseur": { "tag": "Some", "arg": 2.0 }, "masse_max": 0.3 } } }
     },
     {
       "id": "m10-regle",
       "request": "Avec l'estimateur par règle, dimensionne une plaque de 180 × 120 mm de moins de 800 g.",
       "expect": {
-        "bindings": { "demande": { "largeur": 180.0, "hauteur": 120.0, "epaisseur": null, "masse_max": 0.8 } },
+        "bindings": { "demande": { "largeur": 180.0, "hauteur": 120.0, "epaisseur": { "tag": "None" }, "masse_max": 0.8 } },
         "calls": ["Plaque.estimateur_regle"]
       }
     },
@@ -69,7 +69,7 @@
       "id": "m11-mesure-implicite",
       "request": "Une plaque de 400 mm sur 250 mm qui ne doit pas dépasser 3 kg ; ensuite contrôle son épaisseur réelle au pied à coulisse.",
       "expect": {
-        "bindings": { "demande": { "largeur": 400.0, "hauteur": 250.0, "epaisseur": null, "masse_max": 3.0 } },
+        "bindings": { "demande": { "largeur": 400.0, "hauteur": 250.0, "epaisseur": { "tag": "None" }, "masse_max": 3.0 } },
         "calls": ["Plaque.concevoir_puis_mesurer"]
       },
       "environment": { "mesure": "8" }
@@ -77,173 +77,173 @@
     {
       "id": "m12-piege-epaisseur",
       "request": "Plaque de 120 × 120 mm, 0,5 kg maximum. Je ne connais pas encore l'épaisseur.",
-      "expect": { "bindings": { "demande": { "largeur": 120.0, "hauteur": 120.0, "epaisseur": null, "masse_max": 0.5 } } }
+      "expect": { "bindings": { "demande": { "largeur": 120.0, "hauteur": 120.0, "epaisseur": { "tag": "None" }, "masse_max": 0.5 } } }
     },
     {
       "id": "t01-simple", "split": "test",
       "request": "Besoin d'une plaque de 33 cm sur 21 cm, pas plus de 2,2 kg.",
-      "expect": { "bindings": { "demande": { "largeur": 330.0, "hauteur": 210.0, "epaisseur": null, "masse_max": 2.2 } }, "calls": ["Plaque.concevoir demande"], "not_calls": ["concevoir_puis_mesurer"] }
+      "expect": { "bindings": { "demande": { "largeur": 330.0, "hauteur": 210.0, "epaisseur": { "tag": "None" }, "masse_max": 2.2 } }, "calls": ["Plaque.concevoir demande"], "not_calls": ["concevoir_puis_mesurer"] }
     },
     {
       "id": "t02-compact-epaisseur", "split": "test",
       "request": "plaque 85x55 ep 2.5mm 200g max",
-      "expect": { "bindings": { "demande": { "largeur": 85.0, "hauteur": 55.0, "epaisseur": 2.5, "masse_max": 0.2 } } }
+      "expect": { "bindings": { "demande": { "largeur": 85.0, "hauteur": 55.0, "epaisseur": { "tag": "Some", "arg": 2.5 }, "masse_max": 0.2 } } }
     },
     {
       "id": "t03-decimetres", "split": "test",
       "request": "Une plaque de 2 dm sur 1 dm, 0,6 kg maximum.",
-      "expect": { "bindings": { "demande": { "largeur": 200.0, "hauteur": 100.0, "epaisseur": null, "masse_max": 0.6 } } }
+      "expect": { "bindings": { "demande": { "largeur": 200.0, "hauteur": 100.0, "epaisseur": { "tag": "None" }, "masse_max": 0.6 } } }
     },
     {
       "id": "t04-abaque-poli", "split": "test",
       "request": "Peux-tu dimensionner une plaque de 450 millimètres par 275 millimètres ? Elle doit peser moins de 5 kg, estimation par abaque.",
-      "expect": { "bindings": { "demande": { "largeur": 450.0, "hauteur": 275.0, "epaisseur": null, "masse_max": 5.0 } }, "calls": ["Plaque.estimateur_abaque"] }
+      "expect": { "bindings": { "demande": { "largeur": 450.0, "hauteur": 275.0, "epaisseur": { "tag": "None" }, "masse_max": 5.0 } }, "calls": ["Plaque.estimateur_abaque"] }
     },
     {
       "id": "t05-nom-regle", "split": "test",
       "request": "Plaque nommée bride-pompe : 14 cm × 9 cm, 700 g maxi, épaisseur à estimer avec la règle.",
-      "expect": { "bindings": { "demande": { "nom": "bride-pompe", "largeur": 140.0, "hauteur": 90.0, "epaisseur": null, "masse_max": 0.7 } }, "calls": ["Plaque.estimateur_regle"] }
+      "expect": { "bindings": { "demande": { "nom": "bride-pompe", "largeur": 140.0, "hauteur": 90.0, "epaisseur": { "tag": "None" }, "masse_max": 0.7 } }, "calls": ["Plaque.estimateur_regle"] }
     },
     {
       "id": "t06-un-metre", "split": "test",
       "request": "Je voudrais une plaque d'un mètre de large sur 40 cm de haut, 9 kg au plus.",
-      "expect": { "bindings": { "demande": { "largeur": 1000.0, "hauteur": 400.0, "epaisseur": null, "masse_max": 9.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 1000.0, "hauteur": 400.0, "epaisseur": { "tag": "None" }, "masse_max": 9.0 } } }
     },
     {
       "id": "t07-mesure", "split": "test",
       "request": "Conçois une plaque de 28 × 18 cm (3 kg max) puis vérifie son épaisseur réelle à l'aide du pied à coulisse.",
-      "expect": { "bindings": { "demande": { "largeur": 280.0, "hauteur": 180.0, "epaisseur": null, "masse_max": 3.0 } }, "calls": ["Plaque.concevoir_puis_mesurer"] },
+      "expect": { "bindings": { "demande": { "largeur": 280.0, "hauteur": 180.0, "epaisseur": { "tag": "None" }, "masse_max": 3.0 } }, "calls": ["Plaque.concevoir_puis_mesurer"] },
       "environment": { "mesure": "6" }
     },
     {
       "id": "t08-sans-masse", "split": "test",
       "request": "Plaque de 55 mm x 55 mm avec une épaisseur de 4 mm.",
-      "expect": { "bindings": { "demande": { "largeur": 55.0, "hauteur": 55.0, "epaisseur": 4.0, "masse_max": "*" } } }
+      "expect": { "bindings": { "demande": { "largeur": 55.0, "hauteur": 55.0, "epaisseur": { "tag": "Some", "arg": 4.0 }, "masse_max": "*" } } }
     },
     {
       "id": "t09-cm-colles", "split": "test",
       "request": "fais moi une plaque 20x20cm 1kg max",
-      "expect": { "bindings": { "demande": { "largeur": 200.0, "hauteur": 200.0, "epaisseur": null, "masse_max": 1.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 200.0, "hauteur": 200.0, "epaisseur": { "tag": "None" }, "masse_max": 1.0 } } }
     },
     {
       "id": "t10-abaque-mesure", "split": "test",
       "request": "Une plaque de 72 mm par 48 mm, 0,12 kg maximum, avec l'estimateur abaque, puis mesure l'épaisseur obtenue.",
-      "expect": { "bindings": { "demande": { "largeur": 72.0, "hauteur": 48.0, "epaisseur": null, "masse_max": 0.12 } }, "calls": ["Plaque.concevoir_puis_mesurer", "Plaque.estimateur_abaque"] },
+      "expect": { "bindings": { "demande": { "largeur": 72.0, "hauteur": 48.0, "epaisseur": { "tag": "None" }, "masse_max": 0.12 } }, "calls": ["Plaque.concevoir_puis_mesurer", "Plaque.estimateur_abaque"] },
       "environment": { "mesure": "3" }
     },
     {
       "id": "t11-inconnue", "split": "test",
       "request": "Dimensionne une plaque de 9 cm de large et 14 cm de haut. L'épaisseur, je ne sais pas. Maximum 450 g.",
-      "expect": { "bindings": { "demande": { "largeur": 90.0, "hauteur": 140.0, "epaisseur": null, "masse_max": 0.45 } } }
+      "expect": { "bindings": { "demande": { "largeur": 90.0, "hauteur": 140.0, "epaisseur": { "tag": "None" }, "masse_max": 0.45 } } }
     },
     {
       "id": "t12-nom", "split": "test",
       "request": "Plaque couvercle de 38 cm sur 26 cm, limitée à 2,8 kg.",
-      "expect": { "bindings": { "demande": { "nom": "couvercle", "largeur": 380.0, "hauteur": 260.0, "epaisseur": null, "masse_max": 2.8 } } }
+      "expect": { "bindings": { "demande": { "nom": "couvercle", "largeur": 380.0, "hauteur": 260.0, "epaisseur": { "tag": "None" }, "masse_max": 2.8 } } }
     },
     {
       "id": "t13-minimal", "split": "test",
       "request": "plaque 100x100 3mm",
-      "expect": { "bindings": { "demande": { "largeur": 100.0, "hauteur": 100.0, "epaisseur": 3.0, "masse_max": "*" } } }
+      "expect": { "bindings": { "demande": { "largeur": 100.0, "hauteur": 100.0, "epaisseur": { "tag": "Some", "arg": 3.0 }, "masse_max": "*" } } }
     },
     {
       "id": "t14-metres-decimaux", "split": "test",
       "request": "Génère une plaque de 0,18 m × 0,12 m, au plus 900 g, épaisseur 2 mm.",
-      "expect": { "bindings": { "demande": { "largeur": 180.0, "hauteur": 120.0, "epaisseur": 2.0, "masse_max": 0.9 } } }
+      "expect": { "bindings": { "demande": { "largeur": 180.0, "hauteur": 120.0, "epaisseur": { "tag": "Some", "arg": 2.0 }, "masse_max": 0.9 } } }
     },
     {
       "id": "t15-mesure-ensuite", "split": "test",
       "request": "Une plaque de 65 × 45 mm dont la masse ne doit pas dépasser 0,08 kg ; ensuite, mesure-la au pied à coulisse.",
-      "expect": { "bindings": { "demande": { "largeur": 65.0, "hauteur": 45.0, "epaisseur": null, "masse_max": 0.08 } }, "calls": ["Plaque.concevoir_puis_mesurer"] },
+      "expect": { "bindings": { "demande": { "largeur": 65.0, "hauteur": 45.0, "epaisseur": { "tag": "None" }, "masse_max": 0.08 } }, "calls": ["Plaque.concevoir_puis_mesurer"] },
       "environment": { "mesure": "2" }
     },
     {
       "id": "t16-calcule", "split": "test",
       "request": "Calcule l'épaisseur d'une plaque de 500 × 350 mm, maximum 7,5 kg.",
-      "expect": { "bindings": { "demande": { "largeur": 500.0, "hauteur": 350.0, "epaisseur": null, "masse_max": 7.5 } }, "not_calls": ["concevoir_puis_mesurer"] }
+      "expect": { "bindings": { "demande": { "largeur": 500.0, "hauteur": 350.0, "epaisseur": { "tag": "None" }, "masse_max": 7.5 } }, "not_calls": ["concevoir_puis_mesurer"] }
     },
     {
       "id": "h01-nombres-en-lettres", "split": "hard",
       "request": "Plaque de trente centimètres sur vingt, pas plus de deux kilos.",
-      "expect": { "bindings": { "demande": { "largeur": 300.0, "hauteur": 200.0, "epaisseur": null, "masse_max": 2.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 300.0, "hauteur": 200.0, "epaisseur": { "tag": "None" }, "masse_max": 2.0 } } }
     },
     {
       "id": "h02-ordre-inverse", "split": "hard",
       "request": "Plaque haute de 12 cm et large de 30 cm, 1 kg max.",
-      "expect": { "bindings": { "demande": { "largeur": 300.0, "hauteur": 120.0, "epaisseur": null, "masse_max": 1.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 300.0, "hauteur": 120.0, "epaisseur": { "tag": "None" }, "masse_max": 1.0 } } }
     },
     {
       "id": "h03-unites-mixtes", "split": "hard",
       "request": "Plaque de 1 m × 250 mm, masse maximale 8 kg.",
-      "expect": { "bindings": { "demande": { "largeur": 1000.0, "hauteur": 250.0, "epaisseur": null, "masse_max": 8.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 1000.0, "hauteur": 250.0, "epaisseur": { "tag": "None" }, "masse_max": 8.0 } } }
     },
     {
       "id": "h04-epaisseur-decimale", "split": "hard",
       "request": "Plaque de 100 × 100 mm, épaisseur 1,2 mm, tolérance de masse : 150 grammes.",
-      "expect": { "bindings": { "demande": { "largeur": 100.0, "hauteur": 100.0, "epaisseur": 1.2, "masse_max": 0.15 } } }
+      "expect": { "bindings": { "demande": { "largeur": 100.0, "hauteur": 100.0, "epaisseur": { "tag": "Some", "arg": 1.2 }, "masse_max": 0.15 } } }
     },
     {
       "id": "h05-abaque-puis-mesure", "split": "hard",
       "request": "Je cherche une plaque 18x12 cm : estime d'abord l'épaisseur à l'abaque, puis mesure-la, 2 kg max.",
-      "expect": { "bindings": { "demande": { "largeur": 180.0, "hauteur": 120.0, "epaisseur": null, "masse_max": 2.0 } }, "calls": ["Plaque.concevoir_puis_mesurer", "Plaque.estimateur_abaque"] },
+      "expect": { "bindings": { "demande": { "largeur": 180.0, "hauteur": 120.0, "epaisseur": { "tag": "None" }, "masse_max": 2.0 } }, "calls": ["Plaque.concevoir_puis_mesurer", "Plaque.estimateur_abaque"] },
       "environment": { "mesure": "4" }
     },
     {
       "id": "h06-negation-mesure", "split": "hard",
       "request": "Plaque de 80 mm sur 60 mm, 0,25 kg maximum. Ne la mesure pas, je veux seulement la dimensionner.",
-      "expect": { "bindings": { "demande": { "largeur": 80.0, "hauteur": 60.0, "epaisseur": null, "masse_max": 0.25 } }, "not_calls": ["concevoir_puis_mesurer"] }
+      "expect": { "bindings": { "demande": { "largeur": 80.0, "hauteur": 60.0, "epaisseur": { "tag": "None" }, "masse_max": 0.25 } }, "not_calls": ["concevoir_puis_mesurer"] }
     },
     {
       "id": "h07-sans-limite", "split": "hard",
       "request": "Pas de limite de poids. Plaque 90 × 70 mm, épaisseur à déterminer.",
-      "expect": { "bindings": { "demande": { "largeur": 90.0, "hauteur": 70.0, "epaisseur": null, "masse_max": 1000.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 90.0, "hauteur": 70.0, "epaisseur": { "tag": "None" }, "masse_max": 1000.0 } } }
     },
     {
       "id": "h08-nom-avec-chiffre", "split": "hard",
       "request": "Plaque nommée platine-moteur-2, 22 cm de large, 14 cm de haut, 1,1 kg max.",
-      "expect": { "bindings": { "demande": { "nom": "platine-moteur-2", "largeur": 220.0, "hauteur": 140.0, "epaisseur": null, "masse_max": 1.1 } } }
+      "expect": { "bindings": { "demande": { "nom": "platine-moteur-2", "largeur": 220.0, "hauteur": 140.0, "epaisseur": { "tag": "None" }, "masse_max": 1.1 } } }
     },
     {
       "id": "h09-liste-de-parametres", "split": "hard",
       "request": "Dimensions : 150 mm (largeur) et 95 mm (hauteur). Masse limite : 700 g. Épaisseur : 3,5 mm.",
-      "expect": { "bindings": { "demande": { "largeur": 150.0, "hauteur": 95.0, "epaisseur": 3.5, "masse_max": 0.7 } } }
+      "expect": { "bindings": { "demande": { "largeur": 150.0, "hauteur": 95.0, "epaisseur": { "tag": "Some", "arg": 3.5 }, "masse_max": 0.7 } } }
     },
     {
       "id": "h10-regle-puis-mesure", "split": "hard",
       "request": "Plaque carrée de 0,3 m de côté, 6 kg max, estimation par la règle puis contrôle au pied à coulisse.",
-      "expect": { "bindings": { "demande": { "largeur": 300.0, "hauteur": 300.0, "epaisseur": null, "masse_max": 6.0 } }, "calls": ["Plaque.concevoir_puis_mesurer", "Plaque.estimateur_regle"] },
+      "expect": { "bindings": { "demande": { "largeur": 300.0, "hauteur": 300.0, "epaisseur": { "tag": "None" }, "masse_max": 6.0 } }, "calls": ["Plaque.concevoir_puis_mesurer", "Plaque.estimateur_regle"] },
       "environment": { "mesure": "7" }
     },
     {
       "id": "h11-grammes-petits", "split": "hard",
       "request": "Une plaque de 45 mm de large pour 45 mm de haut. Elle doit faire moins de 60 g.",
-      "expect": { "bindings": { "demande": { "largeur": 45.0, "hauteur": 45.0, "epaisseur": null, "masse_max": 0.06 } } }
+      "expect": { "bindings": { "demande": { "largeur": 45.0, "hauteur": 45.0, "epaisseur": { "tag": "None" }, "masse_max": 0.06 } } }
     },
     {
       "id": "h12-decimetres-rect", "split": "hard",
       "request": "Fabrique-moi une plaque rectangulaire : 2,5 dm × 1,5 dm, 2 kg.",
-      "expect": { "bindings": { "demande": { "largeur": 250.0, "hauteur": 150.0, "epaisseur": null, "masse_max": 2.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 250.0, "hauteur": 150.0, "epaisseur": { "tag": "None" }, "masse_max": 2.0 } } }
     },
     {
       "id": "h13-epaisseur-sans-unite", "split": "hard",
       "request": "plaque 250x150 mm, ep 4, 1.2kg",
-      "expect": { "bindings": { "demande": { "largeur": 250.0, "hauteur": 150.0, "epaisseur": 4.0, "masse_max": 1.2 } } }
+      "expect": { "bindings": { "demande": { "largeur": 250.0, "hauteur": 150.0, "epaisseur": { "tag": "Some", "arg": 4.0 }, "masse_max": 1.2 } } }
     },
     {
       "id": "h14-sous-entendu-cm", "split": "hard",
       "request": "Peux-tu me préparer une plaque de 60 centimètres de large sur 35 de haut ? Elle ne doit pas excéder 10 kilos.",
-      "expect": { "bindings": { "demande": { "largeur": 600.0, "hauteur": 350.0, "epaisseur": null, "masse_max": 10.0 } } }
+      "expect": { "bindings": { "demande": { "largeur": 600.0, "hauteur": 350.0, "epaisseur": { "tag": "None" }, "masse_max": 10.0 } } }
     },
     {
       "id": "h15-mesure-apres-conception", "split": "hard",
       "request": "Conçois une plaque de 70 × 70 mm puis contrôle-la au pied à coulisse ; masse maxi 0,5 kg.",
-      "expect": { "bindings": { "demande": { "largeur": 70.0, "hauteur": 70.0, "epaisseur": null, "masse_max": 0.5 } }, "calls": ["Plaque.concevoir_puis_mesurer"] },
+      "expect": { "bindings": { "demande": { "largeur": 70.0, "hauteur": 70.0, "epaisseur": { "tag": "None" }, "masse_max": 0.5 } }, "calls": ["Plaque.concevoir_puis_mesurer"] },
       "environment": { "mesure": "3" }
     },
     {
       "id": "h16-demi-kilo", "split": "hard",
       "request": "Plaque de 35 mm × 25 mm. Masse max : un demi-kilo.",
-      "expect": { "bindings": { "demande": { "largeur": 35.0, "hauteur": 25.0, "epaisseur": null, "masse_max": 0.5 } } }
+      "expect": { "bindings": { "demande": { "largeur": 35.0, "hauteur": 25.0, "epaisseur": { "tag": "None" }, "masse_max": 0.5 } } }
     }
   ]
 }

@@ -239,6 +239,48 @@ résolution à l'inspection, même si une dépendance est absente. Codes 0 succ�
 `src/hypomnesis/contracts/` : schémas JSON Schema 2020-12 (enveloppe, manifeste d'extension) et
 `SchemaRegistry` (validation des schémas à l'enregistrement, enveloppe puis payload).
 
+### Correspondance des types et JSON (HYP-042, ADR 0010)
+
+`contracts/codec.py` : `TypeCodec(checker, type_ou_signature)` photographie les déclarations
+du compilateur. `schema` rend une copie Draft 2020-12, `encode(value)` valide la valeur
+runtime puis son JSON, `decode(payload)` valide le JSON puis reconstruit la valeur typée.
+Primitives, tuples, listes, records, variants, options, alias, instanciations et récursion
+régulière sont couverts ; erreurs `CodecError` avec chemin JSON et `UnsupportedTypeError`.
+Les signatures passent par `parser.parse_type` et `Checker.resolve_type` sans mutation du
+contexte d'inférence. Les références récursives sont locales dans `$defs`.
+
+`contracts/compatibility.py::require_inclusion(source, target, schemas)` démontre une
+inclusion structurelle suffisante, avec refus explicite des mots-clés hors sous-ensemble.
+`ExtensionRegistry.prepare(id, checker, version=None)` exige type d'entrée ⊆ contrat et
+contrat de sortie ⊆ type ; rend `PreparedExtension` (`manifest`, `input`, `output`,
+`encode_input`, `decode_output`). Ces deux dernières méthodes valident aussi le contrat
+concret. L'inspection reste indépendante ; HYP-044 devra utiliser cette préparation avant
+chargement et invocation. Les contrats sont cherchés par identifiant enregistré exact,
+jamais téléchargés. `SchemaRegistry.schema(id)` rend une copie ; l'enregistrement possède
+aussi sa copie, pour éviter une mutation ultérieure par l'appelant.
+
+Le sous-ensemble comprend scalaires, bornes numériques, longueurs, constantes/enum, objets
+fermés, tableaux homogènes/tuples, `anyOf`, `oneOf` étiquetés disjoints et références locales
+ou absolues déjà enregistrées. `CompatibilityError` indique une inclusion non établie ;
+`UnsupportedSchemaError` un schéma hors sous-ensemble. `pattern`, `format`, `allOf`,
+conditions, objets ouverts, ressources imbriquées et références relatives sont refusés.
+Les sorties `float` demandent des bornes finies ; JSON Schema `integer` accepte un token
+intégral comme `1.0`, reconstruit exactement comme `int`.
+
+`runtime/json.py` partage l'encodage structurel et les conversions `Json.t` entre
+`engine/bridge.py`, la primitive `core.to_json` et `engine/procedure.py`. Les options sont
+étiquetées, les entiers utilisent `Json.Int` (ajouté après les constructeurs existants),
+les flottants restent flottants ; NaN/infinis, listes mal formées et clés JSON non textuelles
+ou dupliquées sont refusés. `Json.num` reste une conversion explicite vers float,
+`Json.int` est exact. Les anciens formats d'options ne sont pas acceptés silencieusement.
+Les attentes JSON du banc mécanique et les explications numériques sont migrées ; les
+contrats capteurs/actionneurs existants n'exposaient pas d'option.
+
+Tests : `tests/unit/test_json_codec.py`, `tests/unit/test_contract_compatibility.py`,
+`tests/unit/test_effects.py`, `tests/integration/test_languages.py`. Propriétés Hypothesis
+sur types composés et récursifs, sérialisation JSON réelle et accord des ponts ; manifestes
+incompatibles refusés sans importer un backend piégé. Ces tests ne remplacent pas HYP-043.
+
 ## Observabilité (HYP-015)
 
 `src/hypomnesis/observability/trace.py` : la classe `Tracer` est une façade au-dessus du SDK

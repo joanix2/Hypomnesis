@@ -31,6 +31,11 @@ annotations que le vérificateur Python ajoute à sa Core IR : `lam dom` ↔
 `Lambda.param_types`, `fix dom cod` ↔ `LetRec.types` / `DefRec.types`. Les
 annotations Python liées au polymorphisme (`forall_vars`, `type_args`) n'ont
 pas encore d'équivalent : elles seront formalisées avec HYP-023.
+
+Frontière JSON (HYP-042, ADR 0010). `Json.Int` est un constructeur de bibliothèque
+Python/Hypomnesis, pas une nouvelle forme IR. La primitive `core.to_json` et les
+codecs JSON restent hors de ce fragment de primitives entières ; les tests
+d'aller-retour ne constituent pas les preuves JSON prévues par HYP-043.
 -/
 
 namespace Hypomnesis.Core

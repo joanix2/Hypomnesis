@@ -86,14 +86,17 @@ def test_repairs_are_bounded():
 
 
 def test_semantic_check_catches_invented_values():
-    errors = semantic_errors(MECANIQUE, GOOD, {"bindings": {"demande": {"epaisseur": None}}})
-    assert errors == ["demande.epaisseur = 4.0, attendu None"]
+    errors = semantic_errors(
+        MECANIQUE, GOOD, {"bindings": {"demande": {"epaisseur": {"tag": "None"}}}}
+    )
+    assert errors == ["demande.epaisseur = {'tag': 'Some', 'arg': 4.0}, attendu {'tag': 'None'}"]
 
 
 def test_benchmark_end_to_end_with_a_fake_model(tmp_path, monkeypatch):
     spec = (
         '{"examples": [], "cases": [{"id": "c1", "request": "plaque", '
-        '"expect": {"bindings": {"demande": {"largeur": 120.0, "epaisseur": 4.0}}}}]}'
+        '"expect": {"bindings": {"demande": {"largeur": 120.0, '
+        '"epaisseur": {"tag": "Some", "arg": 4.0}}}}}]}'
     )
     language = tmp_path / "mecanique"
     shutil.copytree(MECANIQUE, language)  # copie réelle : les adaptateurs restent dans le paquet
@@ -111,7 +114,7 @@ def test_inline_record_counts_as_the_expected_binding():
         " masse_max = 0.6 }\n"
         "  Plaque.estimateur_regle\n"
     )
-    expect = {"bindings": {"demande": {"largeur": 160.0, "epaisseur": None}}}
+    expect = {"bindings": {"demande": {"largeur": 160.0, "epaisseur": {"tag": "None"}}}}
     assert semantic_errors(MECANIQUE, inline, expect) == []
     wrong = {"bindings": {"demande": {"largeur": 999.0}}}
     assert semantic_errors(MECANIQUE, inline, wrong) == ["demande.largeur = 160.0, attendu 999.0"]

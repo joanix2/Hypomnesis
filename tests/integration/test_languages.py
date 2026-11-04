@@ -74,6 +74,23 @@ def test_known_value_skips_estimation(tmp_path):
     assert kb.support("demande.valide") is Support.OBSERVED
 
 
+@pytest.mark.parametrize("language", [MECANIQUE, VENTILATION])
+def test_effect_json_boundary_keeps_options_and_integer_precision(tmp_path, language):
+    report = run_procedure(
+        load_language(language),
+        """
+let procedure =
+  Effect.record "option" (Some ()) "programme" Effect.Given >>= fun () ->
+  Effect.return (Some None, 9007199254740993)
+""",
+        out_dir=tmp_path,
+    )
+    assert report.kb.value("option") == {"tag": "Some", "arg": None}
+    assert report.result == [{"tag": "Some", "arg": {"tag": "None"}}, 9007199254740993]
+    saved = json.loads((tmp_path / "rapport.json").read_text())
+    assert saved["result"] == report.result
+
+
 def test_measurement_revises_the_design_inside_the_language(tmp_path):
     report = plaque(tmp_path, MESUREE, environment={"mesure": "5"})
     kb = report.kb

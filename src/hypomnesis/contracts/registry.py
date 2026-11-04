@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from importlib.resources import files
 from typing import Any
@@ -55,6 +56,7 @@ class SchemaRegistry:
         return cls(schemas)
 
     def add(self, schema: Mapping[str, Any]) -> str:
+        schema = deepcopy(dict(schema))
         schema_id = schema.get("$id")
         if not isinstance(schema_id, str) or not schema_id:
             raise ValueError("a contract schema must declare a non-empty $id")
@@ -71,6 +73,12 @@ class SchemaRegistry:
 
     def ids(self) -> list[str]:
         return sorted(self._schemas)
+
+    def schema(self, schema_id: str) -> dict[str, Any]:
+        """Inspect a registered contract without exposing mutable registry state."""
+        if schema_id not in self._schemas:
+            raise ContractError(schema_id, [ValidationIssue("$", "unknown schema")])
+        return deepcopy(dict(self._schemas[schema_id]))
 
     def issues(self, schema_id: str, instance: Any) -> list[ValidationIssue]:
         if schema_id not in self._schemas:

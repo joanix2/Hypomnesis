@@ -144,46 +144,11 @@ def _string_get(s: str, i: int) -> str:
     return s[i]
 
 
-_JSON_TAGS = {"Null": 0, "Bool": 1, "Num": 2, "Str": 3, "Arr": 4, "Obj": 5}
-
-
-def json_variant(tag: str, arg: Value = None) -> Variant:
-    """A value of the standard library type ``Json.t``."""
-    return Variant(tag, arg, _JSON_TAGS[tag])
-
-
 def to_json_value(v: Value) -> Variant:
-    """Any runtime value as a ``Json.t``: records become objects, lists arrays,
-    ``Some x`` is ``x`` and ``None`` is ``Null``; other constructors become
-    ``Obj [("tag", …); ("arg", …)]``. Pure: no effect, functions refused."""
-    from hypomnesis.runtime.values import RecordValue, from_iterable, is_list, iter_list
+    """Encode data structurally, with tagged options and exact integers (ADR 0010)."""
+    from hypomnesis.runtime.json import data_to_json, value_to_data
 
-    if isinstance(v, bool):
-        return json_variant("Bool", v)
-    if isinstance(v, int | float):
-        return json_variant("Num", float(v))
-    if isinstance(v, str):
-        return json_variant("Str", v)
-    if isinstance(v, tuple):
-        return (
-            json_variant("Null")
-            if v == ()
-            else json_variant("Arr", from_iterable(map(to_json_value, v)))
-        )
-    if isinstance(v, RecordValue):
-        return json_variant("Obj", from_iterable((k, to_json_value(x)) for k, x in v.fields))
-    if is_list(v):
-        return json_variant("Arr", from_iterable(map(to_json_value, iter_list(v))))
-    if isinstance(v, Variant):
-        if v.tag == "None":
-            return json_variant("Null")
-        if v.tag == "Some":
-            return to_json_value(v.arg)
-        fields = [("tag", json_variant("Str", v.tag))]
-        if v.arg is not None:
-            fields.append(("arg", to_json_value(v.arg)))
-        return json_variant("Obj", from_iterable(fields))
-    raise EvaluationError("to_json: functional value")
+    return data_to_json(value_to_data(v))
 
 
 def default_registry() -> NativeRegistry:

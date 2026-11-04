@@ -16,7 +16,10 @@ from resolvelib.resolvers import ResolutionImpossible, ResolutionTooDeep
 from semantic_version import SimpleSpec, Version
 
 from hypomnesis.capabilities.protocols import ROLES
+from hypomnesis.contracts.codec import TypeCodec
+from hypomnesis.contracts.compatibility import require_inclusion
 from hypomnesis.contracts.registry import MANIFEST_ID, ContractError, SchemaRegistry
+from hypomnesis.language.typesystem.infer import Checker
 
 
 class RegistryError(ValueError):
@@ -41,6 +44,29 @@ class VersionConflictError(RegistryError):
 
 class DependencyCycleError(RegistryError):
     """The selected dependency graph contains a cycle."""
+
+
+@dataclass(frozen=True)
+class PreparedExtension:
+    """Verified metadata and boundary codecs; no backend is imported or instantiated."""
+
+    _manifest: dict[str, Any]
+    input: TypeCodec
+    output: TypeCodec
+    _schemas: SchemaRegistry
+
+    @property
+    def manifest(self) -> dict[str, Any]:
+        return deepcopy(self._manifest)
+
+    def encode_input(self, value: Any) -> Any:
+        payload = self.input.encode(value)
+        self._schemas.validate(self._manifest["input_schema"], payload)
+        return payload
+
+    def decode_output(self, payload: Any) -> Any:
+        self._schemas.validate(self._manifest["output_schema"], payload)
+        return self.output.decode(payload)
 
 
 @dataclass(frozen=True)
@@ -256,3 +282,18 @@ class ExtensionRegistry:
             self.show(identifier, result.mapping[identifier].version)
             for identifier in nx.lexicographical_topological_sort(graph)
         ]
+
+    def prepare(
+        self, identifier: str, checker: Checker, version: str | None = None
+    ) -> PreparedExtension:
+        """Check signatures/contracts before handing metadata to a future backend loader."""
+        manifest = self.show(identifier, version)
+        input_codec = TypeCodec(checker, manifest["signature"]["input"])
+        output_codec = TypeCodec(checker, manifest["signature"]["output"])
+        require_inclusion(
+            input_codec.schema, self._schemas.schema(manifest["input_schema"]), self._schemas
+        )
+        require_inclusion(
+            self._schemas.schema(manifest["output_schema"]), output_codec.schema, self._schemas
+        )
+        return PreparedExtension(manifest, input_codec, output_codec, self._schemas)
