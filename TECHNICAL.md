@@ -45,13 +45,12 @@ La **source de vérité** reste le terme de provenance en semi-anneau de chaque 
 en sont des évaluations. `KnowledgeBase.graph()` en dérive, à la demande, un `nx.DiGraph` :
 
 - nœuds `fact:<clé>` et `source:<id>` (préfixes : une clé de fait peut ressembler à un id de
-  source) ; une provenance peut citer une source non déclarée (`source:axiome`) ;
+  source) ; `source:axiome` est déclarée dès qu'un fait est dérivé sans prémisse (voir plus bas) ;
 - arêtes `source → fait` (la provenance du fait la mentionne, `kind="provenance"`) et
   `prémisse → conclusion` (`kind="premise"`) ; `graph(detailed=True)` ajoute valeur, méthode,
   support et confiance (nœuds faits), origine et confiance (nœuds sources).
 
-Usages : `retract_source` prend pour **ensemble candidat** les descendants des sources qui ne
-tiennent plus (retirées ou non déclarées), puis **décide par l'évaluation booléenne** de chaque
+Usages : `retract_source` prend pour **ensemble candidat** les descendants des sources retirées, puis **décide par l'évaluation booléenne** de chaque
 candidat (substitution `x ↦ 0`, P10/P11) — un fait à deux dérivations (`plus`) survit si l'une tient
 encore ; `explain` parcourt les prédécesseurs `premise` (même rendu texte qu'avant) ;
 `provenance_graph()` exporte le graphe en JSON node-link (`nx.node_link_data(…, edges="edges")`,
@@ -64,6 +63,17 @@ Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
 révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une
 même dérivation n'apparaissent qu'une fois dans l'explication.
+
+Fait sans prémisse (HYP-143, option A) : `derive(k, v, m, [])` est une *constante du programme*. Sa
+provenance est `obs("axiome")`, et la source `axiome` (`AXIOM`) est **déclarée** à la première
+utilisation : type `default`, support « par défaut » (`Defaulted`), confiance 1,0, origine
+« constante du programme ». `support`, `confidence`, `explain`, `to_json` et le graphe fonctionnent
+donc sur ce fait (avant : `KeyError: 'axiome'`). `retract_source("axiome", …)` est refusé
+(`ValueError`) : la source n'est jamais rétractée, et `_holds` ne dit plus « faux » pour une source
+inconnue (avant : tout fait sans prémisse était invalidé par la première rétractation, même sans
+lien). Cohérent avec P10/P11 : un fait dont la provenance ne mentionne pas la source retirée est
+inchangé. Un fait mêlant `axiome` et une observation suit l'observation (produit : le plus faible
+l'emporte ; le retrait de l'observation l'invalide).
 
 CLI : `hypomnesis lancer LANGAGE [PROGRAMME] [--demande …] [--mode …] [--env cle=valeur]
 [--sortie DIR] [--sans-permission]`.
@@ -84,6 +94,28 @@ n'est volontairement **pas** vérifié par Click : son absence est refusée par 
 code 1). `main(argv) -> int` appelle `app` en mode autonome et convertit le `SystemExit` en entier
 retourné : les tests l'appellent directement, le point d'entrée `hypomnesis` fait
 `sys.exit(main())`.
+
+### Diagnostics structurés (HYP-130)
+
+`hypomnesis check FICHIERS --format json [--langage DOSSIER]` imprime sur la sortie standard un
+document `diagnostics/1.0.0` (`contracts/schemas/diagnostics-1.0.0.json`, constantes
+`DIAGNOSTICS_SCHEMA_ID`/`DIAGNOSTICS_VERSION` dans `language/errors.py`) et rien d'autre ; la sortie
+texte (défaut `--format text`) et les codes de sortie (0/1) sont inchangés. Le compilateur s'arrête à
+la première erreur : le tableau `diagnostics` contient donc 0 ou 1 entrée (le schéma admet plus, pour
+les avertissements de HYP-010, gravité `warning`).
+
+`HypomnesisError.to_diagnostic(filename)` produit une entrée : `stage` (identifiant stable
+`stage_id` : `syntax`, `name`, `type`, `runtime`, ou `error` pour toute sous-classe qui ne le
+redéfinit pas — le libellé affiché reste `stage`), `severity`, `message`, `file`, et `line`,
+`column`, `end_line`, `end_column` (1-based, fin exclusive, `null` si l'erreur n'a pas d'étendue).
+`--langage DOSSIER` charge le langage M2 (`load_language`) et vérifie les fichiers dans sa session ;
+un dossier sans `langage.json` est refusé (`refusé : …`, code 1).
+
+Précision des étendues (fin approximée ou large) : une erreur de **syntaxe** n'a que son début
+(`parser._convert_error` : fin = début + 1 colonne) ; un **champ inconnu** (`infer._check_fields`)
+est positionné sur l'expression enregistrement entière, faute d'étendue du nom de champ dans l'AST.
+Les erreurs de nommage et de typage portent l'étendue de l'expression fautive.
+Consommateurs : linter VS Code (HYP-132) et CLI pour agents (HYP-133).
 
 ### Banc LLM : graphiques (HYP-016)
 
@@ -122,6 +154,28 @@ les relit : `cd formal && lake build hypomnesis-check`, puis
 `lake exe hypomnesis-check check cert.json` (codes : 0 accepté, 1 rejeté par `typeOf`, 2 hors du
 fragment, 3 illisible) ou `eval cert.json` (sémantique de référence). Exemple entièrement dans
 le fragment : `examples/basics/certifiable.hyp`.
+
+## Capacités (HYP-040)
+
+`src/hypomnesis/capabilities/` (M3, strict Pyright par `# pyright: strict`) définit les neuf
+interfaces génériques du §6 — `Observer`, `Generator`, `Estimator`, `Transpiler`, `Solver`,
+`Validator`, `KnowledgeBase`, `Actuator`, `Resolver` — comme des `typing.Protocol`
+`runtime_checkable` (conformité structurelle, sans héritage ni import de backend). Le rôle
+type-théorique de chacune (§4.4 de `docs/architecture/m3-metalangage.md`) est dans sa docstring.
+
+- `result.py` : `Result[T]` immuable (`value`, `certificate`, `diagnostics`, `ok` = aucun
+  diagnostic de gravité `error`), `Diagnostic` (`code`, `message`, `severity`, `data`), `Certificate`
+  (`kind`, `body`), constructeurs `success` / `failure`. Un refus du `Validator` est un diagnostic
+  d'erreur dont `data` porte le contre-exemple ; un succès porte le certificat.
+- `protocols.py` : un protocole par interface (méthodes à paramètres positionnels, une méthode
+  par verbe : `observe`, `generate(spec, *, limit)`, `estimate`, `transpile`, `solve`, `validate`,
+  `query`/`store`, `actuate`, `resolve(goal, capabilities)`), `ROLES` (clés = énumération `role`
+  du manifeste d'extension, vérifié par test) et `roles_of(plugin)`.
+- `safe.py` : `guarded` convertit toute `Exception` d'un plugin en `Result` en échec
+  (`capability.raised`) ; règle : **jamais d'exception brute vers le noyau**.
+
+Un plugin ne décide rien : il rend valeur et certificat, le noyau gradue et vérifie. Le registre
+et les manifestes sont l'objet de HYP-041.
 
 ## Contrats
 

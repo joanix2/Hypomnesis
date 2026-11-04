@@ -36,3 +36,9 @@ description: "P0 · M · Phase 3 — Extensions et contrats · dépend de HYP-04
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Note de HYP-040 : les neuf protocoles existent dans `src/hypomnesis/capabilities/` (`protocols.py`). `ROLES` associe chaque valeur de l'énumération `role` du manifeste à son protocole (cohérence testée) ; `roles_of(plugin)` rend les rôles qu'un objet satisfait structurellement ; `guarded` (`safe.py`) contient les exceptions d'un plugin dans un `Result`. Le registre peut donc vérifier, après chargement du module (jamais à l'inspection), que l'objet lié à un manifeste de rôle `R` satisfait `ROLES[R]`. Les protocoles sont `runtime_checkable` : seule la présence des méthodes est contrôlée, pas leurs signatures.
+
+### user
