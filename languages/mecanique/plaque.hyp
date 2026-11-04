@@ -2,13 +2,46 @@
    ses contraintes et ses commandes. Écrit en Hypomnesis, au-dessus du moteur (M3),
    qui n'en sait rien. Longueurs en mm, masses en kg. Règles illustratives. *)
 
+(** Plaques d'acier : conception d'une plaque (épaisseur donnée, estimée ou mesurée),
+    validation de ses contraintes puis export de sa géométrie.
+    @squelette
+      let demande = {
+        Plaque.nom = "plaque";
+        largeur = 100.0;
+        hauteur = 50.0;
+        epaisseur = None;
+        masse_max = 2.0;
+      }
+
+      let procedure = Plaque.concevoir demande Plaque.estimateur_regle
+    @note le premier champ d'un record est préfixé par le module (`Plaque.nom = …`), les
+      autres non ; la demande se nomme `demande` et la procédure `procedure` *)
 module Plaque = struct
-  (* Demande : ce que décrit un programme M1. `None` = inconnu à déterminer. *)
+  (** La plaque voulue, telle que la décrit la demande. `None` = valeur inconnue, à
+      déterminer par le langage : ne jamais inventer une valeur absente de la demande. *)
   type demande = {
+    (** Nom court de la plaque.
+        @défaut "plaque"
+        @exemple « plaque renfort-gauche » → "renfort-gauche" ; sans nom → "plaque" *)
     nom : string;
+    (** Largeur de la plaque.
+        @unité mm (convertir : 1 cm = 10 mm, 1 m = 1000 mm)
+        @exemple « 7 cm » → 70.0 ; « 0,6 m » → 600.0 ; « 95 × 40 » → largeur 95.0
+        @note « carrée de 6 cm de côté » → largeur = hauteur = 60.0 *)
     largeur : float;
+    (** Hauteur de la plaque (deuxième dimension).
+        @unité mm
+        @exemple « 95 × 40 » → hauteur 40.0 ; « 9 cm sur 5 cm » → 50.0 *)
     hauteur : float;
+    (** Épaisseur, si elle est donnée.
+        @unité mm
+        @défaut None (inconnue : l'estimateur la détermine)
+        @exemple « épaisseur 6 mm » → Some 6.0 ; « on verra plus tard » → None *)
     epaisseur : float option;
+    (** Masse maximale admissible.
+        @unité kg (convertir : 250 g = 0.25)
+        @défaut 1000.0 si aucune limite n'est donnée
+        @exemple « pas plus de 2,5 kg » → 2.5 ; « moins de 350 g » → 0.35 *)
     masse_max : float;
   }
 
@@ -67,9 +100,16 @@ module Plaque = struct
   (* ------------------------------------------------------- procédures *)
   (* Effets comme valeurs (type 'a Effect.t) : décrits ici, exécutés par le moteur. *)
 
+  (** Un estimateur d'épaisseur : une heuristique métier interchangeable. *)
   type estimateur = { id : string; confiance : float; estimer : demande -> float }
 
+  (** Estimateur par règle : épaisseur ≈ petit côté / 25.
+      @quand la demande dit « règle » ou « estimateur par règle »
+      @défaut estimateur à utiliser quand la demande n'en précise aucun *)
   let estimateur_regle = { id = "regle v1"; confiance = 0.6; estimer = estimer_regle }
+
+  (** Estimateur par abaque : épaisseur lue dans une table selon la surface.
+      @quand la demande dit « abaque » *)
   let estimateur_abaque = { id = "abaque v1"; confiance = 0.7; estimer = estimer_abaque }
 
   let connus = ["demande.nom"; "demande.largeur"; "demande.hauteur"; "demande.masse_max"]
@@ -96,7 +136,12 @@ module Plaque = struct
       Effect.note ("invalide : " ^ String.concat "; " erreurs) >>= fun () ->
       Effect.return "Invalide"
 
-  (* Conception : épaisseur donnée, ou estimée puis résolue sous les contraintes. *)
+  (** Conçoit une plaque : prend l'épaisseur si elle est donnée, sinon l'estime, la résout
+      sous les contraintes d'élancement et de masse, valide la plaque puis exporte sa géométrie
+      (SVG et JSON). Procédure de base, sans mesure.
+      @quand « crée », « conçois », « dimensionne », « fais », « je veux » une plaque
+      @pas_quand la demande parle de mesurer ou contrôler l'épaisseur réelle (pied à coulisse)
+      @exemple « plaque 70 × 55 mm, 0,25 kg max » → Plaque.concevoir demande Plaque.estimateur_regle *)
   let concevoir (d : demande) (est : estimateur) =
     donnees d >>= fun () ->
     match d.epaisseur with
@@ -128,6 +173,11 @@ module Plaque = struct
     Effect.record "demande.epaisseur" mesure "mesure directe" (Effect.Derived [cle]) >>= fun () ->
     valider_et_exporter d mesure
 
+  (** Conçoit la plaque comme `concevoir`, puis mesure l'épaisseur réelle au pied à coulisse,
+      retire l'estimation et revalide la plaque avec la mesure.
+      @quand la demande parle de mesurer, contrôler ou réviser l'épaisseur réelle (pied à coulisse)
+      @exemple « plaque 90 × 60 mm, 0,2 kg max, puis contrôle l'épaisseur au pied à coulisse » →
+        Plaque.concevoir_puis_mesurer demande Plaque.estimateur_regle *)
   let concevoir_puis_mesurer (d : demande) (est : estimateur) =
     concevoir d est >>= fun verdict ->
     Effect.note ("verdict avant mesure : " ^ verdict) >>= fun () ->

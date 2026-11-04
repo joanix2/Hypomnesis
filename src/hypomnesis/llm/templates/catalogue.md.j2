@@ -1,0 +1,62 @@
+{% macro tag_line(tag, text, bullet) -%}
+{% if tag == 'squelette' -%}
+{{ bullet }}{{ tag | label }} :
+{{ ('```\n' ~ (text | block) ~ '\n```') | indent(bullet | length + 2, first=True) }}
+{%- else -%}
+{{ bullet }}{{ tag | label }} : {{ text | inline }}
+{%- endif %}
+{%- endmacro %}
+=== Catalogue du langage « {{ c.language }} » ===
+{{ c.description }}
+
+Tu n'utilises que les éléments de ce catalogue. Le programme se termine par `let {{ c.entry }} = …` qui appelle une procédure.
+{% for m in c.modules %}
+
+## Module {{ m.path }}
+{{ m.summary }}
+{% for tag, text in m.tags %}
+{{ tag_line(tag, text, '- ') }}
+{% endfor %}
+{% for t in m.types %}
+
+### Type `{{ t.path }}`
+{{ t.summary }}
+{% for f in t.fields %}
+- `{{ f.path.rsplit('.', 1)[1] }} : {{ f.type }}`{% if f.summary %} — {{ f.summary }}{% endif %}
+
+{% for tag, text in f.tags %}
+{{ tag_line(tag, text, '  - ') }}
+{% endfor %}
+{% endfor %}
+{% for k in t.constructors %}
+- `{{ k.path.rsplit('.', 1)[1] }}`{% if k.type %} de `{{ k.type }}`{% endif %}
+
+{% endfor %}
+{% endfor %}
+{% set procedures = m.values | selectattr('is_procedure') | list %}
+{% if procedures %}
+
+### Procédures (valeurs de type `… Effect.t`)
+{% for v in procedures %}
+
+`{{ v.path }}` : {{ v.signature }}
+{{ v.summary }}
+{% for tag, text in v.tags %}
+{{ tag_line(tag, text, '- ') }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% set others = m.values | rejectattr('is_procedure') | list %}
+{% if others %}
+
+### Valeurs
+{% for v in others %}
+
+`{{ v.path }}` : {{ v.signature }}
+{{ v.summary }}
+{% for tag, text in v.tags %}
+{{ tag_line(tag, text, '- ') }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}

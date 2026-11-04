@@ -3,8 +3,30 @@
    (type 'a Effect.t) que le moteur (M3) interprète. Le langage ne fait rien
    lui-même : il décrit. *)
 
+(** Régulation de la température d'une pièce par un ventilateur.
+    @squelette
+      let installation = {
+        Ventilation.capteur = "thermo-1";
+        ventilateur = "fan-1";
+        budget = 3;
+      }
+
+      let procedure = Ventilation.reguler installation
+    @note le premier champ d'un record est préfixé par le module (`Ventilation.capteur = …`),
+      les autres non ; l'installation se nomme `installation` et la procédure `procedure` *)
 module Ventilation = struct
-  type installation = { capteur : string; ventilateur : string; budget : int }
+  (** Une installation à réguler : un capteur, un ventilateur et un nombre maximal d'actions. *)
+  type installation = {
+    (** Identifiant du capteur de température.
+        @exemple « le capteur thermo-1 » → "thermo-1" *)
+    capteur : string;
+    (** Identifiant du ventilateur à piloter.
+        @exemple « le ventilateur fan-7 » → "fan-7" *)
+    ventilateur : string;
+    (** Nombre maximal d'actions (itérations, tentatives) de la régulation.
+        @exemple « pas plus de 6 tentatives » → 6 ; « une seule action » → 1 *)
+    budget : int;
+  }
 
   let seuil = 28.0                 (* °C *)
   let baisse_attendue = 1.0        (* °C après une action *)
@@ -55,6 +77,11 @@ module Ventilation = struct
                        ^ String.concat ", " invalides) >>= fun () ->
           Effect.return "hypothèse réfutée : le ventilateur ne fonctionne pas (alerte)"
 
+  (** Régule la température : observe le capteur, règle la vitesse du ventilateur si la
+      température dépasse le seuil, vérifie l'effet, recommence au plus `budget` fois.
+      @quand « régule », « surveille », « pilote », « maintiens la température »
+      @exemple « régule avec thermo-1 et fan-7, 6 tentatives max » →
+        Ventilation.reguler installation *)
   let reguler (inst : installation) =
     Effect.record "hypothese" true "le ventilateur fonctionne" (Effect.Assumed 0.9) >>= fun () ->
     Effect.observe inst.capteur >>= fun (cle, releve) ->

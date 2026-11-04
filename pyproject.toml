@@ -18,7 +18,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+llm = [
+  "jinja2>=3.1",
+  "scikit-learn>=1.5",
+]
 dev = [
+  "jinja2>=3.1",
+  "scikit-learn>=1.5",
   "pytest>=8",
   "hypothesis>=6.100",
   "ruff>=0.6",

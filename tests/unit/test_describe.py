@@ -1,0 +1,59 @@
+"""Catalogue de prompt compilé depuis l'auto-documentation d'un langage."""
+
+from pathlib import Path
+
+import pytest
+
+from hypomnesis.engine.language import load_language
+from hypomnesis.llm.describe import catalogue
+
+LANGUAGES = Path(__file__).resolve().parents[2] / "languages"
+
+
+def render(name: str) -> str:
+    return catalogue(load_language(LANGUAGES / name)).render()
+
+
+def test_catalogue_lists_documented_types_fields_and_tags():
+    text = render("mecanique")
+    assert "### Type `Plaque.demande`" in text
+    assert "- `masse_max : float` — Masse maximale admissible." in text
+    assert "  - Unité : kg" in text
+    assert "  - Exemple : " in text
+
+
+def test_catalogue_gives_inferred_signatures_and_separates_procedures():
+    text = render("mecanique")
+    assert "`Plaque.concevoir` : Plaque.demande -> Plaque.estimateur -> string Effect.t" in text
+    assert "### Procédures" in text and "### Valeurs" in text
+    assert "- Utiliser quand : " in text and "- Ne pas utiliser quand : " in text
+
+
+def test_undocumented_items_stay_out_of_the_catalogue():
+    text = render("mecanique")
+    assert "valider_et_exporter" not in text and "petit_cote" not in text
+
+
+def test_catalogue_is_generic_across_languages():
+    text = render("ventilation")
+    assert "`Ventilation.reguler`" in text and "`budget : int`" in text
+    assert "Plaque" not in text
+
+
+def test_catalogue_names_the_entry_point():
+    assert "`let procedure = …`" in render("mecanique")
+
+
+@pytest.mark.parametrize("name", ["mecanique", "ventilation"])
+def test_catalogue_is_much_shorter_than_the_source(name):
+    language = load_language(LANGUAGES / name)
+    source = "".join(
+        (language.root / s).read_text(encoding="utf-8") for s in language.manifest["sources"]
+    )
+    assert len(render(name)) < len(source)
+
+
+def test_program_skeleton_is_rendered_as_a_code_block():
+    text = render("mecanique")
+    assert "- Squelette de programme :\n    ```\n    let demande = {" in text
+    assert "let procedure = Plaque.concevoir demande Plaque.estimateur_regle\n    ```" in text
