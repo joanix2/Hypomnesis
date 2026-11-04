@@ -22,6 +22,7 @@ evaluation of its provenance, which is exact when a fact has several derivations
 from __future__ import annotations
 
 import itertools
+import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -32,15 +33,85 @@ from hypomnesis.epistemics.provenance import (
     BOOLEAN,
     CONFIDENCE,
     SUPPORT,
+    Obs,
+    One,
+    Plus,
     Prov,
     Support,
+    Times,
+    Zero,
     evaluate,
     obs,
 )
+from hypomnesis.runtime.values import RecordValue, Variant
 
 FACT = "fact:"  # node-id prefixes: a fact key may look like a source id
 SOURCE = "source:"
 AXIOM = "axiome"  # id of the declared source of premise-less facts (never retracted)
+
+
+def _identifier(value: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("expected a non-empty identifier")
+
+
+def _snapshot(value: Any, active: frozenset[int] = frozenset()) -> tuple[str, Any]:
+    if value is None or type(value) in (str, bool, int):
+        return type(value).__name__, value
+    if type(value) is float:
+        if not math.isfinite(value):
+            raise ValueError("knowledge values must be finite")
+        return "float", value
+    if id(value) in active:
+        raise ValueError("cyclic knowledge value")
+    active = active | {id(value)}
+    if type(value) in (list, tuple):
+        return type(value).__name__, tuple(_snapshot(v, active) for v in value)
+    if type(value) is dict:
+        if any(not isinstance(k, str) for k in value):
+            raise ValueError("knowledge object keys must be strings")
+        return "dict", tuple((k, _snapshot(v, active)) for k, v in value.items())
+    if type(value) is RecordValue:
+        _identifier(value.type_name)
+        if not isinstance(value.fields, tuple) or any(
+            not isinstance(pair, tuple) or len(pair) != 2 for pair in value.fields
+        ):
+            raise ValueError("invalid record fields")
+        for key, _ in value.fields:
+            _identifier(key)
+        return "record", (value.type_name, _snapshot(value.fields, active))
+    if type(value) is Variant:
+        _identifier(value.tag)
+        if type(value.index) is not int or value.index < 0:
+            raise ValueError("invalid constructor index")
+        return "variant", (value.tag, _snapshot(value.arg, active), value.index)
+    raise ValueError(f"unsupported knowledge value: {type(value).__name__}")
+
+
+def _restore(snapshot: tuple[str, Any]) -> Any:
+    kind, data = snapshot
+    if kind in ("NoneType", "str", "bool", "int", "float"):
+        return data
+    if kind == "dict":
+        return {k: _restore(v) for k, v in data}
+    if kind == "record":
+        return RecordValue(data[0], _restore(data[1]))
+    if kind == "variant":
+        return Variant(data[0], _restore(data[1]), data[2])
+    items = tuple(_restore(v) for v in data)
+    return list(items) if kind == "list" else items
+
+
+def _provenance(value: Prov) -> Prov:
+    if type(value) is Obs:
+        _identifier(value.id)
+        return value
+    if type(value) in (Zero, One):
+        return value
+    if isinstance(value, Plus | Times):
+        constructor = Plus if isinstance(value, Plus) else Times
+        return constructor(_provenance(value.left), _provenance(value.right))
+    raise ValueError("invalid provenance term")
 
 
 @dataclass(frozen=True)
@@ -52,6 +123,14 @@ class Source:
     origin: str  # human-readable: "demande utilisateur", "estimateur règle-empirique v1", …
     confidence: float = 1.0
 
+    def __post_init__(self) -> None:
+        _identifier(self.id)
+        _identifier(self.origin)
+        if self.kind not in ("observation", "estimation", "default", "hypothesis"):
+            raise ValueError(f"invalid source kind: {self.kind}")
+        if type(self.confidence) not in (int, float) or not 0 <= self.confidence <= 1:
+            raise ValueError("confidence must be a finite number between 0 and 1")
+
     @property
     def support(self) -> Support:
         return {
@@ -62,19 +141,78 @@ class Source:
         }[self.kind]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class Fact:
+    """Immutable snapshot of a concrete value with its justification.
+
+    v0.3 §7.1: Observed/Estimated/Defaulted/Hypothesis are readings of source
+    provenance, not stored grades. Derived is the method/premise justification,
+    Unknown is a separate metavariable, and Conflict belongs to coherence
+    (detection is HYP-035). A Fact does not assert absence of conflicts.
+
+    ``key`` is the stable logical property identifier, not a revision number.
+    Input containers are snapshotted; ``value`` returns detached containers.
+    JSON exchange is typed through ``epistemics.serialization`` and TypeCodec.
+    """
+
     key: str  # "<objet>.<propriété>", par exemple "demande.largeur"
-    value: Any
+    _value: tuple[str, Any] = field(repr=False)
     provenance: Prov
     method: str  # how it was obtained: "observé", "estimé", "dérivé par solveur Z3", …
     premises: tuple[str, ...] = ()  # keys of the facts it was derived from
 
+    def __init__(
+        self, key: str, value: Any, provenance: Prov, method: str, premises: tuple[str, ...] = ()
+    ) -> None:
+        _identifier(key)
+        _identifier(method)
+        if not isinstance(premises, tuple):
+            raise ValueError("premises must be an immutable tuple")
+        for premise in premises:
+            _identifier(premise)
+        object.__setattr__(self, "key", key)
+        object.__setattr__(self, "_value", _snapshot(value))
+        object.__setattr__(self, "provenance", _provenance(provenance))
+        object.__setattr__(self, "method", method)
+        object.__setattr__(self, "premises", premises)
+
+    @property
+    def value(self) -> Any:
+        return _restore(self._value)
+
 
 @dataclass(frozen=True)
 class Unknown:
+    """Unresolved metavariable identified by key, never a concrete sentinel."""
+
     key: str
     description: str
+
+    def __post_init__(self) -> None:
+        _identifier(self.key)
+        _identifier(self.description)
+
+
+@dataclass(frozen=True)
+class Observation:
+    """An observed Fact and its declared Source; ``id`` survives JSON exchange."""
+
+    source: Source
+    fact: Fact
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.source, Source) or not isinstance(self.fact, Fact):
+            raise ValueError("observation requires a Source and a Fact")
+        if (
+            self.source.kind != "observation"
+            or self.fact.provenance != obs(self.source.id)
+            or self.fact.premises
+        ):
+            raise ValueError("observation must directly reference its observation source")
+
+    @property
+    def id(self) -> str:
+        return self.source.id
 
 
 @dataclass(frozen=True)
@@ -100,9 +238,7 @@ class KnowledgeBase:
         self.journal.append(Event(len(self.journal) + 1, kind, key, detail))
 
     def _source(self, kind: str, origin: str, confidence: float) -> Source:
-        source = Source(f"{kind[:3]}-{next(self._ids)}", kind, origin, confidence)
-        self.sources[source.id] = source
-        return source
+        return Source(f"{kind[:3]}-{next(self._ids)}", kind, origin, confidence)
 
     def unknown(self, key: str, description: str) -> Unknown:
         u = Unknown(key, description)
@@ -130,6 +266,7 @@ class KnowledgeBase:
     def _record(self, kind, event, key, value, origin, confidence, method) -> Fact:
         source = self._source(kind, origin, confidence)
         fact = Fact(key, value, obs(source.id), f"{method} ({origin})")
+        self.sources[source.id] = source
         self._replace(key, fact)
         self._log(event, key, f"{value!r} — {origin} [{source.id}]")
         return fact
@@ -147,9 +284,10 @@ class KnowledgeBase:
             p = self.facts[premise].provenance
             provenance = p if provenance is None else provenance * p
         if provenance is None:
-            self._declare_axiom()
             provenance = obs(AXIOM)
         fact = Fact(key, value, provenance, method, tuple(premises))
+        if not premises:
+            self._declare_axiom()
         self._replace(key, fact)
         self._log("derived", key, f"{value!r} — {method} ← {', '.join(premises)}")
         return fact

@@ -116,6 +116,16 @@ Les exemples `booleen`, `arithmetique`, `contraintes`, `composition_a` et
 
 ### Épistémique : graphe de provenance (NetworkX, HYP-008)
 
+HYP-030 complète les instantanés existants : `Fact` capture récursivement les
+valeurs dans un arbre immuable et renvoie des conteneurs détachés ; `Source`
+et `Unknown` valident leurs métadonnées. `Observation` lie explicitement un
+fait observé et sa source. Les signatures de la base restent inchangées.
+`epistemics/serialization.py` échange ces trois formes selon
+`contracts/schemas/knowledge-1.0.0.json`, en réutilisant `TypeCodec` et le
+type fermé attendu par l'hôte pour la valeur. Ni grade déclaré ni valeur
+sentinelle pour une inconnue. Ce n'est pas l'export/rejeu complet d'une base.
+Guide et limites : [connaissances.md](docs/architecture/connaissances.md).
+
 La **source de vérité** reste le terme de provenance en semi-anneau de chaque fait
 (`epistemics/provenance.py`, miroir du modèle Lean) : support, confiance et « tient-il encore ? »
 en sont des évaluations. `KnowledgeBase.graph()` en dérive, à la demande, un `nx.DiGraph` :

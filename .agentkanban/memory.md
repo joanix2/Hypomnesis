@@ -86,6 +86,12 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
 
 ## Outils
 
+HYP-030 : les faits capturent un instantané immuable et renvoient des valeurs
+détachées. `epistemics.serialization.to_json/from_json` utilise le contrat
+knowledge/1.0.0 et un TypeCodec fourni par l'hôte ; le schéma seul ne valide
+pas la valeur du langage. Observation lie source et fait, Unknown n'est pas
+une valeur concrète. Guide : `docs/architecture/connaissances.md`.
+
 - Graphe de connaissances : `graphify query|path|explain|affected` sur `graphify-out/` (voir
   `CLAUDE.md`) ; il n'est pas reconstruit automatiquement : `./scripts/validate.sh graphe`.
 - Kanban : `.venv/bin/python scripts/kanban.py status` (tâches prêtes ou bloquées, chemin critique vers P0), `check` (validation),

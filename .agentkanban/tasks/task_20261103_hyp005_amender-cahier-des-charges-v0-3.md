@@ -163,3 +163,13 @@ manquante au ticket HYP-149, sans modifier sa proposition.
 HYP-005 et sa checklist passent en `qa`, pas en `done`.
 
 ### user
+
+continue
+
+### agent
+
+HYP-005 est terminé et validé en QA. Poursuite directe sur HYP-030, prêt
+et P0, pour implémenter le modèle de connaissances selon les axes adoptés.
+L'ADR 0006 reste proposée et HYP-149 reste une hypothèse non adoptée.
+
+### user
