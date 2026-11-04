@@ -18,10 +18,17 @@ class Span:
         return f"{self.line}:{self.column}"
 
 
+DIAGNOSTICS_VERSION = "1.0.0"
+DIAGNOSTICS_SCHEMA_ID = f"https://schemas.example.org/hypomnesis/diagnostics/{DIAGNOSTICS_VERSION}"
+
+
 class HypomnesisError(Exception):
     """Base error carrying a stage name and an optional source span."""
 
     stage = "error"
+    # Stable machine identifier of the stage (``stage`` is the human label of the text output).
+    # Subclasses that do not override it report as the generic ``error``.
+    stage_id = "error"
 
     def __init__(self, message: str, span: Span | None = None) -> None:
         super().__init__(message)
@@ -47,18 +54,44 @@ class HypomnesisError(Exception):
         width = max(1, end - start)
         return f"{text}\n  {line}\n  {' ' * (start - 1)}{'^' * width}"
 
+    def to_diagnostic(self, filename: str = "<input>") -> dict[str, object]:
+        """The error as a JSON-ready diagnostic (see the ``diagnostics`` schema).
+
+        Positions are 1-based; they are ``None`` when the error carries no span.
+        """
+        span = self.span
+        return {
+            "stage": self.stage_id,
+            "severity": "error",
+            "message": self.message,
+            "file": filename,
+            "line": span.line if span else None,
+            "column": span.column if span else None,
+            "end_line": span.end_line if span else None,
+            "end_column": span.end_column if span else None,
+        }
+
+
+def diagnostics_document(diagnostics: list[dict[str, object]]) -> dict[str, object]:
+    """Wrap diagnostics in the versioned document published by ``check --format json``."""
+    return {"version": DIAGNOSTICS_VERSION, "diagnostics": diagnostics}
+
 
 class ParseError(HypomnesisError):
     stage = "syntax error"
+    stage_id = "syntax"
 
 
 class NameResolutionError(HypomnesisError):
     stage = "name error"
+    stage_id = "name"
 
 
 class TypeCheckError(HypomnesisError):
     stage = "type error"
+    stage_id = "type"
 
 
 class EvaluationError(HypomnesisError):
     stage = "runtime error"
+    stage_id = "runtime"

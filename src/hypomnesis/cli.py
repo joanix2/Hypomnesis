@@ -11,21 +11,53 @@ from typing import Annotated
 import typer
 
 from hypomnesis import __version__
-from hypomnesis.language.errors import HypomnesisError
+from hypomnesis.language.errors import HypomnesisError, diagnostics_document
 from hypomnesis.session import Session
 
 
-def _load_files(session: Session, paths: list[Path], *, execute: bool) -> int:
+def _load_files(
+    session: Session, paths: list[Path], *, execute: bool, as_json: bool = False
+) -> int:
+    """Load files in order; with ``as_json``, stdout carries only the diagnostics document."""
     for path in paths:
         source = path.read_text(encoding="utf-8")
         try:
             result = session.load(source) if execute else session.check(source)
         except HypomnesisError as exc:
-            print(exc.render(source, str(path)), file=sys.stderr)
+            if as_json:
+                print(json.dumps(diagnostics_document([exc.to_diagnostic(str(path))])))
+            else:
+                print(exc.render(source, str(path)), file=sys.stderr)
             return 1
-        for binding in result.bindings:
-            print(binding.render() if execute else binding.render_signature())
+        if not as_json:
+            for binding in result.bindings:
+                print(binding.render() if execute else binding.render_signature())
+    if as_json:
+        print(json.dumps(diagnostics_document([])))
     return 0
+
+
+def _check(
+    files: list[Path],
+    output_format: CheckFormat,
+    langage: Path | None,
+    emit_certificate: Path | None,
+) -> int:
+    """Type-check files, alone or in the context of a M2 language."""
+    session = Session()
+    if langage is not None:
+        from hypomnesis.engine.language import LanguageError, load_language
+
+        try:
+            session = load_language(langage).session
+        except (LanguageError, HypomnesisError) as exc:
+            message = exc.render() if isinstance(exc, HypomnesisError) else str(exc)
+            print(f"refusé : {message}", file=sys.stderr)
+            return 1
+    status = _load_files(session, files, execute=False, as_json=output_format is CheckFormat.JSON)
+    if status == 0 and emit_certificate is not None:
+        status = _emit_certificate(session, emit_certificate)
+    return status
 
 
 def _emit_certificate(session: Session, path: Path) -> int:
@@ -59,6 +91,13 @@ class Mode(StrEnum):
     SIMULATE = "simulate"
     DRY_RUN = "dry-run"
     PRODUCTION = "production"
+
+
+class CheckFormat(StrEnum):
+    """Output format of ``check``."""
+
+    TEXT = "text"
+    JSON = "json"
 
 
 class Format(StrEnum):
@@ -283,13 +322,25 @@ def check_command(
             help="écrire le Core IR élaboré et annoté (prélude inclus) en certificat JSON",
         ),
     ] = None,
+    output_format: Annotated[
+        CheckFormat,
+        typer.Option(
+            "--format",
+            help="text : signatures et erreurs lisibles ; json : diagnostics structurés "
+            "(schéma diagnostics-1.0.0) sur la sortie standard",
+        ),
+    ] = CheckFormat.TEXT,
+    langage: Annotated[
+        Path | None,
+        typer.Option(
+            "--langage",
+            metavar="DOSSIER",
+            help="dossier d'un langage M2 : vérifier les fichiers M1 dans son contexte",
+        ),
+    ] = None,
 ) -> None:
     """Typer des fichiers et afficher leurs signatures."""
-    session = Session()
-    status = _load_files(session, files, execute=False)
-    if status == 0 and emit_certificate is not None:
-        status = _emit_certificate(session, emit_certificate)
-    _exit_with(status)
+    _exit_with(_check(files, output_format, langage, emit_certificate))
 
 
 @app.command("repl")

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/diagnostics/1.0.0",
+  "title": "HypomnesisDiagnostics",
+  "description": "Structured compiler diagnostics (`hypomnesis check --format json`), consumed by the VS Code linter, the MCP server and LLM agents. Positions are 1-based; `end_*` is the exclusive end of the span and is null with the other positions when the error has no source location.",
+  "type": "object",
+  "properties": {
+    "version": { "const": "1.0.0" },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+  },
+  "required": ["version", "diagnostics"],
+  "additionalProperties": false,
+  "$defs": {
+    "position": { "type": ["integer", "null"], "minimum": 1 },
+    "diagnostic": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "description": "Stable stage identifier: syntax, name, type, runtime, or error for an unclassified compiler error. New stages may appear in minor versions.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "severity": { "enum": ["error", "warning"] },
+        "message": { "type": "string" },
+        "file": { "type": "string", "minLength": 1 },
+        "line": { "$ref": "#/$defs/position" },
+        "column": { "$ref": "#/$defs/position" },
+        "end_line": { "$ref": "#/$defs/position" },
+        "end_column": { "$ref": "#/$defs/position" }
+      },
+      "required": [
+        "stage",
+        "severity",
+        "message",
+        "file",
+        "line",
+        "column",
+        "end_line",
+        "end_column"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -36,3 +36,9 @@ Un agent doit pouvoir découvrir un langage, vérifier un programme et le simule
 
 - À coordonner avec HYP-006 (migration vers Typer)
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Note (HYP-130) : le format de diagnostic à consommer est le contrat `diagnostics/1.0.0` (`src/hypomnesis/contracts/schemas/diagnostics-1.0.0.json`), produit par `hypomnesis check --format json [--langage DOSSIER]` ou, en Python, par `HypomnesisError.to_diagnostic(fichier)` + `diagnostics_document([...])` (`hypomnesis.language.errors`). Positions 1-based, fin exclusive, `null` sans étendue ; `stage` ∈ `syntax|name|type|runtime|error`. Limites d'étendue : voir `TECHNICAL.md` § « Diagnostics structurés ».
+
+### user
