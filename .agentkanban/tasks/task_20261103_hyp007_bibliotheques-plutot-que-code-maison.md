@@ -65,3 +65,25 @@ Ce ticket coordonne les migrations ; chacune a son ticket, et celui-ci se termin
 
 - `.agentkanban/memory.md` (préférence « bibliothèques plutôt que code maison »)
 - Tickets liés : HYP-006 (Typer), HYP-054 (scikit-learn), HYP-070 (OpenTelemetry)
+
+### agent
+
+**Point d'étape (2026-11-04 14:40).** Lot 0 fait (commit eaa6e55) : dépendances déclarées dans `pyproject.toml`.
+
+| Ticket | Migration | État |
+|---|---|---|
+| HYP-006 | CLI : argparse → Typer | qa |
+| HYP-008 | graphe de provenance → NetworkX | qa |
+| HYP-009 | outil Kanban → NetworkX et PyYAML | qa |
+| HYP-015 | traceur → SDK OpenTelemetry (façade `Tracer`) | qa |
+| HYP-017 | certificats → `jsonschema` | qa |
+| HYP-014 | client LLM → paquet `ollama` | doing (reste la validation finale) |
+| HYP-016 | graphiques du banc → matplotlib | todo, en cours chez un implémenteur |
+| HYP-054 | estimateurs appris → scikit-learn | bloqué (attend HYP-044, HYP-032), hors du périmètre de clôture |
+
+Bug découvert pendant HYP-008 : HYP-143 (fait sans source déclarée `axiome`).
+
+Pour la clôture, l'inventaire du code maison encore présent (avec bibliothèque candidate ou raison de le garder) est dans la checklist `todo_20261103_hyp007_…`, itération 2. Résumé : aucune autre migration ne s'impose ; trois examens restent ouverts (intervalles de confiance du banc avec `scipy.stats`, collecte des commentaires de doc par les callbacks du lexeur Lark, bibliothèque d'automate ou de relance pour HYP-061) et sont rattachés à leurs tickets plutôt qu'à un nouveau ticket.
+
+### user
+

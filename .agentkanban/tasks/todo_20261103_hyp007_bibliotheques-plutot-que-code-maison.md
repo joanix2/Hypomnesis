@@ -21,11 +21,34 @@ Ordre et lots (fichiers disjoints au sein d'un lot) :
 
 Règles pour travailler à plusieurs dans le même arbre : chaque ticket ne `git add` que **ses** fichiers ; `validate.sh rapide` peut échouer à cause du travail en cours d'un autre ticket (utiliser `pytest <ses tests>` et `ruff check <ses fichiers>` entre-temps) ; `complet` se lance une fois par lot, arbre stable ; `TECHNICAL.md` : chaque ticket ne modifie que sa propre ligne ou section. `ruff` interdit `noqa` et `type: ignore`.
 
-- [ ] `pyproject.toml`, dépendances d'exécution : `typer>=0.12` (apporte Click et Rich), `networkx>=3.2`, `opentelemetry-api>=1.25`, `opentelemetry-sdk>=1.25`
-- [ ] `pyproject.toml`, extra `llm` : `ollama>=0.3`, `matplotlib>=3.8` (en plus de `jinja2`, `scikit-learn`)
-- [ ] `pyproject.toml`, extra `dev` : reprendre `llm` + `pyyaml>=6` (scripts/kanban.py), éventuellement `types-networkx` si Pyright se plaint (jamais `type: ignore`)
-- [ ] `pip install -e '.[dev]'` dans `.venv` ; noter les versions installées dans la fiche ; vérifier `import typer, networkx, ollama, opentelemetry.sdk.trace, matplotlib, yaml`
-- [ ] Vérifier que `.github/workflows/ci.yml` (`pip install -e '.[dev]'`) suffit ; sinon l'adapter
-- [ ] `./scripts/validate.sh rapide` vert avant de lancer les lots ; commit « Dépendances des migrations vers bibliothèques » en français
+- [x] `pyproject.toml`, dépendances d'exécution : `typer>=0.12` (apporte Click et Rich), `networkx>=3.2`, `opentelemetry-api>=1.25`, `opentelemetry-sdk>=1.25`
+- [x] `pyproject.toml`, extra `llm` : `ollama>=0.3`, `matplotlib>=3.8` (en plus de `jinja2`, `scikit-learn`)
+- [x] `pyproject.toml`, extra `dev` : reprendre `llm` + `pyyaml>=6` (scripts/kanban.py), éventuellement `types-networkx` si Pyright se plaint (jamais `type: ignore`)
+- [x] `pip install -e '.[dev]'` dans `.venv` ; noter les versions installées dans la fiche ; vérifier `import typer, networkx, ollama, opentelemetry.sdk.trace, matplotlib, yaml`
+- [x] Vérifier que `.github/workflows/ci.yml` (`pip install -e '.[dev]'`) suffit ; sinon l'adapter
+- [x] `./scripts/validate.sh rapide` vert avant de lancer les lots ; commit « Dépendances des migrations vers bibliothèques » en français
 - [ ] Après chaque lot : mettre à jour la colonne « Remplacement » du tableau de la fiche HYP-007 (fait / reste), relire `git status` pour détecter un fichier modifié par deux tickets
 - [ ] Clôture : tous les tickets en `qa` ; `./scripts/validate.sh complet` vert sur l'arbre final ; `memory.md` (Outils, Conventions) à jour ; mettre HYP-007 en `qa`
+
+# Iteration 2
+
+État au 2026-11-04 14:40 : HYP-006, 008, 009, 015, 017 en `qa` ; HYP-014 en `doing` (validation finale) ; HYP-016 en cours. HYP-143 (bug de provenance découvert en HYP-008) n'est pas une migration et ne bloque pas la clôture.
+
+Inventaire du code maison encore présent, lu dans le code (`graphify query` puis lecture). Pour chaque ligne : cocher quand la décision est consignée dans la fiche HYP-007 (section « Inventaire »), ou quand le ticket cité a traité le cas.
+
+- [ ] `language/docs.py` — expressions régulières `_DOC`/`_TAG` appliquées au texte source pour retrouver `(** … *)`. Candidat : callbacks du lexeur Lark (`lexer_callbacks` sur `COMMENT`, positions exactes). Risque de la regex actuelle : un `(**` à l'intérieur d'une chaîne ou d'un commentaire imbriqué. À examiner avec HYP-137 ; garder `parse_doc` (format de balises propre au projet)
+- [ ] `llm/benchmark.py` — intervalles de confiance du banc (reste de HYP-139) : ne pas les écrire à la main ; `scipy.stats.binomtest(k, n).proportion_ci(method="wilson")`. SciPy est déjà installé par scikit-learn : ajouter `scipy` explicitement dans l'extra `llm` si utilisé. Le tableau Markdown de `summary()` (≈ 30 lignes) : garder (une bibliothèque de tableaux n'apporte pas assez)
+- [ ] `effects/dispatcher.py` (+ HYP-061) — automate d'états et relances. Candidats : `transitions` ou `python-statemachine` pour l'automate, `tenacity` pour les relances. Raison probable de garder : la table de transitions doit être lisible et miroir de la preuve Lean (HYP-066), et la règle « jamais de relance d'une commande non idempotente » est de la logique du projet. Décision à consigner dans HYP-061 (une bibliothèque de relance ne se justifie que pour le délai exponentiel)
+- [ ] `scripts/kanban.py` — verrou `flock` (`graph_lock`, `_lock_busy`) copié du protocole de Graphify : candidat `filelock`, mais le protocole doit rester celui de Graphify (fichier supprimé à la libération) → garder. Analyse des sections Markdown par expressions régulières (`_section_paths`, `_meta`, L96-128) : format maison simple → garder (un analyseur Markdown complet serait disproportionné)
+- [ ] `observability/trace.py` — reste maison : le rendu `tree()` et le format d'`export()` au-dessus du SDK OpenTelemetry. Garder la façade jusqu'à HYP-070 (export OTLP), puis réexaminer sa suppression
+- [ ] `cli.py` — boucle `repl` maison (tampon jusqu'à `;;`, Ctrl-D) : candidats `prompt_toolkit` (historique, édition multiligne) ; lourd pour un gain faible → garder, priorité P3. Rendu des rapports (`engine/procedure.py::render`, `kanban.py status`) : Rich est déjà installé par Typer ; mise en forme optionnelle, hors périmètre
+- [ ] `llm/translation.py` — extraction du code dans la réponse du modèle (`re.findall` des blocs ```, `_PROGRAM_START`) : quelques lignes, spécifique à notre langage → garder. Boucle de réparation : logique du projet
+- [ ] `languages/mecanique/adaptateurs/transcription.py` — transcription par expressions régulières : adaptateur M2 de remplacement du LLM, remplacé à terme par HYP-081 → garder
+- [ ] `llm/retrieval.py` (TF-IDF) et `llm/describe.py` (Jinja2) — déjà `scikit-learn` et `jinja2` : rien à faire (le `_normalise` par regex est une règle métier du banc)
+- [ ] `contracts/registry.py` — mince adaptateur au-dessus de `jsonschema` et `referencing` : garder
+- [ ] `engine/bridge.py`, `runtime/natives.py::to_json_value`, `certify/export.py` — conversions entre valeurs Hypomnesis et JSON, propres au projet (le certificat est lu par Lean) : garder
+- [ ] `session.py::run_deep` (fil d'exécution à grande pile et limite de récursion relevée) — contournement de CPython, aucune bibliothèque ne le remplace : garder, noter que seule une évaluation sans récursion Python l'éliminerait (HYP-013)
+- [ ] `language/parser.py` — Lark déjà utilisé ; `ast.literal_eval` pour les chaînes : bibliothèque standard, garder
+- [ ] `language/typesystem/` (inférence HM, 893 lignes), `runtime/interpreter.py`, `epistemics/provenance.py` (semi-anneau miroir de Lean), `ir/core.py` : cœur du projet (ADR 0002, 0007), garder
+- [ ] Reporter le tableau « code maison restant → bibliothèque ou raison de garder » dans la fiche HYP-007 et dans `TECHNICAL.md` ; ouvrir un ticket seulement si une ligne passe de « garder » à « migrer » (aucune aujourd'hui)
+- [ ] Clôture finale : `pyproject.toml` relu (une ligne de justification par dépendance), `./scripts/validate.sh complet` vert, mettre HYP-007 en `qa`

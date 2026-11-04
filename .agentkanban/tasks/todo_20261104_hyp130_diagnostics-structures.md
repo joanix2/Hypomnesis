@@ -12,6 +12,8 @@ description: "Checklist de HYP-130"
 
 Fichiers : `src/hypomnesis/language/errors.py`, `src/hypomnesis/cli.py`, `src/hypomnesis/contracts/schemas/diagnostics-1.0.0.json` (nouveau), `tests/unit/test_diagnostics.py` (nouveau). Éviter tout autre changement de `cli.py` en parallèle (HYP-010, HYP-137).
 
+Mise à jour 2026-11-04 : depuis HYP-006, `cli.py` est écrit avec **Typer** : `--format` et `--langage` s'ajoutent comme paramètres annotés de la fonction `check` (`--format` en `Enum` texte|json), et `main(argv) -> int` doit continuer à rendre un entier. HYP-016 ajoute aussi une option à `benchmark-llm` dans ce fichier : coordonner les commits.
+
 - [ ] Vérifier la position de fin de l'étendue pour chaque étape (syntaxe Lark, nommage, typage, champ inconnu) ; lister dans le ticket celles où `end_*` est approximé (parser.py ligne ~72 : fin = début + 1)
 - [ ] Ajouter `HypomnesisError.to_diagnostic(filename)` → dict : `stage` (`syntax`|`name`|`type`|`runtime`, identifiant stable distinct du libellé affiché), `severity`, `message`, `file`, `line`, `column`, `end_line`, `end_column`
 - [ ] Schéma JSON Schema 2020-12 `diagnostics-1.0.0.json` (`$id` sous `https://schemas.example.org/hypomnesis/…`, `version`, `diagnostics: [...]`, `additionalProperties: false`) ; constante d'identifiant exportée
