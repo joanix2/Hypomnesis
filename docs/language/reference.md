@@ -114,8 +114,104 @@ par `_`) n'a pas de description ; `@interne` retire un élément décrit du cata
 `@discret` garde un champ dans le catalogue sans sa description. Les programmes M1 en sont exempts.
 Voir l'ADR 0009.
 
+## Couches de langages et imports
+
+Un fichier d'entrée `.hyp` peut déclarer une couche symbolique. Par convention, un dossier
+de langage contient `langage.hyp`. La déclaration `language` doit être le premier élément,
+unique et hors de tout module :
+
+```ocaml
+language exemple = {
+  version = "1.0.0";
+  description = "Un langage construit sur des couches communes.";
+  imports = ["../booleen"; "../arithmetique/langage.hyp"];
+  sources = ["definitions.hyp"];
+  adapters = ["adaptateurs/io.py"];
+  contracts = ["contrats/commande.json"];
+  procedure = { kind = "program"; entry = "procedure" }
+}
+```
+
+- `version` est obligatoire. `description`, `imports`, `sources`, `adapters`, `contracts`,
+  `examples` et `procedure` sont optionnels. Les champs inconnus ou dupliqués sont refusés.
+- Les données de configuration sont statiques : chaînes, entiers, booléens, listes
+  séparées par `;`, records de champs `cle = valeur` (clés chaînes possibles).
+  Aucune expression, fonction, interpolation ou import Python n'est évalué pour les lire.
+- `imports` contient des chemins **relatifs** de dossiers ou fichiers `.hyp` d'entrée.
+  Les imports transitifs sont résolus avant les définitions de la couche.
+  Les chemins canoniques dédupliquent les diamants ; cycles, identités dupliquées et
+  collisions d'exports entre couches sont refusés. Une branche ne peut utiliser les
+  imports d'une autre branche qu'elle ne déclare pas.
+- Les définitions gardent les espaces de noms des modules existants ; les exports
+  transitifs sont disponibles sous leurs noms qualifiés. Il n'y a pas de renommage
+  d'import ni de nouvelle règle de visibilité privée.
+- Le corps du fichier d'entrée, après `language`, précède les fichiers `sources`,
+  chargés dans l'ordre. Ces fichiers ne redéclarent pas de couche et doivent rester
+  dans le paquet, comme les contrats, exemples et modules d'adaptateurs.
+- Sans `procedure`, la couche est une bibliothèque importable, pas un programme exécutable.
+  Les configurations d'entrées/sorties ne sont pas héritées implicitement des imports.
+
+Les anciens `langage.json` ne sont plus acceptés. Migrer leurs métadonnées vers la déclaration
+native et remplacer les références Python `fichier.py:fonction` par des modules dans
+`adapters` et des décorateurs sur leurs fonctions.
+
+```bash
+hypomnesis check chemin/langage.hyp
+hypomnesis check programme.hyp --langage chemin/du/langage --format json
+hypomnesis layers chemin/du/langage
+```
+
+`layers` exporte du JSON versionné : nœuds identifiés par nom de couche, arêtes
+`from` → `to` orientées **dépendance vers utilisateur**, et générations topologiques
+dans `layers`. Il ne charge aucun code Python d'entrée/sortie et n'évalue pas de programme.
+Les chemins d'entrée absolus de l'export identifient les sources locales ; le graphe
+est déterministe pour un même ensemble de fichiers.
+
+### Entrées et sorties Python
+
+Seuls les modules explicitement déclarés dans `adapters` sont inspectés, au moment de
+l'exécution ou d'une demande de transcription. Ils utilisent :
+
+```python
+from hypomnesis.engine.adapters import actuator, environment, sensor, transcriber
+
+
+@environment
+def creer_environnement(options, dossier_sortie):
+    return MonEnvironnement(options, dossier_sortie)
+
+
+@sensor("mon-capteur")
+def lire(env, identifiant):
+    return env.message(identifiant)
+
+
+@actuator("mon-actionneur")
+def creer_actionneur(env):
+    return MonActionneur(env)  # une valeur hypomnesis.effects.dispatcher.Actuator
+
+
+@transcriber
+def transcrire(demande):
+    return produire_programme(demande)
+```
+
+Un lecteur de capteur renvoie une enveloppe de message validée par les contrats ; une
+fabrique d'actionneur doit renvoyer un `Actuator` du même identifiant que son décorateur.
+Les permissions et contrats du dispatcher continuent de contrôler toute action.
+En l'absence d'environnement, les fabriques d'actionneurs reçoivent le dossier de sortie
+et les lecteurs de capteurs reçoivent `None`. Chaque rôle capteur/actionneur a des
+identifiants uniques ; environnement et transcription sont uniques par langage.
+Les signatures incompatibles et fonctions asynchrones ne sont pas acceptées.
+Les décorateurs ne modifient pas les fonctions et n'enregistrent aucun état global.
+`check` et le LSP n'importent jamais ces modules et n'exécutent aucune définition éditée.
+Ils peuvent donc vérifier une bibliothèque sans ses dépendances Python d'exécution.
+
+Les exemples complets sont dans `demo/languages/booleen`, `arithmetique`, `contraintes`,
+`composition_a` et `composition_b` ; les deux derniers réutilisent les mêmes couches.
+
 ## Pas encore implémenté
 
-Signatures de modules et foncteurs, import entre fichiers (la CLI charge les fichiers dans
-l'ordre donné), opérateurs définis par l'utilisateur, exceptions rattrapables, vérification
+Signatures de modules et foncteurs, registre distant et versions d'import,
+opérateurs définis par l'utilisateur, exceptions rattrapables, vérification
 d'exhaustivité du filtrage, macros, types dimensionnels, effets.

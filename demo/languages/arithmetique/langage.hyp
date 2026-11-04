@@ -1,0 +1,13 @@
+language arithmetique = {
+  version = "1.0.0";
+  description = "Arithmétique entière réutilisable, sans entrée/sortie."
+}
+
+(** Opérations et prédicats sur les entiers. *)
+module Arithmetique = struct
+  (** Somme de deux entiers. *)
+  let addition a b = a + b
+
+  (** Un entier est positif ou nul. *)
+  let positif n = n >= 0
+end

@@ -105,6 +105,41 @@ class _ToAst(Transformer):
     def start(self, meta, children):
         return A.Program(tuple(children), span=_span(meta))
 
+    def language_item(self, meta, children):
+        name, configuration = children
+        return A.LanguageItem(str(name), configuration, span=_span(meta))
+
+    def config_string(self, meta, children):
+        return pyast.literal_eval(str(children[0]))
+
+    def config_int(self, meta, children):
+        return int(str(children[0]).replace("_", ""))
+
+    def config_true(self, meta, children):
+        return True
+
+    def config_false(self, meta, children):
+        return False
+
+    def config_list(self, meta, children):
+        return [child for child in children if child is not None]
+
+    def config_field(self, meta, children):
+        key, value = children
+        name = pyast.literal_eval(str(key)) if key.type == "STRING" else str(key)
+        return name, value
+
+    def config_record(self, meta, children):
+        result = {}
+        for child in children:
+            if child is None:
+                continue
+            name, value = child
+            if name in result:
+                raise ParseError(f"duplicate language field {name!r}", _span(meta))
+            result[name] = value
+        return result
+
     def let_item(self, meta, children):
         rec, *bindings = children
         return A.LetItem(rec is not None, tuple(bindings), span=_span(meta))

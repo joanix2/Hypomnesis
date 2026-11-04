@@ -5,10 +5,10 @@ import shutil
 
 import pytest
 
-from hypomnesis.llm.benchmark import REPEAT_TEMPERATURE, run_benchmark, summary, wilson
-from hypomnesis.llm.ollama import Reply
-from hypomnesis.llm.plots import cost_by_label, normalize
-from tests.unit.test_llm import GOOD, MECANIQUE, FakeLLM
+from hypomnesis_codegen.benchmark import REPEAT_TEMPERATURE, run_benchmark, summary, wilson
+from hypomnesis_codegen.ollama import Reply
+from hypomnesis_codegen.plots import cost_by_label, normalize
+from test_llm import GOOD, MECANIQUE, FakeLLM
 
 BAD = "let demande = { Plaque.nom = 1 }"
 EXPECT = {"bindings": {"demande": {"largeur": 120.0}}}

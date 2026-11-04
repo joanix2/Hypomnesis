@@ -1,0 +1,15 @@
+language composition_a = {
+  version = "1.0.0";
+  imports = ["../contraintes"; "../arithmetique"];
+  description = "Premier langage composé, avec une dépendance en diamant.";
+  procedure = { kind = "program"; entry = "procedure" }
+}
+
+(** Premier langage utilisateur des couches communes. *)
+module CompositionA = struct
+  (** Calcule une somme lorsque les arguments sont admissibles. *)
+  let calculer a b =
+    if Contraintes.positives a b
+    then Some (Arithmetique.addition a b)
+    else None
+end

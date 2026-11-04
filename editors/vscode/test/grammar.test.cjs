@@ -76,6 +76,12 @@ test("types, booleans, numbers and operators are recognized", () => {
   assert(scoped(tokens, "keyword.control.hypomnesis", "true"));
 });
 
+test("native language declarations highlight without a JSON manifest", () => {
+  const tokens = tokenize('language exemple = { imports = ["../base"]; version = "1" }');
+  assert(scoped(tokens, "keyword.control.hypomnesis", "language"));
+  assert(scoped(tokens, "string.quoted.double.hypomnesis", "../base"));
+});
+
 for (const name of ["mecanique/plaque.hyp", "ventilation/ventilation.hyp"]) {
   test(`real language ${name} has all expected scopes`, () => {
     const tokens = tokenize(fs.readFileSync(path.join(root, "demo", "languages", name), "utf8"));

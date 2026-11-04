@@ -30,6 +30,10 @@ de l'enveloppe de message et du manifeste d'extension.
 | M1 | `demo/programs/` | des programmes écrits dans ces langages |
 | M0 | `demo/sortie/` | les résultats : rapports, fichiers exportés |
 
+La génération de programmes par LLM est un paquet optionnel séparé :
+[`hypomnesis-codegen`](packages/codegen/README.md), sous `packages/codegen/`.
+Le compilateur, le métalangage, le LSP et le moteur symbolique n'en dépendent pas.
+
 ```bash
 hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_120x80.hyp
 hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_mesuree.hyp --mode production --env mesure=5
@@ -49,6 +53,33 @@ let concevoir (d : demande) (est : estimateur) =
   Effect.solve (probleme d estimation) >>= fun solution -> …
 ``` Voir
 [ADR 0008](docs/adr/0008-niveaux-m3-m2-m1-m0.md).
+
+## Couches de langages réutilisables
+
+Chaque langage se déclare directement en `.hyp`, par convention dans `langage.hyp` :
+
+```ocaml
+language exemple = {
+  version = "1.0.0";
+  imports = ["../booleen"; "../arithmetique"];
+  procedure = { kind = "program"; entry = "procedure" }
+}
+```
+
+Les modules importés conservent leurs types et noms qualifiés (`Booleen.*`,
+`Arithmetique.*`). Imports transitifs et diamants sont partagés ; cycles et collisions
+sont refusés. Une couche bibliothèque n'a pas besoin de `procedure`.
+
+```bash
+hypomnesis layers demo/languages/composition_a
+hypomnesis check demo/languages/composition_a/langage.hyp demo/programs/composition_a/exemple.hyp
+```
+
+Les anciens `langage.json` ne sont plus lus. Les entrées/sorties externes sont définies
+par décorateurs Python (`@sensor`, `@actuator`, `@environment`, `@transcriber`) dans les
+modules explicitement listés par `adapters`. Aucun module d'adaptateur n'est importé
+pendant `check` ou l'analyse VS Code. Voir [la référence](docs/language/reference.md#couches-de-langages-et-imports)
+et [l'ADR 0013](docs/adr/0013-couches-declarees-en-hypomnesis.md).
 
 ## Démarrage
 
@@ -120,6 +151,20 @@ explicitement les dépendances SemVer avec backtracking (`resolve({"mon.extensio
 Voir [TECHNICAL.md](TECHNICAL.md#registre-statique-des-extensions-hyp-041) pour l'API et les limites.
 Le chargement effectif des backends reste hors de ce registre statique.
 
+## Génération de programmes et LLM (optionnel)
+
+```bash
+pip install -e . -e packages/codegen
+hypomnesis-codegen decrire demo/languages/ventilation
+```
+
+Le paquet regroupe traduction langage naturel → programme M1, prompts, recherche
+d'exemples, client Ollama, bancs d'essai et graphiques. Ses commandes `decrire`,
+`benchmark-llm` et `graphiques-llm` ne sont plus dans la CLI `hypomnesis`.
+Les imports deviennent `hypomnesis_codegen.*` au lieu de `hypomnesis.llm.*`.
+Les solveurs, validateurs et transpileurs symboliques ne relèvent pas de ce paquet.
+Voir [l'ADR 0012](docs/adr/0012-codegen-separe-du-moteur.md).
+
 ## Licence
 
 Hypomnesis est distribué sous [licence MIT](LICENSE) : vous pouvez l'utiliser, le modifier et
@@ -134,6 +179,12 @@ d'essai restent soumis à leurs propres conditions.
 
 ```bash
 pytest                    # tests unitaires, propriétés (Hypothesis), contrats
+pip install -e packages/codegen  # optionnel : tests des outils LLM sans modèle
+pytest packages/codegen/tests
 ruff check . && ruff format --check .
 pyright
+pyright --project packages/codegen  # si Codegen est installé
 ```
+
+`pytest` seul teste le moteur, sans installer Codegen. La validation globale
+`./scripts/validate.sh complet` couvre les deux distributions et exige leur installation.

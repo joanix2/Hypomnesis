@@ -6,6 +6,25 @@ on:
   pull_request:
 
 jobs:
+  core-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install symbolic distribution only
+        run: pip install '.[dev]'
+      - name: Verify isolation
+        run: |
+          python -c "from importlib.util import find_spec; assert all(find_spec(m) is None for m in ['hypomnesis_codegen', 'ollama', 'sklearn', 'jinja2', 'matplotlib', 'scipy'])"
+          hypomnesis check demo/examples/basics/certifiable.hyp
+      - name: Test symbolic engine without codegen
+        run: pytest tests
+      - name: Check symbolic types without codegen
+        run: pyright
+
   vscode:
     runs-on: ubuntu-latest
     defaults:
@@ -35,12 +54,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install
-        run: pip install -e '.[dev]'
+        run: pip install '.[dev]' ./packages/codegen
       - name: Linters (pre-commit)
         # lean-build s'exécute dans le job « proofs »
         run: SKIP=lean-build pre-commit run --all-files --show-diff-on-failure
       - name: Test
-        run: pytest
+        run: pytest tests packages/codegen/tests
       - name: Run examples
         run: |
           hypomnesis run demo/examples/basics/tour.hyp

@@ -194,16 +194,9 @@ def test_negotiated_position_encoding(tmp_path, encoding, column):
 def test_context_configuration_and_unsaved_m2_dependencies(client, tmp_path):
     root = tmp_path / "language"
     root.mkdir()
-    (root / "langage.json").write_text(
-        json.dumps(
-            {
-                "name": "test",
-                "version": "0.1.0",
-                "description": "Test",
-                "sources": ["a.hyp"],
-                "procedure": {"kind": "program", "entry": "main"},
-            }
-        )
+    (root / "langage.hyp").write_text(
+        'language test = { version = "0.1.0"; sources = ["a.hyp"]; '
+        'procedure = { kind = "program"; entry = "main" } }'
     )
     (root / "a.hyp").write_text("let x = 1")
     client.send(
@@ -218,4 +211,29 @@ def test_context_configuration_and_unsaved_m2_dependencies(client, tmp_path):
     [issue] = client.diagnostics(uri, 1)
     assert issue["code"] == "type"
     client.change(dependency, "let x = 1", 2)
+    assert client.diagnostics(uri, 1) == []
+
+
+def test_imported_language_declaration_overlay_rechecks_its_users(client, tmp_path):
+    base = tmp_path / "base"
+    base.mkdir()
+    initial = 'language base = { version = "1" }\nlet x = 1'
+    (base / "langage.hyp").write_text(initial)
+    root = tmp_path / "language"
+    root.mkdir()
+    (root / "langage.hyp").write_text('language example = { version = "1"; imports = ["../base"] }')
+    client.send(
+        "workspace/didChangeConfiguration",
+        {"settings": {"hypomnesis": {"languageRoot": "language", "debounceMs": 20}}},
+    )
+    dependency = (base / "langage.hyp").as_uri()
+    uri = (tmp_path / "program.hyp").as_uri()
+    client.open(dependency, initial)
+    assert client.diagnostics(dependency, 1) == []
+    client.open(uri, "let y = x + 1")
+    assert client.diagnostics(uri, 1) == []
+    client.change(dependency, initial.replace("let x = 1", "let x = true"), 2)
+    [issue] = client.diagnostics(uri, 1)
+    assert issue["code"] == "type"
+    client.change(dependency, initial, 3)
     assert client.diagnostics(uri, 1) == []

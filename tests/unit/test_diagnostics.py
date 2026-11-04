@@ -133,7 +133,7 @@ def test_text_signatures_are_still_printed(tmp_path, capsys):
 def test_language_option_rejects_a_folder_that_is_not_a_language(tmp_path, capsys):
     path = source(tmp_path, "let x = 1\n")
     assert main(["check", "--langage", str(tmp_path), str(path)]) == 1
-    assert "langage.json" in capsys.readouterr().err
+    assert "langage.hyp" in capsys.readouterr().err
 
 
 def test_unknown_format_is_a_usage_error(tmp_path):

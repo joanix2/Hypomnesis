@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 
+from hypomnesis.engine.adapters import transcriber
+
 NOMBRE = r"(\d+(?:[.,]\d+)?)"
 
 
@@ -16,6 +18,7 @@ def _nombre(texte: str) -> float:
     return float(texte.replace(",", "."))
 
 
+@transcriber
 def transcrire(demande: str) -> str:
     dims = re.search(NOMBRE + r"\s*[x×*]\s*" + NOMBRE + r"\s*mm", demande)
     if not dims:

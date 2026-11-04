@@ -16,3 +16,5 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0009](0009-langage-auto-documente-et-prompt-compile.md) | Langage M2 auto-documenté et prompt LLM compilé | Proposée |
 | [0010](0010-types-et-json-reversible.md) | Types statiques, JSON Schema et encodage réversible | Acceptée |
 | [0011](0011-demonstrations-isolees.md) | Démonstrations isolées dans `demo/` | Acceptée |
+| [0012](0012-codegen-separe-du-moteur.md) | Génération de programmes séparée du moteur | Acceptée |
+| [0013](0013-couches-declarees-en-hypomnesis.md) | Couches déclarées en Hypomnesis, imports DAG et I/O décorées | Acceptée |

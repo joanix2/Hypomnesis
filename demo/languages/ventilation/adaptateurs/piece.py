@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from hypomnesis.effects.dispatcher import Actuator
+from hypomnesis.engine.adapters import actuator, environment, sensor
 
 READING = "https://schemas.example.org/hypomnesis/temperature.reading/1.0.0"
 
@@ -43,10 +44,17 @@ class Piece:
         self.celsius += 0.2 if self.panne or self.vitesse == 0 else -self.vitesse / 25
 
 
+@environment
 def piece(options: Mapping[str, Any], out_dir: Any) -> Piece:
     return Piece(options)
 
 
+@sensor("thermo-1")
+def lire(env: Piece, identifier: str) -> dict[str, Any]:
+    return env.message(identifier)
+
+
+@actuator("fan.set")
 def ventilateur(env: Piece) -> Actuator:
     def executer(payload: Mapping[str, Any]) -> dict[str, Any]:
         env.vitesse = payload["speed_percent"]

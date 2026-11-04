@@ -1,6 +1,6 @@
-"""Ollama client: thin layer over the official `ollama` package (extra `llm`).
+"""Ollama client: thin layer over the official `ollama` package.
 
-The package is imported lazily so that `hypomnesis.llm` stays importable without the extra.
+The client is imported lazily; importing the package does not contact a server.
 """
 
 from __future__ import annotations

@@ -39,16 +39,17 @@ dépôt utilisé pour ce test. Un fichier témoin confirme que les assertions on
 - `hypomnesis.pythonPath` : Python avec l'extra `lsp` ; par défaut le `.venv` du dossier
   ouvert, sinon `python3` (`python` sous Windows). Un chemin relatif est résolu depuis ce
   dossier. Ne pas ajouter d'arguments au chemin.
-- `hypomnesis.languageRoot` : dossier contenant `langage.json`, relatif au dossier ouvert
-  ou absolu. Vide : manifeste dans le dossier du fichier ou ses parents ; pour
-  `demo/programs/<nom>/…`, recherche aussi `demo/languages/<nom>/langage.json`.
+- `hypomnesis.languageRoot` : dossier contenant `langage.hyp` ou fichier d'entrée `.hyp`,
+  relatif au dossier ouvert ou absolu. Vide : déclaration de langage dans le dossier du
+  fichier ou ses parents ; pour `demo/programs/<nom>/…`, recherche aussi
+  `demo/languages/<nom>/langage.hyp`.
 - `hypomnesis.debounceMs` : délai de frappe, 300 ms par défaut (0 à 5 000 ms).
 
 Un serveur est lancé par dossier dans un espace de travail multi-racines. Un changement
 de réglage relance les serveurs. Le serveur lit les textes non enregistrés, y compris les
-sources M2 ouvertes, vérifie les sources du manifeste dans l'ordre et annule les analyses
+sources M2 et déclarations importées ouvertes, résout leur DAG et annule les analyses
 obsolètes. Les diagnostics disparaissent après correction et à la fermeture du fichier.
-Le compilateur signale la première erreur ; les erreurs d'une dépendance ou du manifeste
+Le compilateur signale la première erreur ; les erreurs d'une dépendance ou de sa déclaration
 sont indiquées au début du document avec le chemin concerné. Survol, complétion et
 navigation ne sont pas inclus.
 

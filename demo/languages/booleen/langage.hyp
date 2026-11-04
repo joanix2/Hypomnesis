@@ -1,0 +1,13 @@
+language booleen = {
+  version = "1.0.0";
+  description = "Logique booléenne réutilisable, sans entrée/sortie."
+}
+
+(** Opérations booléennes communes aux langages symboliques. *)
+module Booleen = struct
+  (** Conjonction de deux propositions. *)
+  let conjonction a b = a && b
+
+  (** Négation d'une proposition. *)
+  let negation a = not a
+end

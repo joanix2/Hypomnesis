@@ -1,0 +1,12 @@
+language composition_b = {
+  version = "1.0.0";
+  imports = ["../contraintes"; "../booleen"];
+  description = "Second langage composé, réutilisant les mêmes définitions.";
+  procedure = { kind = "program"; entry = "procedure" }
+}
+
+(** Second langage utilisateur des couches communes. *)
+module CompositionB = struct
+  (** Indique si au moins une grandeur est négative. *)
+  let invalide a b = Booleen.negation (Contraintes.positives a b)
+end

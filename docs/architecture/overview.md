@@ -24,6 +24,14 @@ valeurs (runtime/values.py)
 `session.py` assemble ces étapes : une `Session` charge le prélude puis des programmes
 successifs ; chaque chargement étend l'environnement de types et l'environnement d'exécution.
 
+En amont, `engine/layers.py` résout les déclarations statiques `language` des fichiers
+d'entrée `.hyp` et leur DAG d'imports locaux. Le corps de chaque couche est vérifié
+dans sa propre fermeture de dépendances, puis les définitions résolues sont chargées
+une seule fois. La Core IR ne contient pas de configuration de paquet.
+`engine/adapters.py` lit les décorateurs des modules Python explicitement déclarés
+à l'exécution seulement ; CLI statique et LSP ne les importent jamais.
+Voir [l'ADR 0013](../adr/0013-couches-declarees-en-hypomnesis.md).
+
 ## Choix notables
 
 | Sujet | Implémentation |

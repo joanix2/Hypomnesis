@@ -1,6 +1,5 @@
 """Compiler-backed editor checks, including unsaved M2 sources and Unicode positions."""
 
-import json
 from pathlib import Path
 
 import pytest
@@ -49,7 +48,7 @@ def test_context_discovery_keeps_external_workspace_layouts(tmp_path, prefix):
     base = tmp_path / prefix
     root = base / "languages" / "sample"
     root.mkdir(parents=True)
-    (root / "langage.json").write_text("{}")
+    (root / "langage.hyp").write_text('language sample = { version = "1" }')
     program = base / "programs" / "sample" / "nested" / "p.hyp"
     assert language_root(program, tmp_path, None) == root
     assert language_root(base / "programs" / "standalone.hyp", tmp_path, None) is None
@@ -57,16 +56,9 @@ def test_context_discovery_keeps_external_workspace_layouts(tmp_path, prefix):
 
 def make_language(root):
     root.mkdir()
-    (root / "langage.json").write_text(
-        json.dumps(
-            {
-                "name": "test",
-                "version": "0.1.0",
-                "description": "Test",
-                "sources": ["a.hyp", "b.hyp"],
-                "procedure": {"kind": "program", "entry": "main"},
-            }
-        )
+    (root / "langage.hyp").write_text(
+        'language test = { version = "0.1.0"; sources = ["a.hyp"; "b.hyp"]; '
+        'procedure = { kind = "program"; entry = "main" } }'
     )
     (root / "a.hyp").write_text("let x = 1")
     (root / "b.hyp").write_text("let y = x + 1")
@@ -83,13 +75,20 @@ def test_unsaved_dependency_and_target_overlay(tmp_path):
     assert analyze(root / "a.hyp", "let x = true", tmp_path, None, {}) == []
 
 
+@pytest.mark.parametrize("later", ["let y = missing", "let y = ("])
+def test_later_sources_do_not_pollute_an_earlier_document(tmp_path, later):
+    root = make_language(tmp_path / "m2")
+    (root / "b.hyp").write_text(later)
+    assert analyze(root / "a.hyp", "let x = 1", tmp_path, None, {}) == []
+
+
 def test_explicit_context_and_configuration_errors(tmp_path):
     root = make_language(tmp_path / "m2")
     path = tmp_path / "p.hyp"
     assert analyze(path, "let z = y", tmp_path, "m2", {}) == []
     [issue] = analyze(path, "let z = y", tmp_path, "missing", {})
     assert issue.code == "configuration"
-    assert "langage.json" in issue.message
+    assert "langage.hyp" in issue.message
     (root / "a.hyp").write_text("let x = missing")
     [issue] = analyze(path, "let z = y", tmp_path, "m2", {})
     assert str(root / "a.hyp") in issue.message
@@ -98,7 +97,7 @@ def test_explicit_context_and_configuration_errors(tmp_path):
 
 def test_invalid_manifest_is_not_a_success(tmp_path):
     root = make_language(tmp_path / "m2")
-    (root / "langage.json").write_text("{}")
+    (root / "langage.hyp").write_text("language test = {}")
     [issue] = analyze(tmp_path / "p.hyp", "let x = 1", tmp_path, "m2", {})
     assert issue.code == "configuration"
-    assert "manifeste invalide" in issue.message
+    assert "déclaration invalide" in issue.message

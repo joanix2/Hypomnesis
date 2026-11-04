@@ -119,19 +119,14 @@ def test_lancer_without_permission_is_accepted(tmp_path):
     assert code(argv) in (0, 1)
 
 
-def test_lancer_and_decrire_refuse_an_absent_language_with_status_1(tmp_path, capsys):
+def test_lancer_refuses_an_absent_language_with_status_1(tmp_path, capsys):
     assert code(["lancer", str(tmp_path / "absent"), str(PROGRAM)]) == 1
     assert "refusé :" in capsys.readouterr().err
-    assert code(["decrire", str(tmp_path / "absent")]) == 1
-    assert "refusé :" in capsys.readouterr().err
 
 
-def test_decrire_unknown_format_is_refused():
-    assert code(["decrire", str(VENTILATION), "--format", "xml"]) != 0
-
-
-def test_benchmark_requires_models():
-    assert code(["benchmark-llm", str(VENTILATION)]) != 0
+@pytest.mark.parametrize("command", ["decrire", "benchmark-llm", "graphiques-llm"])
+def test_codegen_commands_are_not_in_the_core_cli(command):
+    assert code([command]) == 2
 
 
 def test_plugins_list_uses_only_explicit_manifests(tmp_path, capsys, extension_manifest):

@@ -75,10 +75,12 @@ case "$MODE" in
         step "ruff (format)" "$PY" -m ruff format --check .
         step "kanban" "$PY" scripts/kanban.py check
         step "tests" "$PY" -m pytest -q
+        step "tests codegen" "$PY" -m pytest -q packages/codegen/tests
         ;;
     complet)
         step "pre-commit (tous les linters)" "$PY" -m pre_commit run --all-files --show-diff-on-failure
         step "tests" "$PY" -m pytest -q
+        step "tests codegen" "$PY" -m pytest -q packages/codegen/tests
         step "lean (audit des axiomes)" lean_audit
         step "lean (vérificateur de certificats)" certificate_check
         ;;

@@ -1,0 +1,12 @@
+language contraintes = {
+  version = "1.0.0";
+  imports = ["../booleen"; "../arithmetique"];
+  description = "Contraintes composées à partir de couches indépendantes."
+}
+
+(** Prédicats de contraintes communs aux langages métier. *)
+module Contraintes = struct
+  (** Les deux grandeurs sont positives ou nulles. *)
+  let positives a b =
+    Booleen.conjonction (Arithmetique.positif a) (Arithmetique.positif b)
+end

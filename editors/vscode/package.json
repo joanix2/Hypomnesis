@@ -52,7 +52,7 @@
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Dossier M2 contenant langage.json, absolu ou relatif au dossier de travail. Vide : détection automatique."
+          "description": "Dossier M2 contenant langage.hyp ou fichier d'entrée .hyp, absolu ou relatif au dossier de travail. Vide : détection automatique."
         },
         "hypomnesis.debounceMs": {
           "type": "integer",

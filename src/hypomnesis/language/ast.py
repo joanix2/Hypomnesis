@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal as Lit
+from typing import TypeAlias
 
 from hypomnesis.language.errors import Span
 
@@ -267,6 +268,15 @@ class Neg(Expr):
 @dataclass(frozen=True)
 class Item(Node):
     pass
+
+
+ConfigValue: TypeAlias = str | int | bool | list["ConfigValue"] | dict[str, "ConfigValue"]
+
+
+@dataclass(frozen=True)
+class LanguageItem(Item):
+    name: str
+    configuration: dict[str, ConfigValue]
 
 
 @dataclass(frozen=True)

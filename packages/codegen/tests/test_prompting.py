@@ -8,11 +8,11 @@ import pytest
 
 from hypomnesis.engine.language import LanguageError, load_language
 from hypomnesis.engine.procedure import run_procedure
-from hypomnesis.llm.prompting import BASE, DEFAULT, Strategy
-from hypomnesis.llm.retrieval import Retriever, load_examples
-from hypomnesis.llm.translation import shots, system_prompt
+from hypomnesis_codegen.prompting import BASE, DEFAULT, Strategy
+from hypomnesis_codegen.retrieval import Retriever, load_examples
+from hypomnesis_codegen.translation import shots, system_prompt
 
-LANGUAGES = Path(__file__).resolve().parents[2] / "demo" / "languages"
+LANGUAGES = Path(__file__).resolve().parents[3] / "demo" / "languages"
 NAMES = ["mecanique", "ventilation"]
 
 

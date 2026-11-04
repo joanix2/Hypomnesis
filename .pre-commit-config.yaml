@@ -57,6 +57,12 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+      - id: pyright-codegen
+        name: pyright (types Codegen)
+        entry: bash -c 'PY=.venv/bin/python; [ -x "$PY" ] || PY=$(command -v python3 || command -v python); exec "$PY" -m pyright --project packages/codegen --pythonpath "$PY"'
+        language: system
+        files: ^packages/codegen/.*\.(py|toml)$
+        pass_filenames: false
       - id: kanban-check
         name: kanban (format et dépendances)
         entry: bash -c 'PY=.venv/bin/python; [ -x "$PY" ] || PY=$(command -v python3 || command -v python); exec "$PY" scripts/kanban.py check'

@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 
 from hypomnesis.engine.language import MissingDescriptionError, load_language
-from hypomnesis.llm.benchmark import run_benchmark, semantic_errors, summary
-from hypomnesis.llm.ollama import Reply
-from hypomnesis.llm.prompting import BASE
-from hypomnesis.llm.translation import extract_code, system_prompt, translate
+from hypomnesis_codegen.benchmark import run_benchmark, semantic_errors, summary
+from hypomnesis_codegen.ollama import Reply
+from hypomnesis_codegen.prompting import BASE
+from hypomnesis_codegen.translation import extract_code, system_prompt, translate
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 MECANIQUE = ROOT / "demo" / "languages" / "mecanique"
 VENTILATION = ROOT / "demo" / "languages" / "ventilation"
 GOOD = (

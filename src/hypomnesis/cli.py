@@ -11,7 +11,10 @@ from typing import Annotated
 import typer
 
 from hypomnesis import __version__
+from hypomnesis.engine.errors import LanguageError
+from hypomnesis.language import ast as A
 from hypomnesis.language.errors import HypomnesisError, diagnostics_document
+from hypomnesis.language.parser import parse_program
 from hypomnesis.session import Session
 
 
@@ -20,14 +23,33 @@ def _load_files(
 ) -> int:
     """Load files in order; with ``as_json``, stdout carries only the diagnostics document."""
     for path in paths:
-        source = path.read_text(encoding="utf-8")
         try:
-            result = session.load(source) if execute else session.check(source)
+            source = path.read_text(encoding="utf-8")
+            program = parse_program(source)
+            if any(isinstance(item, A.LanguageItem) for item in program.items):
+                from hypomnesis.engine.language import load_language
+
+                language = load_language(path, execute=execute)
+                session = language.session
+                if not as_json:
+                    print(f"langage : {language.name}")
+                continue
+            result = session.load_program(program) if execute else session.check_program(program)
         except HypomnesisError as exc:
             if as_json:
                 print(json.dumps(diagnostics_document([exc.to_diagnostic(str(path))])))
             else:
                 print(exc.render(source, str(path)), file=sys.stderr)
+            return 1
+        except (LanguageError, OSError, UnicodeError) as exc:
+            if as_json:
+                print(
+                    json.dumps(
+                        diagnostics_document([HypomnesisError(str(exc)).to_diagnostic(str(path))])
+                    )
+                )
+            else:
+                print(f"refusé : {exc}", file=sys.stderr)
             return 1
         if not as_json:
             for binding in result.bindings:
@@ -49,10 +71,14 @@ def _check(
         from hypomnesis.engine.language import LanguageError, load_language
 
         try:
-            session = load_language(langage).session
+            session = load_language(langage, execute=False).session
         except (LanguageError, HypomnesisError) as exc:
-            message = exc.render() if isinstance(exc, HypomnesisError) else str(exc)
-            print(f"refusé : {message}", file=sys.stderr)
+            if output_format is CheckFormat.JSON:
+                error = exc if isinstance(exc, HypomnesisError) else HypomnesisError(str(exc))
+                print(json.dumps(diagnostics_document([error.to_diagnostic(str(langage))])))
+            else:
+                message = exc.render() if isinstance(exc, HypomnesisError) else str(exc)
+                print(f"refusé : {message}", file=sys.stderr)
             return 1
     status = _load_files(session, files, execute=False, as_json=output_format is CheckFormat.JSON)
     if status == 0 and emit_certificate is not None:
@@ -122,13 +148,6 @@ class CheckFormat(StrEnum):
     JSON = "json"
 
 
-class Format(StrEnum):
-    """Output format of ``decrire``."""
-
-    MD = "md"
-    JSON = "json"
-
-
 def _lancer(
     langage: Path,
     programme: Path | None,
@@ -145,8 +164,8 @@ def _lancer(
         language = load_language(langage)
         if programme is not None:
             program = programme.read_text(encoding="utf-8")
-        elif demande is not None and "transcriber" in language.manifest:
-            program = language.adapter(language.manifest["transcriber"])(demande)
+        elif demande is not None and language.adapters.identifiers("transcriber"):
+            program = language.adapters.get("transcriber")(demande)
         else:
             print("un programme M1 ou une --demande transcriptible est requis", file=sys.stderr)
             return 64
@@ -167,88 +186,6 @@ def _lancer(
             message = str(exc)
         print(f"refusé : {message}", file=sys.stderr)
         return 1
-
-
-def _decrire(langage: Path, output_format: Format) -> int:
-    from dataclasses import asdict
-
-    from hypomnesis.engine.language import LanguageError, load_language
-    from hypomnesis.llm.describe import catalogue
-
-    try:
-        published = catalogue(load_language(langage))
-    except LanguageError as exc:
-        print(f"refusé : {exc}", file=sys.stderr)
-        return 1
-    text = (
-        json.dumps(asdict(published), indent=2, ensure_ascii=False)
-        if output_format is Format.JSON
-        else published.render()
-    )
-    print(text)
-    print(f"-- {len(text)} caractères (≈ {len(text) // 3} jetons)", file=sys.stderr)
-    return 0
-
-
-def _benchmark(
-    langages: list[Path],
-    modeles: str,
-    reparations: int,
-    strategie: str,
-    jeux: str,
-    sortie: Path,
-    graphiques: bool = True,
-) -> int:
-    from datetime import datetime
-
-    from hypomnesis.llm.benchmark import run_benchmark, summary
-    from hypomnesis.llm.ollama import OllamaClient
-    from hypomnesis.llm.prompting import Strategy
-
-    models = [m.strip() for m in modeles.split(",") if m.strip()]
-    results = run_benchmark(
-        OllamaClient(),
-        models,
-        langages,
-        repairs=reparations,
-        strategy=Strategy.parse(strategie),
-        splits=[j.strip() for j in jeux.split(",")] if jeux else None,
-    )
-    table = summary(results)
-    sortie.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    rows = [r.to_json() for r in results]
-    (sortie / f"resultats-{stamp}.json").write_text(
-        json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-    (sortie / f"resume-{stamp}.md").write_text(table + "\n", encoding="utf-8")
-    print("\n" + table)
-    if graphiques:
-        try:
-            from hypomnesis.llm.plots import normalize, render_all
-        except ImportError:
-            print("graphiques ignorés : matplotlib absent (extra « llm »)", file=sys.stderr)
-        else:
-            for path in render_all([normalize(r) for r in rows], sortie, f"resultats-{stamp}"):
-                print(f"graphique : {path}", file=sys.stderr)
-    return 0
-
-
-def _graphiques(fichier: Path, sortie: Path | None) -> int:
-    from hypomnesis.llm.plots import ResultsError, load_results, render_all
-
-    try:
-        results = load_results(fichier)
-    except ResultsError as exc:
-        print(f"graphiques-llm : {exc}", file=sys.stderr)
-        return 1
-    written = render_all(results, sortie if sortie is not None else fichier.parent, fichier.stem)
-    if not written:
-        print(f"graphiques-llm : {fichier} ne contient aucun résultat", file=sys.stderr)
-        return 1
-    for path in written:
-        print(path)
-    return 0
 
 
 def _repl(session: Session) -> int:
@@ -436,80 +373,23 @@ def lancer_command(
         bool, typer.Option("--sans-permission", help="n'accorder aucune permission")
     ] = False,
 ) -> None:
-    """Exécuter un programme M1 écrit dans un langage M2 (dossier avec langage.json)."""
+    """Exécuter un programme M1 écrit dans un langage M2 (entrée langage.hyp)."""
     _exit_with(_lancer(langage, programme, demande, mode, sortie, env or [], sans_permission))
 
 
-@app.command("decrire")
-def decrire_command(
-    langage: Annotated[Path, typer.Argument(help="dossier du langage M2")],
-    output_format: Annotated[
-        Format, typer.Option("--format", help="format de sortie du catalogue")
-    ] = Format.MD,
+@app.command("layers")
+def layers_command(
+    langage: Annotated[Path, typer.Argument(help="dossier ou fichier d'entrée du langage")],
 ) -> None:
-    """Exporter ce que le langage M2 dit de lui-même (catalogue du prompt LLM)."""
-    _exit_with(_decrire(langage, output_format))
+    """Exporter le DAG des couches, de la dépendance vers son utilisateur, en JSON."""
+    from hypomnesis.engine.layers import resolve_layers
 
-
-@app.command("benchmark-llm")
-def benchmark_command(
-    langages: Annotated[
-        list[Path],
-        typer.Argument(exists=True, file_okay=False, help="dossiers de langages (benchmark.json)"),
-    ],
-    modeles: Annotated[
-        str,
-        typer.Option("--modeles", help="modèles Ollama, séparés par des virgules"),
-    ],
-    reparations: Annotated[
-        int, typer.Option("--reparations", help="réparations par les diagnostics")
-    ] = 2,
-    strategie: Annotated[
-        str,
-        typer.Option(
-            "--strategie",
-            help="prompt : éléments joints par « + » parmi source, catalogue, programmes, "
-            "tirsN, ragN (ex. catalogue+rag3) ; « defaut » = catalogue+rag5, "
-            "« base » = source+programmes",
-        ),
-    ] = "defaut",
-    jeux: Annotated[
-        str,
-        typer.Option(
-            "--jeux",
-            help="jeux de cas (dev, test, hard), séparés par des virgules ; défaut : tous",
-        ),
-    ] = "",
-    sortie: Annotated[Path, typer.Option("--sortie", help="dossier des résultats")] = Path(
-        "demo/sortie/benchmark-llm"
-    ),
-    graphiques: Annotated[
-        bool,
-        typer.Option(
-            "--graphiques/--sans-graphiques",
-            help="écrire les figures (PNG et SVG, matplotlib) à côté du résumé",
-        ),
-    ] = True,
-) -> None:
-    """Mesurer la traduction langage naturel → programme M1 par des LLM."""
-    _exit_with(_benchmark(langages, modeles, reparations, strategie, jeux, sortie, graphiques))
-
-
-@app.command("graphiques-llm")
-def graphiques_command(
-    fichier: Annotated[
-        Path,
-        typer.Argument(
-            exists=True, dir_okay=False, readable=True, help="resultats-*.json de benchmark-llm"
-        ),
-    ],
-    sortie: Annotated[
-        Path | None,
-        typer.Option("--sortie", help="dossier des figures ; défaut : celui du fichier"),
-    ] = None,
-) -> None:
-    """Régénérer les figures (PNG et SVG) d'un lot de résultats, sans relancer le banc."""
-    _exit_with(_graphiques(fichier, sortie))
+    try:
+        print(json.dumps(resolve_layers(langage).to_json(), indent=2, ensure_ascii=False))
+    except (LanguageError, HypomnesisError) as exc:
+        message = exc.render() if isinstance(exc, HypomnesisError) else str(exc)
+        print(f"refusé : {message}", file=sys.stderr)
+        raise typer.Exit(1) from exc
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -76,7 +76,7 @@ class Catalogue:
 
 def _environment() -> Environment:
     env = Environment(
-        loader=PackageLoader("hypomnesis.llm", "templates"),
+        loader=PackageLoader("hypomnesis_codegen", "templates"),
         trim_blocks=True,
         lstrip_blocks=True,
         keep_trailing_newline=True,
@@ -98,8 +98,8 @@ def _parts(doc: Doc | None, member: bool = False) -> tuple[str, tuple[tuple[str,
 def catalogue(language: Language) -> Catalogue:
     """The documented, public face of a language."""
     found: list[Declaration] = []
-    for source in language.manifest["sources"]:
-        found += declarations((language.root / source).read_text(encoding="utf-8"))
+    for source in language.plan.source_files():
+        found += declarations(source.text)
 
     modules: list[ModuleDoc] = []
     shown = published(found)

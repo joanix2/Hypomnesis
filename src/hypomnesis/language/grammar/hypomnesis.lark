@@ -9,8 +9,20 @@ _item: let_item
      | module_item
      | open_item
      | external_item
+     | language_item
 
 // ---------------------------------------------------------------- items
+
+language_item: "language" LIDENT "=" config_record
+config_record: "{" [config_field (";" config_field)* ";"?] "}"
+config_field: config_key "=" config_value
+?config_key: LIDENT | STRING
+?config_value: STRING -> config_string
+             | INT -> config_int
+             | "true" -> config_true
+             | "false" -> config_false
+             | "[" [config_value (";" config_value)* ";"?] "]" -> config_list
+             | config_record
 
 let_item: "let" [REC] binding ("and" binding)*
 type_item: "type" type_def ("and" type_def)*

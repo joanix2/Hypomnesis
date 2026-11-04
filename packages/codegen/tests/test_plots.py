@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from hypomnesis.cli import main
-from hypomnesis.llm.plots import (
+from hypomnesis_codegen.cli import main
+from hypomnesis_codegen.plots import (
     ResultsError,
     accuracy_by_label,
     accuracy_by_split,
@@ -186,12 +186,12 @@ class _Stub:
 def test_cli_benchmark_llm_figures_follow_the_flag(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, flag: str, expected: bool
 ):
-    import hypomnesis.llm.benchmark as benchmark
+    import hypomnesis_codegen.benchmark as benchmark
 
     rows = [_Stub(r) for r in synthetic()]
     monkeypatch.setattr(benchmark, "run_benchmark", lambda *args, **kwargs: rows)
     monkeypatch.setattr(benchmark, "summary", lambda results: "table")
-    ventilation = Path(__file__).resolve().parents[2] / "demo" / "languages" / "ventilation"
+    ventilation = Path(__file__).resolve().parents[3] / "demo" / "languages" / "ventilation"
     argv = ["benchmark-llm", str(ventilation), "--modeles", "alpha:1b", "--sortie", str(tmp_path)]
     assert main([*argv, flag]) == 0
     assert bool(list(tmp_path.glob("*-justesse.png"))) is expected

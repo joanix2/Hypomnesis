@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from hypomnesis.backends import z3_solver
-from hypomnesis.effects.dispatcher import Dispatcher, Outcome
+from hypomnesis.effects.dispatcher import Actuator, Dispatcher, Outcome
 from hypomnesis.engine.bridge import to_problem
 from hypomnesis.engine.language import Language, LanguageError
 from hypomnesis.epistemics.knowledge import KnowledgeBase
@@ -118,18 +118,22 @@ def run_procedure(
     if not language.session.type_of(entry).endswith("Effect.t"):
         raise LanguageError(f"`{entry}` doit être une procédure (type … Effect.t)")
 
+    adapters = language.adapters
     env = None
-    if "environment" in proc:
-        env = language.adapter(proc["environment"])(environment or {}, out_dir)
-    actuators = proc.get("actuators", [])
+    if adapters.identifiers("environment"):
+        env = adapters.get("environment")(environment or {}, out_dir)
+    actuators = adapters.identifiers("actuator")
     granted = (
-        {f"actuator:{a['actuator']}" for a in actuators} if permissions is None else permissions
+        {f"actuator:{identifier}" for identifier in actuators}
+        if permissions is None
+        else permissions
     )
     dispatcher = Dispatcher(language.schemas, set(granted), mode)
-    for action in actuators:
-        dispatcher.register(
-            language.adapter(action["adapter"])(env if env is not None else out_dir)
-        )
+    for identifier in actuators:
+        action = adapters.get("actuator", identifier)(env if env is not None else out_dir)
+        if not isinstance(action, Actuator) or action.id != identifier:
+            raise LanguageError(f"fabrique d'actionneur incompatible : {identifier}")
+        dispatcher.register(action)
     readings: dict[str, int] = {}
     apply = language.session.interpreter.apply
 
@@ -143,14 +147,16 @@ def run_procedure(
             op, arg = value.tag, value.arg
             if op == "Observe":
                 sensor, k = arg
-                spec = proc.get("sensors", {}).get(sensor)
-                if spec is None or env is None:
+                sensors = adapters.identifiers("sensor")
+                if sensor not in sensors:
                     raise LanguageError(
                         f"capteur non déclaré par le langage : {sensor}. "
-                        f"Capteurs déclarés : {', '.join(proc.get('sensors', {})) or 'aucun'}."
+                        f"Capteurs déclarés : {', '.join(sensors) or 'aucun'}."
                     )
                 with tracer.span("observer.read", capteur=sensor):
-                    payload = language.schemas.validate_message(getattr(env, spec["read"])(sensor))
+                    payload = language.schemas.validate_message(
+                        adapters.get("sensor", sensor)(env, sensor)
+                    )
                 readings[sensor] = readings.get(sensor, 0) + 1
                 key = f"{sensor}#{readings[sensor]}"
                 kb.observe(key, payload, f"capteur {sensor}")

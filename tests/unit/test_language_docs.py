@@ -11,7 +11,6 @@ from hypomnesis.engine.language import MissingDescriptionError, load_language
 from hypomnesis.language.docs import declarations, missing_descriptions
 from hypomnesis.language.errors import HypomnesisError
 from hypomnesis.language.parser import lex
-from hypomnesis.llm.describe import catalogue
 from hypomnesis.runtime.values import show
 from hypomnesis.session import Session
 
@@ -53,7 +52,7 @@ def copy_language(tmp_path: Path, name: str) -> Path:
 
 
 def edit_source(root: Path, old: str, new: str) -> None:
-    source = next(root.glob("*.hyp"))
+    source = next(path for path in root.glob("*.hyp") if path.name != "langage.hyp")
     text = source.read_text(encoding="utf-8")
     assert old in text
     source.write_text(text.replace(old, new, 1), encoding="utf-8")
@@ -80,7 +79,7 @@ def test_removing_a_field_description_names_the_field_at_its_position(tmp_path):
     assert "field Plaque.demande.largeur" in error.message
     line = next(i for i, text in enumerate(source.splitlines(), 1) if "largeur : float;" in text)
     assert (error.span.line, error.span.column) == (line, 5)
-    assert str(error).startswith(f"plaque.hyp:{line}:5: ")
+    assert str(error).startswith(f"{root / 'plaque.hyp'}:{line}:5: ")
     assert "^^^^^^^" in error.render(source)  # the field name is underlined
 
 
@@ -185,26 +184,6 @@ def test_a_doc_marker_inside_a_string_or_a_comment_is_not_a_description():
 def test_a_doc_comment_followed_by_an_ordinary_comment_is_detached():
     found = {d.path: d for d in declarations("(** Lost. *)\n(* ordinary *)\nlet a = 1\n")}
     assert found["a"].doc is None
-
-
-# ------------------------------------------------------------------- @interne in the catalogue
-
-
-def test_interne_elements_are_documented_but_not_published():
-    for name in ("mecanique", "ventilation"):
-        language = load_language(LANGUAGES / name)
-        text = catalogue(language).render()
-        for internal in ("petit_cote", "valider_et_exporter", "reviser_par_mesure", "boucle"):
-            assert internal not in text
-    source = (LANGUAGES / "mecanique" / "plaque.hyp").read_text(encoding="utf-8")
-    interne = {d.path for d in declarations(source) if d.internal}
-    assert {"Plaque.petit_cote", "Plaque.reviser_par_mesure", "Plaque.piece"} <= interne
-
-
-def test_discret_members_are_listed_without_their_description():
-    text = catalogue(load_language(LANGUAGES / "mecanique")).render()
-    assert "- `estimer : demande -> float`\n" in text
-    assert "Fonction qui estime" not in text
 
 
 # --------------------------------------------------------------- descriptions have no effect

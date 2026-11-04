@@ -11,10 +11,35 @@ Détails d'implémentation : `TECHNICAL.md`.
 - **M3** `src/hypomnesis/` : moteur, métalangage, bibliothèque standard, procédures génériques.
   **Aucun domaine** (test `test_engine_contains_no_domain`).
 - **M2** `demo/languages/<langage>/` : langage métier en Hypomnesis (règles, estimateurs, contraintes,
-  commandes), contrats, adaptateurs Python vers le monde extérieur seulement, `langage.json`.
+  commandes), contrats, adaptateurs Python vers le monde extérieur seulement, `langage.hyp`.
 - **M1** `demo/programs/<langage>/` : programmes écrits dans un langage M2.
 - **M0** `demo/sortie/` : résultats (non versionné).
 - Les dépendances ne vont que vers le niveau supérieur. Jamais de logique métier en Python.
+
+## Couches symboliques (ADR 0013, HYP-147)
+
+- Déclaration native `language nom = { version = "..."; imports = ["../base"]; … }` dans
+  le fichier d'entrée `.hyp` (par convention `langage.hyp`). Plus de lecture de `langage.json`.
+- Imports locaux de fichiers/dossiers, DAG dépendance → utilisateur, déduplication des diamants,
+  cycles/identités/collisions refusés. Bibliothèques sans procédure autorisées.
+- Les I/O Python sont déclarées par `@sensor`, `@actuator`, `@environment`, `@transcriber`
+  depuis `hypomnesis.engine.adapters`. La déclaration ne liste que les modules dans `adapters`.
+- Aucun module Python d'adaptateur n'est importé pendant `check` ou le LSP ; les définitions
+  statiques ne sont pas évaluées. `hypomnesis layers LANGAGE` exporte le DAG et ses couches.
+- `engine/layers.py` partage le plan avec CLI, LSP (overlays transitifs) et Codegen ; les
+  configurations I/O et permissions des dépendances ne sont jamais héritées implicitement.
+
+## Génération de programmes (ADR 0012, HYP-146)
+
+- Distribution optionnelle `hypomnesis-codegen` sous `packages/codegen/`, module Python
+  `hypomnesis_codegen` : catalogue de prompt, prompting, RAG, Ollama, traduction, banc et graphiques.
+- Codegen dépend du moteur ; aucun import inverse, ni dépendance LLM dans le moteur ou son extra
+  `dev`. Le compilateur, la documentation structurée, les solveurs, certificats et LSP restent au cœur.
+- CLI dédiée `hypomnesis-codegen decrire|benchmark-llm|graphiques-llm` ; anciennes commandes et
+  imports `hypomnesis.llm.*` retirés sans alias.
+- Installation globale : `pip install -e '.[dev]' -e packages/codegen`. `pytest tests` teste le
+  moteur seul ; `pytest packages/codegen/tests` teste Codegen sans appel LLM. Les validateurs
+  `rapide` et `complet` couvrent les deux suites et exigent l'installation des deux paquets.
 
 ## Conventions
 

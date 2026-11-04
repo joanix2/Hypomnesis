@@ -15,20 +15,23 @@ nouveaux langages métier et exemples.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install -e '.[dev]'
+pip install -e '.[dev]' -e packages/codegen
 ```
 
 ## Avant d'ouvrir une demande de fusion
 
 ```bash
-pytest
+pytest tests packages/codegen/tests
 ruff check . && ruff format --check .
 pyright
+pyright --project packages/codegen
 ```
 
 La validation complète, preuves Lean et vérificateur de certificats compris, se lance avec
 `./scripts/validate.sh complet` sur Linux et macOS (Python ≥ 3.11, dépendances `dev` et
-version Lean indiquée dans `formal/lean-toolchain` nécessaires).
+version Lean indiquée dans `formal/lean-toolchain` nécessaires). Pour travailler uniquement
+sur le moteur symbolique, `pip install -e '.[dev]'` puis `pytest tests` suffisent :
+aucune dépendance LLM n'est installée. Les tests Codegen sont sous `packages/codegen/tests/`.
 
 Ne contournez pas un validateur (`noqa`, `type: ignore`, test désactivé, `sorry` dans les
 preuves Lean) : corrigez la cause.

@@ -1,24 +1,7 @@
-"""Loading an M2 language package into the engine (M3).
-
-A language package is a directory with a manifest, ``langage.json``, validated
-by ``contracts/schemas/language-manifest-1.0.0.json``:
-
-* ``sources`` — Hypomnesis files defining the language (concepts, rules,
-  estimators, constraints, command builders);
-* ``contracts`` — JSON Schemas of its sensors and actuators;
-* ``adapters`` — Python modules of the package connecting to the outside world
-  (actuators, sensors, transcription stand-ins). Only files inside the package
-  are loaded: a language cannot reach arbitrary Python;
-* ``procedure`` — which generic engine procedure it uses, and how: names of
-  Hypomnesis functions of the language, adapters, permissions.
-
-The engine knows nothing about any particular language: everything specific
-is named in the manifest and defined in the package.
-"""
+"""Load statically declared language layers and their symbolic definitions."""
 
 from __future__ import annotations
 
-import importlib.util
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -26,39 +9,14 @@ from pathlib import Path
 from typing import Any
 
 from hypomnesis.contracts.registry import SchemaRegistry
-from hypomnesis.language.docs import Declaration, missing_descriptions
+from hypomnesis.engine.adapters import AdapterRegistry
+from hypomnesis.engine.errors import LanguageError, MissingDescriptionError, SourceError
+from hypomnesis.engine.layers import LayerPlan, check_layers, package_file, resolve_layers
 from hypomnesis.language.errors import HypomnesisError
 from hypomnesis.runtime.values import Value
 from hypomnesis.session import Session
 
-MANIFEST = "langage.json"
-MANIFEST_SCHEMA = "https://schemas.example.org/hypomnesis/language-manifest/1.0.0"
-
-
-class LanguageError(ValueError):
-    pass
-
-
-class MissingDescriptionError(HypomnesisError, LanguageError):
-    """A public declaration of a language has no ``(** … *)`` description (ADR 0009)."""
-
-    stage = "description error"
-
-    def __init__(self, declaration: Declaration, filename: str) -> None:
-        super().__init__(
-            f"{declaration.kind} {declaration.path} has no description: "
-            "add a (** … *) comment before it, tag it @interne or prefix its name with _",
-            declaration.span,
-        )
-        self.declaration = declaration
-        self.filename = filename
-
-    def __str__(self) -> str:
-        where = f"{self.filename}:{self.span}" if self.span else self.filename
-        return f"{where}: {self.stage}: {self.message}"
-
-    def render(self, source: str | None = None, filename: str | None = None) -> str:
-        return super().render(source, filename or self.filename)
+__all__ = ["Language", "LanguageError", "MissingDescriptionError", "load_language"]
 
 
 @dataclass
@@ -66,8 +24,9 @@ class Language:
     root: Path
     manifest: dict[str, Any]
     schemas: SchemaRegistry
-    session: Session = field(default_factory=Session)
-    _adapters: dict[str, Any] = field(default_factory=dict)
+    session: Session
+    plan: LayerPlan
+    _adapters: AdapterRegistry | None = field(default=None, repr=False)
 
     @property
     def name(self) -> str:
@@ -75,55 +34,43 @@ class Language:
 
     @property
     def procedure(self) -> dict[str, Any]:
+        if "procedure" not in self.manifest:
+            raise LanguageError(f"{self.name} est une bibliothèque sans procédure")
         return self.manifest["procedure"]
 
+    @property
+    def adapters(self) -> AdapterRegistry:
+        """Only explicit execution/transcription requests may import Python modules."""
+        if self._adapters is None:
+            self._adapters = AdapterRegistry.load(self.root, self.manifest.get("adapters", []))
+        return self._adapters
+
     def function(self, path: str) -> Callable[..., Value]:
-        """A Hypomnesis function of the language, callable from Python."""
         fn = self.session.value(path)
         return lambda *args: self.session.interpreter.apply(fn, list(args))
 
-    def adapter(self, reference: str) -> Any:
-        """``"adaptateurs/export.py:GeometryExport"`` → the attribute of that module."""
-        file, _, attribute = reference.partition(":")
-        path = (self.root / file).resolve()
-        if self.root not in path.parents:
-            raise LanguageError(f"adaptateur hors du paquet du langage : {file}")
-        if file not in self._adapters:
-            spec = importlib.util.spec_from_file_location(f"hyp_{self.name}_{path.stem}", path)
-            if spec is None or spec.loader is None:
-                raise LanguageError(f"adaptateur introuvable : {file}")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            self._adapters[file] = module
-        try:
-            return getattr(self._adapters[file], attribute)
-        except AttributeError:
-            raise LanguageError(f"{file} ne définit pas {attribute}") from None
-
     def load_program(self, source: str) -> None:
-        """Load an M1 program written in this language."""
         self.session.load(source)
 
 
-def load_language(root: Path, *, strict: bool = True) -> Language:
-    """Load a language package. ``strict`` demands a description for every public declaration
-    of its sources (``strict=False`` is for toy languages in tests); M1 programs are exempt."""
-    root = root.resolve()
-    manifest_path = root / MANIFEST
-    if not manifest_path.exists():
-        raise LanguageError(f"pas de {MANIFEST} dans {root}")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+def load_language(root: Path, *, strict: bool = True, execute: bool = True) -> Language:
+    """Resolve and check each layer; optionally evaluate definitions, never adapters."""
+    plan = resolve_layers(root)
+    checked = check_layers(plan, strict=strict)
     schemas = SchemaRegistry.with_builtin_schemas()
-    issues = schemas.issues(MANIFEST_SCHEMA, manifest)
-    if issues:
-        raise LanguageError("manifeste invalide : " + "; ".join(map(str, issues)))
-    for contract in manifest.get("contracts", []):
-        schemas.add(json.loads((root / contract).read_text(encoding="utf-8")))
-    language = Language(root, manifest, schemas)
-    for source in manifest["sources"]:
-        text = (root / source).read_text(encoding="utf-8")
-        language.session.load(text)
-        missing = missing_descriptions(text) if strict else []
-        if missing:
-            raise MissingDescriptionError(missing[0], source)
-    return language
+    for reference in plan.root.configuration.get("contracts", []):
+        path = package_file(plan.root.root, reference)
+        try:
+            schemas.add(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise LanguageError(f"contrat illisible {path} : {exc}") from exc
+    if execute:
+        session = Session()
+        for source in plan.source_files():
+            try:
+                session.load_program(source.program)
+            except HypomnesisError as exc:
+                raise SourceError(exc, source.path, source.text) from exc
+    else:
+        session = checked
+    return Language(plan.root.root, plan.root.configuration, schemas, session, plan)

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/language-declaration/1.0.0",
+  "title": "LanguageDeclaration",
+  "description": "Internal static configuration parsed from a native language declaration. Python I/O endpoints are declared by decorators in explicitly listed modules.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "imports": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "adapters": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "\\.py$"}
+    },
+    "contracts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "examples": {
+      "type": "string",
+      "description": "JSON file, relative to the package, listing {request, program} pairs (optionally with a simulation environment) used to show the language in use to an LLM."
+    },
+    "procedure": {
+      "$ref": "#/$defs/program"
+    }
+  },
+  "required": [
+    "name",
+    "version"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "program": {
+      "description": "The procedure is a Hypomnesis value of type 'a Effect.t, interpreted by the engine. The language declares the sensors and actuators it may use.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "program"
+        },
+        "entry": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Binding of the M1 program holding the procedure."
+        }
+      },
+      "required": [
+        "kind",
+        "entry"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

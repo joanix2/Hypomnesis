@@ -9,6 +9,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from hypomnesis.engine.adapters import environment, sensor
+
 READING = "https://schemas.example.org/hypomnesis/thickness.reading/1.0.0"
 
 
@@ -28,5 +30,11 @@ class Atelier:
         }
 
 
+@environment
 def atelier(options: Mapping[str, Any], out_dir: Path) -> Atelier:
     return Atelier(options, out_dir)
+
+
+@sensor("pied-a-coulisse")
+def lire(env: Atelier, identifier: str) -> dict[str, Any]:
+    return env.message(identifier)

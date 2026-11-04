@@ -1,0 +1,2 @@
+let resultat = CompositionA.calculer 20 22
+let procedure = Effect.return resultat

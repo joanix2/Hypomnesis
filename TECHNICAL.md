@@ -17,7 +17,25 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Primitives | `src/hypomnesis/runtime/natives.py` | registre fermé de primitives pures |
 | Prélude | `src/hypomnesis/stdlib/prelude.hyp` | bibliothèque standard en Hypomnesis |
 | Session | `src/hypomnesis/session.py` | enchaîne tout ; pile de 512 Mo pour la récursion profonde |
-| CLI | `src/hypomnesis/cli.py` | application Typer (Rich) : `run`, `check`, `repl`, `plugins list\|show`, `lancer`, `decrire`, `benchmark-llm`, `--version` ; `main(argv) -> int` convertit la sortie Click en entier (voir « CLI ») |
+| CLI | `src/hypomnesis/cli.py` | application Typer (Rich) : `run`, `check`, `repl`, `plugins list\|show`, `lancer`, `--version` ; `main(argv) -> int` convertit la sortie Click en entier (voir « CLI ») |
+
+### Génération optionnelle, hors du noyau (HYP-146, ADR 0012)
+
+`packages/codegen/` construit la distribution `hypomnesis-codegen` et le module
+`hypomnesis_codegen`. Elle dépend du moteur (`hypomnesis>=0.1.0,<0.2`), jamais l'inverse.
+Elle contient catalogue de prompt, prompting, RAG, client Ollama, traduction/réparation,
+benchmarks et graphiques ; ses ressources Jinja2 sont incluses dans sa roue.
+Dans la suite de ce document, `codegen/` abrège `packages/codegen/src/hypomnesis_codegen/`.
+
+Installation des deux paquets depuis la racine :
+`pip install -e '.[dev]' -e packages/codegen`. Le moteur et son extra `dev` ne déclarent
+aucune dépendance LLM. Les commandes extraites sont
+`hypomnesis-codegen decrire|benchmark-llm|graphiques-llm` et les imports
+`hypomnesis_codegen.*`, sans alias dans l'ancienne CLI ou l'ancien module.
+`pytest tests` teste le cœur ; `pytest packages/codegen/tests` teste Codegen sans modèle.
+Les validateurs `rapide` et `complet` exécutent les deux suites, et Pyright couvre les deux
+sources. Un job CI distinct installe seulement le moteur et teste son indépendance.
+Les types, descriptions structurées, IR, solveurs, certificats et LSP restent dans le cœur.
 
 ## Moteur, langages, procédures (ADR 0008, HYP-060)
 
@@ -25,7 +43,9 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 
 | Module | Rôle |
 |---|---|
-| `engine/language.py` | chargement d'un paquet `demo/languages/<langage>/` : manifeste validé (`language-manifest/1.0.0`), sources Hypomnesis, contrats, adaptateurs confinés au paquet |
+| `engine/language.py` | chargement d'une couche déclarée en `.hyp`, vérification statique ou évaluation explicite, contrats propres au langage |
+| `engine/layers.py` | résolution du DAG d'imports locaux, vérification des fermetures, déduplication et export topologique |
+| `engine/adapters.py` | décorateurs Python et registre I/O propre au langage, chargé seulement à l'exécution |
 | `engine/procedure.py` | **interpréteur d'effets** : exécute une valeur `'a Effect.t` (observer, agir, résoudre, enregistrer, retirer, noter), borné en nombre d'étapes |
 | `engine/bridge.py` | valeur Hypomnesis → JSON ; `Problem.problem` → Problem IR |
 | `engine/registry.py` | registre statique de manifestes d'extensions et résolution SemVer, sans chargement de backend |
@@ -38,6 +58,54 @@ enregistre ; seul le moteur crée des faits observés, lors d'une lecture de cap
 
 Briques M3 utilisées par l'interpréteur : `epistemics/` (provenance, connaissances),
 `ir/problem.py`, `backends/z3_solver.py`, `effects/dispatcher.py`, `observability/trace.py`.
+
+### Déclarations natives et couches (HYP-147, ADR 0013)
+
+Le fichier d'entrée `.hyp`, par convention `langage.hyp`, commence par
+`language nom = { version = "..."; imports = ["../base"]; … }`.
+`LanguageItem` dans l'AST porte des données statiques, lues par les règles `config_*`
+de Lark (pas par regex ni évaluation du langage). Le schéma interne
+`language-declaration/1.0.0` vérifie les champs et la configuration de procédure ;
+il ne décrit plus un manifeste utilisateur JSON. `langage.json` n'est plus accepté.
+La propriété Python `Language.manifest` conserve l'objet de configuration normalisé
+pour ses consommateurs existants, sans lire de fichier JSON.
+
+`resolve_layers` renvoie un `LayerPlan` : entrées canoniques, sources avec AST et
+positions d'origine, graphe NetworkX **dépendance → utilisateur**. Les imports de
+dossiers visent `langage.hyp` ; les imports de fichiers `.hyp` sont explicites. Le corps
+de l'entrée précède ses fichiers `sources`. Les diamants sont dédupliqués ; cycles,
+identités dupliquées et collisions d'exports entre paquets sont refusés.
+Les chemins de sources/contrats/exemples/adaptateurs sont confinés au paquet,
+imports relatifs vers des paquets voisins autorisés. Ni registre distant, ni
+contraintes de versions ou renommage d'import dans cette première version.
+
+`check_layers` vérifie chaque couche dans la fermeture de ses propres imports
+pour interdire les dépendances accidentelles entre branches. Les sessions statiques
+ne chargent même pas les valeurs du prélude ; sa frontière de certificat est conservée.
+`load_language(..., execute=False)` utilise cette session sans exécuter les définitions ;
+`execute=True` (défaut pour l'API d'exécution) charge ensuite une seule fois les AST
+résolus dans une session d'exécution fraîche. La Core IR et le runtime sont inchangés.
+`SourceError` conserve source, chemin et étendue pour les erreurs des dépendances.
+Les bibliothèques peuvent omettre `procedure`, mais ne peuvent alors pas être lancées.
+
+Les modules I/O sont listés dans `adapters`, sans nom de fonction ni scan implicite.
+Ils portent `@sensor("id")`, `@actuator("id")`, `@environment` et `@transcriber` :
+lecteur `(env, id) -> enveloppe`, fabrique `env -> Actuator`, constructeur
+`(options, out_dir) -> env`, transcription `demande -> programme M1`.
+Les signatures incompatibles, duplications et fonctions asynchrones sont refusées.
+Sans environnement, une fabrique d'actionneur reçoit `out_dir`.
+Ni la résolution, ni `check`, ni le LSP n'importent ces modules. Les configurations
+I/O, contrats et permissions des dépendances ne sont pas héritées implicitement.
+Le dispatcher reste responsable de valider, autoriser et exécuter les effets.
+
+`hypomnesis layers LANGAGE` publie `LayerPlan.to_json()` (version 1.0.0), ses nœuds,
+arêtes orientées et générations topologiques, sans évaluation. `check langage.hyp`
+reconnaît la déclaration ; `check programme.hyp --langage LANGAGE` vérifie dans
+le même contexte sans exécution. Le catalogue et les prompts Codegen parcourent
+`Language.plan.source_files()` et incluent les définitions transitives une seule fois.
+Les exemples `booleen`, `arithmetique`, `contraintes`, `composition_a` et
+`composition_b` illustrent ce partage. Tests : `test_language_layers.py`,
+`test_adapter_decorators.py`, protocole LSP et catalogue Codegen.
 
 ### Épistémique : graphe de provenance (NetworkX, HYP-008)
 
@@ -84,11 +152,12 @@ CLI : `hypomnesis lancer LANGAGE [PROGRAMME] [--demande …] [--mode …] [--env
 `cli.py` déclare une fonction annotée par commande sur `app = typer.Typer(...)` (typer 0.27 : Click
 embarqué, aide rendue par Rich). Les options gardent leurs noms et défauts d'avant la migration ;
 `--mode` est l'énumération `Mode` (`simulate`, `dry-run`, `production`), `--format` l'énumération
-`Format` (`md`, `json`), `--env` une liste répétable. Les imports lourds (`llm`, `certify`, `engine`)
-restent dans les fonctions pour que `check` démarre vite.
+`CheckFormat` (`text`, `json`), `--env` une liste répétable. Les imports lourds (`certify`, `engine`)
+restent dans les fonctions pour que `check` démarre vite. La CLI séparée Codegen possède
+son propre `Format` (`md`, `json`).
 
 Codes de sortie : 0 succès ; 1 refus applicatif (erreur positionnée, `refusé : …` pour
-`lancer`/`decrire`) ; 64 `lancer` sans programme ni demande ; 2 erreur d'usage détectée par Click
+`lancer`, ou `decrire` dans Codegen) ; 64 `lancer` sans programme ni demande ; 2 erreur d'usage détectée par Click
 (option inconnue, `--mode` invalide, fichier `.hyp` de `run`/`check`/`lancer` ou dossier de
 `benchmark-llm` absent — refusés avant tout chargement). Le dossier `LANGAGE` de `lancer`/`decrire`
 n'est volontairement **pas** vérifié par Click : son absence est refusée par le code (`LanguageError`,
@@ -110,7 +179,7 @@ les avertissements de HYP-010, gravité `warning`).
 redéfinit pas — le libellé affiché reste `stage`), `severity`, `message`, `file`, et `line`,
 `column`, `end_line`, `end_column` (1-based, fin exclusive, `null` si l'erreur n'a pas d'étendue).
 `--langage DOSSIER` charge le langage M2 (`load_language`) et vérifie les fichiers dans sa session ;
-un dossier sans `langage.json` est refusé (`refusé : …`, code 1).
+un dossier sans `langage.hyp` est refusé (`refusé : …`, code 1).
 
 Précision des étendues (fin approximée ou large) : une erreur de **syntaxe** n'a que son début
 (`parser._convert_error` : fin = début + 1 colonne) ; un **champ inconnu** (`infer._check_fields`)
@@ -120,7 +189,7 @@ Consommateurs : linter VS Code (HYP-132) et CLI pour agents (HYP-133).
 
 ### Banc LLM : graphiques (HYP-016)
 
-`src/hypomnesis/llm/plots.py` (matplotlib, extra `llm`) lit un `resultats-*.json` de `benchmark-llm` et
+`packages/codegen/src/hypomnesis_codegen/plots.py` (matplotlib, paquet Codegen) lit un `resultats-*.json` de `benchmark-llm` et
 trace trois figures, chacune en PNG et SVG (`<stem>-justesse`, `<stem>-justesse-par-jeu`, `<stem>-cout`) :
 justesse au premier essai et après réparations par modèle/stratégie, puis par jeu (dev/test/hard), avec
 intervalles de Wilson à 95 % ; temps et jetons générés par cas (moyenne ± erreur standard). Trois
@@ -130,14 +199,14 @@ juste avec au plus une tentative), fonctions de séries pures (`accuracy_by_labe
 `cost_by_label`, `wilson_interval`), figures (`Figure` + `FigureCanvasAgg`, jamais `pyplot` : aucun
 affichage, aucun état global). Le texte SVG reste du texte (`svg.fonttype = none`).
 
-CLI : `hypomnesis benchmark-llm … [--graphiques/--sans-graphiques]` (actif par défaut ; ignoré avec un
-avertissement si matplotlib est absent) écrit les figures à côté du résumé ; `hypomnesis graphiques-llm
+CLI : `hypomnesis-codegen benchmark-llm … [--graphiques/--sans-graphiques]` (actif par défaut ;
+matplotlib est une dépendance du paquet) écrit les figures à côté du résumé ; `hypomnesis-codegen graphiques-llm
 FICHIER.json [--sortie DIR]` les régénère sans relancer le banc ni appeler Ollama.
 
 ### Banc LLM : intervalles, temps hors chargement, répétitions (HYP-139)
 
 - **Intervalles de Wilson** : `benchmark.wilson(k, n)` et `plots.wilson_interval` s'appuient sur
-  `scipy.stats.binomtest(k, n).proportion_ci(method="wilson")` (extras `llm` et `dev`). `summary()` les
+  `scipy.stats.binomtest(k, n).proportion_ci(method="wilson")` (paquet Codegen). `summary()` les
   affiche à 95 % pour « Correct (1er essai) » et « Correct ». Le tableau distingue aussi parsé, typé
   (1er essai / après réparations), exécuté, **cas réparés** (plus d'une tentative), et deux temps :
   « Temps moy. » (total) et « Temps moy. hors chargement » (total − `Reply.load_seconds`).
@@ -150,7 +219,7 @@ FICHIER.json [--sortie DIR]` les régénère sans relancer le banc ni appeler Ol
   température par défaut est `REPEAT_TEMPERATURE` (0,7). Chaque essai est une ligne de résultat ; les
   intervalles supposent des essais indépendants, d'où un second tableau (`repetition_table`) : correct au
   1er essai moyen par cas et nombre de cas « stables » (même issue à chaque essai).
-- Option CLI `--repetitions`/`--temperature` : pas encore branchée (`cli.py` appartient à HYP-130).
+- Option CLI `--repetitions`/`--temperature` : pas encore branchée dans `codegen/cli.py`.
 ## Certificats
 
 `src/hypomnesis/certify/` exporte la Core IR élaborée et annotée (prélude compris) en JSON,
@@ -324,12 +393,12 @@ sinon Python système, avec surcharge `hypomnesis.pythonPath`. Un serveur par do
 pas de lancement Python dans un espace non approuvé. Les réglages sont documentés dans
 `editors/vscode/README.md`.
 
-`lsp/analysis.py` appelle `Session.check` sur le prélude, les sources M2 précédentes
-du manifeste puis le document. Une session neuve par analyse évite les noms obsolètes ;
+`lsp/analysis.py` utilise le plan de `engine/layers.py` et ses sessions statiques,
+sur les dépendances transitives puis le document. Une session neuve évite les noms obsolètes ;
 aucun programme édité, contrat d'effet ou adaptateur Python n'est exécuté. Le contexte
-M2 vient du `langage.json` le plus proche, de `demo/programs/<nom>` vers `demo/languages/<nom>`,
+M2 vient du `langage.hyp` le plus proche, de `demo/programs/<nom>` vers `demo/languages/<nom>`,
 ou de `hypomnesis.languageRoot`. Les documents ouverts non enregistrés remplacent les
-sources disque. Une erreur de dépendance est signalée au début du document avec son
+sources disque, déclarations d'imports comprises. Une erreur de dépendance est signalée au début du document avec son
 chemin ; une erreur du document reprend exactement message, étape et étendue du compilateur.
 Les positions sont converties de coordonnées 1-based en positions LSP négociées
 (UTF-16 par défaut, UTF-8/32 possibles).
@@ -423,9 +492,10 @@ rattache par position ; `declarations` rend aussi la position de chaque élémen
 champ ou un constructeur). `missing_descriptions` liste les éléments publics (aucun `_` dans le nom
 qualifié) sans description ; `load_language(root, strict=True)` lève `MissingDescriptionError`
 (`engine/language.py`) pour le premier. `@interne` : décrit mais hors catalogue ; `@discret` : membre
-listé sans sa description (`llm/describe.py`). Règles complètes : ADR 0009 (décisions 6 et 7). Tests :
+listé sans sa description (`codegen/describe.py`). Règles complètes : ADR 0009 (décisions 6 et 7). Tests :
 `tests/unit/test_language_docs.py` (règle, propriétés « Core IR et certificat identiques avec ou sans
-descriptions ») et instantanés `tests/unit/snapshots/` (catalogue rendu, octet pour octet).
+descriptions ») et `packages/codegen/tests/` avec ses instantanés `snapshots/`
+(catalogue rendu, octet pour octet).
 
 ## Commandes
 
@@ -441,7 +511,7 @@ python3 scripts/kanban.py status        # tâches prêtes et bloquées
 
 Les sept remplacements sont présents dans le code : Typer (`cli.py`), NetworkX
 (`epistemics/knowledge.py`, `scripts/kanban.py`), PyYAML (Kanban), client officiel Ollama
-(`llm/ollama.py`), SDK OpenTelemetry (`observability/trace.py`), matplotlib (`llm/plots.py`)
+(`codegen/ollama.py`), SDK OpenTelemetry (`observability/trace.py`), matplotlib (`codegen/plots.py`)
 et jsonschema via `SchemaRegistry` (`certify/load.py`). Cela ne vaut pas clôture des tickets :
 HYP-014 reste en `doing`, avec comparaison réelle du banc avant/après à vérifier par l'utilisateur.
 La façade locale, les conversions de valeurs et les règles de sûreté ne sont pas des
@@ -449,8 +519,9 @@ réimplémentations des bibliothèques. Le noyau pur et Lean restent inchangés 
 
 ### Justification des dépendances déclarées
 
-Relecture de `pyproject.toml` : aucune dépendance nouvelle nécessaire pour cet audit.
-`llm` reste optionnel ; `dev` reprend ses dépendances pour tester sans serveur ni GPU.
+Depuis HYP-146, les dépendances LLM sont déclarées dans `packages/codegen/pyproject.toml`,
+pas dans les extras du moteur ; Codegen reste un paquet optionnel. Ses tests fonctionnent
+sans serveur ni GPU. Le tableau reflète ce nouvel emplacement.
 Les dépendances transitives (Click, Rich, httpx, NumPy…) ne sont pas ajoutées sans besoin direct.
 
 | Dépendance directe | Groupe | Justification |
@@ -466,11 +537,11 @@ Les dépendances transitives (Click, Rich, httpx, NumPy…) ne sont pas ajoutée
 | `resolvelib` | exécution | Résolution transitive par retour arrière des extensions (`engine/registry.py`, HYP-041). |
 | `opentelemetry-api` | exécution | Contextes, statuts et fournisseur sans effet pour les traces désactivées (`observability/trace.py`). |
 | `opentelemetry-sdk` | exécution | Création et collecte des spans, export en mémoire (`observability/trace.py`, HYP-015). |
-| `jinja2` | `llm`, `dev` | Gabarits du catalogue et du prompt (`llm/describe.py`). |
-| `scikit-learn` | `llm`, `dev` | TF-IDF et similarité cosinus du mini-RAG (`llm/retrieval.py`) ; HYP-054 reste distinct. |
-| `ollama` | `llm`, `dev` | Client officiel, réponses typées et erreurs HTTP (`llm/ollama.py`, HYP-014). |
-| `matplotlib` | `llm`, `dev` | Figures PNG/SVG hors affichage, régénérables depuis le JSON (`llm/plots.py`, HYP-016). |
-| `scipy` | `llm`, `dev` | Intervalles de Wilson par `binomtest().proportion_ci`, dans le banc et les figures (HYP-139). |
+| `jinja2` | Codegen | Gabarits du catalogue et du prompt (`codegen/describe.py`). |
+| `scikit-learn` | Codegen | TF-IDF et similarité cosinus du mini-RAG (`codegen/retrieval.py`) ; HYP-054 reste distinct. |
+| `ollama` | Codegen | Client officiel, réponses typées et erreurs HTTP (`codegen/ollama.py`, HYP-014). |
+| `matplotlib` | Codegen | Figures PNG/SVG hors affichage, régénérables depuis le JSON (`codegen/plots.py`, HYP-016). |
+| `scipy` | Codegen | Intervalles de Wilson par `binomtest().proportion_ci`, dans le banc et les figures (HYP-139). |
 | `pyyaml` | `dev` | Lecture sûre du front-matter des tickets (`scripts/kanban.py`, HYP-009). |
 | `pytest` | `dev` | Tests unitaires, d'intégration et de contrats. |
 | `hypothesis` | `dev` | Propriétés de provenance, certificats, codecs et tests différentiels. |
@@ -480,20 +551,20 @@ Les dépendances transitives (Click, Rich, httpx, NumPy…) ne sont pas ajoutée
 
 ### Inventaire du code maison restant
 
-Chemins relatifs à `src/hypomnesis/`, sauf indication contraire. Les décisions concernent
+Chemins relatifs à `src/hypomnesis/`, sauf `codegen/` (voir HYP-146) et indication contraire. Les décisions concernent
 le besoin actuel, pas une interdiction de réexaminer une bibliothèque si ce besoin grandit.
 
 | Emplacement et source | Décision et bibliothèque examinée |
 |---|---|
 | `language/docs.py::_doc_index`, `parser.py::lex` | **Déjà migré** par HYP-137 : jetons Lark (`dont_ignore=True`), plus de regex globale `_DOC`. Garder `parse_doc` et `_TAG`, format de balises du projet. |
-| `llm/benchmark.py::wilson`, `plots.py::wilson_interval` | **Déjà migré** par HYP-139 vers SciPy, déclaré explicitement dans `llm` et `dev`. Garder `summary`, tableau Markdown spécifique au banc. |
+| `codegen/benchmark.py::wilson`, `plots.py::wilson_interval` | **Déjà migré** par HYP-139 vers SciPy, désormais déclaré dans Codegen. Garder `summary`, tableau Markdown spécifique au banc. |
 | `effects/commands.py::TRANSITIONS`, `may_retry`, `RetryPolicy` ; `dispatcher.py::_execute` | **Garder** : automate explicite et règle de non-relance des commandes non idempotentes, miroir de HYP-066. `transitions`/`python-statemachine`/`tenacity` n'enlèveraient pas ces règles ; délai exponentiel actuellement élémentaire. HYP-061 porte ce besoin. |
 | `scripts/kanban.py::graph_lock`, `_lock_busy`, `_section_paths`, `_meta` | **Garder** : protocole `flock` de Graphify et extraction du format Markdown borné ; `filelock` ou un analyseur Markdown complet ne sont pas un remplacement transparent. Aucun changement de verrou dans cet audit. |
 | `observability/trace.py::Tracer.tree`, `export` | **Garder** : rendu des rapports M0 au-dessus des spans SDK ; réexaminer avec l'export OTLP de HYP-070, sans nouveau traceur. |
 | `cli.py::_repl` ; `engine/procedure.py::ProcedureReport.render` | **Garder** : tampon `;;` et rendus spécifiques. `prompt_toolkit` serait disproportionné sans besoin d'édition enrichie ; Rich est déjà fourni par Typer, mise en forme non requise. |
-| `llm/translation.py::extract_code`, `translate` | **Garder** : extraction des blocs et réparation guidée par les diagnostics, protocole propre au projet. |
+| `codegen/translation.py::extract_code`, `translate` | **Garder** : extraction des blocs et réparation guidée par les diagnostics, protocole propre au projet. |
 | `demo/languages/mecanique/adaptateurs/transcription.py::transcrire` | **Garder** : adaptateur M2 déterministe, non infrastructure M3 ; HYP-081 porte la transcription LLM. Aucune migration métier ici. |
-| `llm/retrieval.py::Retriever`, `_normalise` ; `llm/describe.py::_environment` | **Déjà délégué** à scikit-learn et Jinja2 ; garder la normalisation numérique et le catalogue propres au banc. |
+| `codegen/retrieval.py::Retriever`, `_normalise` ; `codegen/describe.py::_environment` | **Déjà délégué** à scikit-learn et Jinja2 ; garder la normalisation numérique et le catalogue propres au banc. |
 | `contracts/registry.py::SchemaRegistry` | **Garder** : adaptateur de jsonschema et referencing, non validateur structurel maison. |
 | `engine/bridge.py::to_json`, `runtime/natives.py::to_json_value`, `certify/export.py::export_certificate` | **Garder** : codecs des valeurs Hypomnesis et certificat lu par Lean. Les ponts JSON passent désormais par `runtime/json.py` (HYP-042), pas par des conversions dupliquées. |
 | `session.py::run_deep` | **Garder** : pile CPython dédiée à la récursion non terminale ; une bibliothèque générique ne la supprime pas. Réexamen avec les évolutions d'évaluation de HYP-013. |

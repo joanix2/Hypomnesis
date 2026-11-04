@@ -1,0 +1,13 @@
+language ventilation = {
+  version = "0.2.0";
+  description = "Régulation de température par ventilateur ; procédures écrites en Hypomnesis (effets comme valeurs).";
+  sources = ["ventilation.hyp"];
+  contracts = [
+    "contrats/temperature.reading-1.0.0.json";
+    "contrats/fan.set-1.0.0.json";
+    "contrats/fan.set.result-1.0.0.json"
+  ];
+  adapters = ["adaptateurs/piece.py"];
+  examples = "exemples.json";
+  procedure = { kind = "program"; entry = "procedure" }
+}

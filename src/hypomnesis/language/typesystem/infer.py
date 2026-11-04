@@ -292,6 +292,11 @@ class Checker:
             self._frame.visible.merge(module)
         elif isinstance(item, A.ExternalItem):
             self._check_external(item)
+        elif isinstance(item, A.LanguageItem):
+            raise TypeCheckError(
+                "language declarations require the package loader (check --langage or langage.hyp)",
+                item.span,
+            )
         else:  # pragma: no cover - parser never produces anything else
             raise TypeCheckError(f"unsupported item {type(item).__name__}", item.span)
 

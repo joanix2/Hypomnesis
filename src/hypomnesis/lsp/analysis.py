@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from lsprotocol import types
 
-from hypomnesis.contracts.registry import SchemaRegistry
-from hypomnesis.engine.language import MANIFEST, MANIFEST_SCHEMA, LanguageError
+from hypomnesis.engine.errors import LanguageError, SourceError
+from hypomnesis.engine.layers import ENTRY, check_layers, resolve_layers
+from hypomnesis.language import ast as A
 from hypomnesis.language.errors import HypomnesisError, Span
+from hypomnesis.language.parser import parse_program
 from hypomnesis.session import Session, prelude_source
 
 
@@ -18,7 +19,7 @@ def language_root(path: Path, workspace: Path, configured: str | None) -> Path |
         root = Path(configured)
         return (root if root.is_absolute() else workspace / root).resolve()
     for parent in path.parents:
-        if (parent / MANIFEST).is_file():
+        if (parent / ENTRY).is_file():
             return parent
         if parent == workspace:
             break
@@ -29,7 +30,7 @@ def language_root(path: Path, workspace: Path, configured: str | None) -> Path |
             relative = path.relative_to(parent)
             if len(relative.parts) > 1:
                 candidate = parent.parent / "languages" / relative.parts[0]
-                if (candidate / MANIFEST).is_file():
+                if (candidate / ENTRY).is_file():
                     return candidate
     return None
 
@@ -71,42 +72,32 @@ def analyze(
 ) -> list[types.Diagnostic]:
     """Check preceding M2 files, then the unsaved target, with no user evaluation."""
     path = path.resolve()
-    current_path, current_source = path, source
     try:
         session = Session(prelude=False)
         session.check(prelude_source())
-        root = language_root(path, workspace, configured)
+        program = parse_program(source)
+        declares_language = any(isinstance(item, A.LanguageItem) for item in program.items)
+        root = path if declares_language else language_root(path, workspace, configured)
         if root is not None:
-            manifest = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
-            issues = SchemaRegistry.with_builtin_schemas().issues(MANIFEST_SCHEMA, manifest)
-            if issues:
-                raise LanguageError("manifeste invalide : " + "; ".join(map(str, issues)))
-            for name in manifest["sources"]:
-                dependency = (root / name).resolve()
-                if not dependency.is_relative_to(root):
-                    raise LanguageError(f"source hors du paquet du langage : {name}")
-                if dependency == path:
-                    break
-                current_path = dependency
-                current_source = (
-                    overlays[str(dependency)]
-                    if str(dependency) in overlays
-                    else dependency.read_text(encoding="utf-8")
-                )
-                session.check(current_source)
-        current_path, current_source = path, source
-        session.check(source)
-    except HypomnesisError as exc:
-        if current_path == path:
-            return [diagnostic(exc.message, exc.stage_id, exc.span, current_source, encoding)]
-        return [
-            diagnostic(
-                f"{current_path}: {exc}",
-                exc.stage_id,
+            plan = resolve_layers(root, {**overlays, str(path): source}, stop_at=path)
+            owner = next(
+                (
+                    entry
+                    for entry, layer in plan.layers.items()
+                    if any(item.path == path for item in layer.sources)
+                ),
                 None,
-                source,
             )
-        ]
-    except (OSError, UnicodeError, json.JSONDecodeError, LanguageError) as exc:
+            session = check_layers(plan, strict=False, stop_at=path, entry=owner)
+            if owner is not None:
+                return []
+        session.check(source)
+    except SourceError as exc:
+        if exc.path == path:
+            return [diagnostic(exc.message, exc.stage_id, exc.span, source, encoding)]
+        return [diagnostic(exc.render(), exc.stage_id, None, source)]
+    except HypomnesisError as exc:
+        return [diagnostic(exc.message, exc.stage_id, exc.span, source, encoding)]
+    except (OSError, UnicodeError, LanguageError) as exc:
         return [diagnostic(str(exc), "configuration", None, source)]
     return []

@@ -30,8 +30,8 @@ from hypomnesis.engine.procedure import run_procedure
 from hypomnesis.language import ast as A
 from hypomnesis.language.errors import HypomnesisError, Span
 from hypomnesis.language.parser import parse_program
-from hypomnesis.llm.prompting import DEFAULT, Strategy
-from hypomnesis.llm.translation import ChatClient, Translation, translate
+from hypomnesis_codegen.prompting import DEFAULT, Strategy
+from hypomnesis_codegen.translation import ChatClient, Translation, translate
 
 ANY = "*"
 REPEAT_TEMPERATURE = 0.7  # default sampling temperature once a case is repeated

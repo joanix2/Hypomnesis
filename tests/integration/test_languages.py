@@ -210,14 +210,16 @@ def test_cli_procedure(capsys, tmp_path):
 
 
 def test_invalid_manifest_is_refused(tmp_path):
-    (tmp_path / "langage.json").write_text(json.dumps({"name": "x", "version": "1", "sources": []}))
-    with pytest.raises(LanguageError, match="manifeste invalide"):
+    (tmp_path / "langage.hyp").write_text('language x = { version = "1"; unknown = true }')
+    with pytest.raises(LanguageError, match="déclaration invalide"):
         load_language(tmp_path)
 
 
 def test_adapters_must_live_inside_the_language():
+    from hypomnesis.engine.adapters import AdapterRegistry
+
     with pytest.raises(LanguageError, match="hors du paquet"):
-        load_language(MECANIQUE).adapter("../../src/hypomnesis/cli.py:main")
+        AdapterRegistry.load(MECANIQUE, ["../../src/hypomnesis/cli.py"])
 
 
 # ------------------------------------------------------------------ architecture

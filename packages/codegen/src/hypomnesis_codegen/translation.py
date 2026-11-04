@@ -19,10 +19,10 @@ from typing import Protocol
 
 from hypomnesis.engine.language import Language, load_language
 from hypomnesis.language.errors import HypomnesisError
-from hypomnesis.llm.describe import catalogue
-from hypomnesis.llm.ollama import Reply
-from hypomnesis.llm.prompting import DEFAULT, Strategy
-from hypomnesis.llm.retrieval import Retriever, load_examples
+from hypomnesis_codegen.describe import catalogue
+from hypomnesis_codegen.ollama import Reply
+from hypomnesis_codegen.prompting import DEFAULT, Strategy
+from hypomnesis_codegen.retrieval import Retriever, load_examples
 
 SYSTEM = """Tu traduis une demande en français en un programme Hypomnesis.
 Hypomnesis a la syntaxe d'OCaml : `let x = …`, records `{ Module.champ = …; autre = … }`,
@@ -94,9 +94,7 @@ def system_prompt(language: Language, examples: list[str], strategy: Strategy = 
     published = catalogue(language) if strategy.catalogue else None
     # A language that documents nothing has no catalogue: fall back on its source.
     if strategy.source or (published is not None and not published.modules):
-        sources = "\n\n".join(
-            (language.root / s).read_text(encoding="utf-8") for s in language.manifest["sources"]
-        )
+        sources = "\n\n".join(source.text for source in language.plan.source_files())
         parts.append(f"=== Langage « {language.name} » ===\n{sources}")
     if published is not None and published.modules:
         parts.append(published.render())

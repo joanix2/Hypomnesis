@@ -50,7 +50,7 @@
     },
     "keywords": {
       "name": "keyword.control.hypomnesis",
-      "match": "\\b(?:and|as|else|end|external|false|fun|function|if|in|let|match|mod|module|of|open|rec|struct|then|true|type|when|with)\\b"
+      "match": "\\b(?:and|as|else|end|external|false|fun|function|if|in|language|let|match|mod|module|of|open|rec|struct|then|true|type|when|with)\\b"
     },
     "numbers": {
       "name": "constant.numeric.hypomnesis",

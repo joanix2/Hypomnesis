@@ -6,7 +6,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
-from hypomnesis.llm.ollama import LLMError, OllamaClient
+from hypomnesis_codegen.ollama import LLMError, OllamaClient
 
 ANSWER = {
     "model": "m",

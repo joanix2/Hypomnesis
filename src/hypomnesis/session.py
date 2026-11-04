@@ -74,13 +74,21 @@ class Session:
 
     def check(self, source: str) -> LoadResult:
         """Type-check ``source`` and extend the type environment, without running it."""
-        result = self.checker.check_program(parse_program(source))
+        return self.check_program(parse_program(source))
+
+    def check_program(self, program: A.Program) -> LoadResult:
+        """Check an already parsed program, retaining its original source positions."""
+        result = self.checker.check_program(program)
         self.definitions.extend(result.definitions)
         return LoadResult([self._binding(info, None) for info in result.values], result.types)
 
     def load(self, source: str) -> LoadResult:
         """Type-check and run ``source``, extending the session."""
-        return self._run(self.checker.check_program(parse_program(source)))
+        return self.load_program(parse_program(source))
+
+    def load_program(self, program: A.Program) -> LoadResult:
+        """Check and evaluate an already parsed program."""
+        return self._run(self.checker.check_program(program))
 
     def _run(self, result: CheckResult) -> LoadResult:
         self.definitions.extend(result.definitions)

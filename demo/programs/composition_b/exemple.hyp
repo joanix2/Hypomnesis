@@ -1,0 +1,2 @@
+let resultat = CompositionB.invalide 20 (-1)
+let procedure = Effect.return resultat
