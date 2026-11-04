@@ -145,14 +145,14 @@ mutual
     | .var n => unsupported s!"variable de type {n} non instanciée (polymorphisme)"
     | .con "int" [] => pure .int
     | .con "bool" [] => pure .bool
+    | .con "float" [] => pure .float
+    | .con "string" [] => pure .string
     | .con "unit" [] => pure .unit
     | .con "->" [a, b] => return .arrow (← toTy a) (← toTy b)
     | .con "*" args => do
       match (← args.mapM toTy).reverse with
       | [] => malformed "n-uplet vide"
       | last :: rest => return rest.foldl (fun acc t => .prod t acc) last
-    | .con "float" [] => unsupported "type float"
-    | .con "string" [] => unsupported "type string"
     | .con name args => return .data (← dataIndex name args)
 
   partial def dataIndex (name : String) (args : List CTy) : M Nat := do
@@ -231,6 +231,19 @@ def literal (j : Json) : M (Sum Expr String) := do
   match ← str (← field j "kind") with
   | "int" => return .inl (.int (← int (← field j "value")))
   | "bool" => return .inl (.bool (← bool (← field j "value")))
+  | "float" =>
+    let some bitsJ := opt j "bits" |
+      unsupported "littéral float historique sans bits binary64 ; réexporter en 1.1.0"
+    let bits ← nat bitsJ
+    unless bits < 2 ^ 64 do malformed "bits binary64 hors limites"
+    let f := Float.ofBits (UInt64.ofNat bits)
+    if f.isNaN || f.isInf then malformed "littéral float non fini"
+    match (← field j "value").getNum? with
+    | .ok n =>
+      unless f == n.toFloat do malformed "bits float incompatibles avec la valeur"
+      return .inl (.float f)
+    | .error e => malformed e
+  | "string" => return .inl (.string (← str (← field j "value")))
   | "unit" => return .inl .unit
   | k => return .inr k
 
@@ -257,6 +270,8 @@ partial def decPat (j : Json) (expected : Ty := .unit) : M (Pat × List Nat) := 
     match ← literal l with
     | .inl (.int n) => return (.int n, [])
     | .inl (.bool b) => return (.bool b, [])
+    | .inl (.float f) => return (.float f, [])
+    | .inl (.string s) => return (.string s, [])
     | .inl _ => return (.wild, [])
     | .inr k => unsupported s!"motif littéral {k}"
   if let some c := opt j "ctor" then
@@ -469,6 +484,9 @@ end
 
 /-- Primitives exprimables dans le fragment, à leur type instancié. -/
 def native (symbol : String) (t : Ty) : M Expr := do
+  if symbol == "core.failwith" then
+    let .arrow .string result := t | unsupported "signature failwith"
+    return .lam .string (.raise result (.var 0))
   let intOp := Ty.arrow .int (.arrow .int .int)
   let intCmp := Ty.arrow .int (.arrow .int .bool)
   let bin (op : BinOp) (swap : Bool := false) : Expr :=
@@ -480,6 +498,8 @@ def native (symbol : String) (t : Ty) : M Expr := do
       | "int.add" => some (bin .add)
       | "int.sub" => some (bin .sub)
       | "int.mul" => some (bin .mul)
+      | "int.div" => some (bin .div)
+      | "int.mod" => some (bin .mod)
       | _ => none
     else if t == intCmp then
       match symbol with
@@ -490,9 +510,42 @@ def native (symbol : String) (t : Ty) : M Expr := do
       | "poly.le" => some (neg (bin .lt (swap := true)))
       | "poly.ge" => some (neg (bin .lt))
       | _ => none
+    else if t == .arrow .float (.arrow .float .float) then
+      match symbol with
+      | "float.add" => some (bin .fadd)
+      | "float.sub" => some (bin .fsub)
+      | "float.mul" => some (bin .fmul)
+      | "float.div" => some (bin .fdiv)
+      | _ => none
+    else if t == .arrow .float (.arrow .float .bool) then
+      match symbol with
+      | "poly.eq" => some (bin .feq)
+      | "poly.neq" => some (neg (bin .feq))
+      | "poly.lt" => some (bin .flt)
+      | "poly.gt" => some (bin .flt (swap := true))
+      | "poly.le" => some (bin .fle)
+      | "poly.ge" => some (bin .fle (swap := true))
+      | _ => none
+    else if t == .arrow .float (.arrow .float .int) && symbol == "poly.compare" then
+      some (bin .fcompare)
+    else if t == .arrow .string (.arrow .string .string) && symbol == "string.concat" then
+      some (bin .sconcat)
+    else if t == .arrow .string (.arrow .string .bool) then
+      match symbol with
+      | "poly.eq" => some (bin .seq)
+      | "poly.neq" => some (neg (bin .seq))
+      | "poly.lt" => some (bin .slt)
+      | "poly.gt" => some (bin .slt (swap := true))
+      | "poly.le" => some (neg (bin .slt (swap := true)))
+      | "poly.ge" => some (neg (bin .slt))
+      | _ => none
+    else if t == .arrow .string (.arrow .string .int) && symbol == "poly.compare" then
+      some (bin .scompare)
     else none
   match body? with
-  | some body => return .lam .int (.lam .int body)
+  | some body =>
+    let .arrow dom _ := t | unsupported "signature de primitive"
+    return .lam dom (.lam dom body)
   | none => unsupported s!"primitive {symbol} au type {repr t}"
 
 def parseDef (j : Json) : M Def := do
@@ -546,6 +599,9 @@ structure Report where
 /-- Décode et **vérifie** un certificat. -/
 def check (cert : Json) : Except Err Report := do
   let run : M Report := do
+    let version ← str (← field cert "certificate_version")
+    unless version == "1.0.0" || version == "1.1.0" do
+      malformed s!"version de certificat inconnue {version}"
     for t in ← arr (← field cert "types") do
       let ctors ← (← arr (← field t "constructors")).mapM fun c => do
         let a ← field c "arg"
@@ -606,6 +662,8 @@ def check (cert : Json) : Except Err Report := do
 partial def showTy : Ty → String
   | .int => "int"
   | .bool => "bool"
+  | .float => "float"
+  | .string => "string"
   | .unit => "unit"
   | .arrow a b => s!"({showTy a} -> {showTy b})"
   | .prod a b => s!"({showTy a} * {showTy b})"
@@ -614,6 +672,8 @@ partial def showTy : Ty → String
 partial def showVal : Val → String
   | .int n => toString n
   | .bool b => toString b
+  | .float f => toString f
+  | .string s => reprStr s
   | .unit => "()"
   | .clo .. | .rclo .. => "<fun>"
   | .pair a b => s!"({showVal a}, {showVal b})"
@@ -624,5 +684,6 @@ def showRes : Res → String
   | .stuck => "BLOQUÉ"
   | .timeout => "budget épuisé"
   | .matchFail => "Match_failure"
+  | .error message => message
 
 end Hypomnesis.Certificate

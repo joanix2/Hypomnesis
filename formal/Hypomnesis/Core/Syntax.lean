@@ -39,6 +39,10 @@ annotations que le vérificateur Python ajoute à sa Core IR : `lam dom` ↔
 annotations Python liées au polymorphisme (`forall_vars`, `type_args`) n'ont
 pas encore d'équivalent : elles seront formalisées avec HYP-023.
 
+Scalaires (HYP-150). Float est binary64 (modèle logique Lean 4.35), String est
+Unicode. BinOp fixe domaines et résultats ; raise produit une erreur explicite.
+Le format de certificat 1.1 conserve les bits des littéraux flottants.
+
 Frontière JSON (HYP-042, ADR 0010). `Json.Int` est un constructeur de bibliothèque
 Python/Hypomnesis, pas une nouvelle forme IR. La primitive `core.to_json` et les
 codecs JSON restent hors de ce fragment de primitives entières ; les tests
@@ -50,6 +54,8 @@ namespace Hypomnesis.Core
 inductive Ty where
   | int
   | bool
+  | float
+  | string
   | unit
   | arrow (dom cod : Ty)
   | prod (fst snd : Ty)
@@ -61,13 +67,22 @@ de chacun de ses constructeurs (dans l'ordre de déclaration). -/
 abbrev Sig := List (List Ty)
 
 inductive BinOp where
-  | add | sub | mul | eq | lt
+  | add | sub | mul | div | mod | eq | lt
+  | fadd | fsub | fmul | fdiv | feq | flt | fle | fcompare
+  | sconcat | seq | slt | scompare
   deriving DecidableEq, Repr
 
-/-- Type du résultat d'une primitive binaire (les opérandes sont entières). -/
+/-- Signatures fermées : le certificat ne choisit pas les types des primitives. -/
+def BinOp.domain : BinOp → Ty
+  | .fadd | .fsub | .fmul | .fdiv | .feq | .flt | .fle | .fcompare => .float
+  | .sconcat | .seq | .slt | .scompare => .string
+  | _ => .int
+
 def BinOp.result : BinOp → Ty
-  | .add | .sub | .mul => .int
-  | .eq | .lt => .bool
+  | .add | .sub | .mul | .div | .mod | .fcompare | .scompare => .int
+  | .fadd | .fsub | .fmul | .fdiv => .float
+  | .sconcat => .string
+  | _ => .bool
 
 /-- Motifs. Les variables liées sont rangées dans l'ordre de l'environnement :
 la plus récente d'abord (les variables de `p₂` précèdent celles de `p₁`
@@ -77,6 +92,8 @@ inductive Pat where
   | var
   | int (n : Int)
   | bool (b : Bool)
+  | float (f : Float)
+  | string (s : String)
   | pair (fst snd : Pat)
   | ctor (c : Nat) (arg : Pat)
   deriving Repr
@@ -85,6 +102,8 @@ inductive Expr where
   | var (i : Nat)
   | int (n : Int)
   | bool (b : Bool)
+  | float (f : Float)
+  | string (s : String)
   | unit
   | lam (dom : Ty) (body : Expr)
   | fix (dom cod : Ty) (body : Expr)
@@ -101,6 +120,7 @@ inductive Expr where
   | case (scrutinee : Expr) (pat : Pat) (onMatch onFail : Expr)
   /-- Échec de filtrage (`Match_failure`), annoté par son type. -/
   | fail (t : Ty)
+  | raise (t : Ty) (message : Expr)
   deriving Repr
 
 abbrev Ctx := List Ty

@@ -44,6 +44,7 @@ la manière dont on peut en établir la validité.
 | P21 | `Records.make_typed`, `get_typed`, `update_typed`, `update_checked` | construction, accès et mise à jour de records nominaux sont des formes dérivées typées, acceptées par le vérificateur prouvé | §4.1 ; HYP-021 |
 | P22 | `Records.get_never_stuck`, `update_never_stuck` | appliqués à un record clos bien typé et à une nouvelle valeur du type du champ, accès et mise à jour ne se bloquent jamais, quel que soit le budget | §4.1 ; HYP-021 |
 | P23 | `Records.Examples.program_typed`, `program_never_stuck`, `deposit_balance`, `deposit_owner` | deposit calcule 150 et conserve le propriétaire (encodé en points de code, pas en string natif) | exemple tour ; HYP-021 |
+| P24 | `Core.evalOp_ty` | toute primitive binaire du catalogue fermé, appliquée à des valeurs de son domaine, produit une valeur du type annoncé ou une erreur explicite ; P1–P7 couvrent aussi les flottants, chaînes et erreurs | §4.1 ; HYP-150, pas de raffinement Python complet |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -54,21 +55,22 @@ la sémantique Lean, couverte par les tests différentiels (HYP-028).
 **Pont CLI (HYP-027).** `hypomnesis check --certify` émet et vérifie le certificat,
 sans exécuter le programme, avec refus explicite hors fragment et délai fini.
 La CI teste ce chemin et refuse une élaboration falsifiée. L'export seul ne
-certifie rien. Un exemple sur six est actuellement accepté ; les cinq autres
-sont explicitement refusés, pas exemptés comme certifiés. HYP-027 reste ouvert
+certifie rien. Cinq exemples sur six sont actuellement acceptés ; tour est
+explicitement refusé sur un motif alternatif, pas exempté comme certifié. HYP-027 reste ouvert
 sur cette couverture totale. Voir [certification.md](certification.md).
 
 **Fragment couvert** (`formal/Hypomnesis/Core/Syntax.lean`) :
-- types `int`, `bool`, `unit`, fonctions, produits et **types de données** (variants, listes),
+- types `int`, `bool`, `unit`, `float` binary64, `string` Unicode, fonctions, produits et **types de données** (variants, listes),
   monomorphisés dans une signature ;
 - lambdas annotées, récursion (`fix` ↔ `LetRec`), `let`, `if` élaboré, paires ;
 - constructeurs et **filtrage** (`case` en chaîne binaire, `fail`), motifs joker, variable,
   littéral, paire, constructeur ;
-- primitives entières.
+- catalogue fermé de primitives entières, flottantes et chaînes ;
+- erreurs de primitives (`Res.error`), distinctes de stuck et Match_failure ;
 - records nominaux comme données à constructeur unique : construction, accès,
   mise à jour et motifs partiels ; mêmes P1–P7, sans changer le noyau.
 
-Ne sont **pas encore** couverts : réels/flottants, chaînes et leurs primitives,
+Ne sont **pas encore** couverts : réels mathématiques et primitives hors catalogue,
 motifs alternatifs et alias, exhaustivité
 (F1c) et polymorphisme (F2).
 

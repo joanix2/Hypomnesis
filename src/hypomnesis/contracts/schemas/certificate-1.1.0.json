@@ -1,0 +1,811 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/certificate/1.1.0",
+  "title": "HypomnesisCertificate",
+  "description": "Elaborated and type-annotated Core IR, re-checked by an independent verifier without inference (HYP-025). Locals are de Bruijn indices (0 = innermost binder); pattern variables are numbered slots; type variables are named per definition and bound by `forall` lists.",
+  "type": "object",
+  "properties": {
+    "certificate_version": {
+      "const": "1.1.0"
+    },
+    "program_start": {
+      "description": "Index of the first definition of the program itself; earlier ones come from the prelude.",
+      "$ref": "#/$defs/index"
+    },
+    "types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/typeDecl"
+      }
+    },
+    "definitions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/definition"
+      }
+    }
+  },
+  "required": [
+    "certificate_version",
+    "types",
+    "definitions"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "names": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/name"
+      }
+    },
+    "type": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "var": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "required": [
+            "var"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "con": {
+              "$ref": "#/$defs/name"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/type"
+              }
+            }
+          },
+          "required": [
+            "con",
+            "args"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/type"
+      }
+    },
+    "template": {
+      "description": "A type inside a type declaration: parameters are positional.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/index"
+            }
+          },
+          "required": [
+            "param"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "con": {
+              "$ref": "#/$defs/name"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/template"
+              }
+            }
+          },
+          "required": [
+            "con",
+            "args"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "typeDecl": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "params": {
+          "$ref": "#/$defs/index"
+        },
+        "kind": {
+          "enum": [
+            "builtin",
+            "variant",
+            "record"
+          ]
+        },
+        "constructors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tag": {
+                "$ref": "#/$defs/name"
+              },
+              "index": {
+                "$ref": "#/$defs/index"
+              },
+              "arg": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/$defs/template"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "tag",
+              "index",
+              "arg"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/name"
+              },
+              "type": {
+                "$ref": "#/$defs/template"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "name",
+        "params",
+        "kind",
+        "constructors",
+        "fields"
+      ],
+      "additionalProperties": false
+    },
+    "literal": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "int"
+            },
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "float"
+            },
+            "value": {
+              "type": "number"
+            },
+            "bits": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615,
+              "description": "Authoritative finite IEEE 754 binary64 bit pattern; preserves signed zero."
+            }
+          },
+          "required": [
+            "kind",
+            "value",
+            "bits"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "bool"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "unit"
+            },
+            "value": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "pattern": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "wild": {
+          "type": "object",
+          "maxProperties": 0
+        },
+        "bind": {
+          "$ref": "#/$defs/index"
+        },
+        "lit": {
+          "$ref": "#/$defs/literal"
+        },
+        "ctor": {
+          "type": "object",
+          "properties": {
+            "tag": {
+              "$ref": "#/$defs/name"
+            },
+            "index": {
+              "$ref": "#/$defs/index"
+            },
+            "arg": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/pattern"
+                }
+              ]
+            }
+          },
+          "required": [
+            "tag",
+            "index",
+            "arg"
+          ],
+          "additionalProperties": false
+        },
+        "tuple": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/pattern"
+          }
+        },
+        "record": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "$ref": "#/$defs/name"
+              },
+              "pattern": {
+                "$ref": "#/$defs/pattern"
+              }
+            },
+            "required": [
+              "name",
+              "pattern"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "or": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/pattern"
+          }
+        },
+        "alias": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "$ref": "#/$defs/pattern"
+            },
+            "bind": {
+              "$ref": "#/$defs/index"
+            }
+          },
+          "required": [
+            "pattern",
+            "bind"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "fieldValues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/name"
+          },
+          "value": {
+            "$ref": "#/$defs/expr"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "expr": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "lit": {
+          "$ref": "#/$defs/literal"
+        },
+        "local": {
+          "type": "object",
+          "properties": {
+            "index": {
+              "$ref": "#/$defs/index"
+            },
+            "type_args": {
+              "$ref": "#/$defs/types"
+            }
+          },
+          "required": [
+            "index",
+            "type_args"
+          ],
+          "additionalProperties": false
+        },
+        "global": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/name"
+            },
+            "type_args": {
+              "$ref": "#/$defs/types"
+            }
+          },
+          "required": [
+            "name",
+            "type_args"
+          ],
+          "additionalProperties": false
+        },
+        "lam": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/type"
+              }
+            },
+            "body": {
+              "$ref": "#/$defs/expr"
+            }
+          },
+          "required": [
+            "params",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        "app": {
+          "type": "object",
+          "properties": {
+            "fn": {
+              "$ref": "#/$defs/expr"
+            },
+            "args": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/expr"
+              }
+            }
+          },
+          "required": [
+            "fn",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        "let": {
+          "type": "object",
+          "properties": {
+            "forall": {
+              "$ref": "#/$defs/names"
+            },
+            "value_type": {
+              "$ref": "#/$defs/type"
+            },
+            "value": {
+              "$ref": "#/$defs/expr"
+            },
+            "body": {
+              "$ref": "#/$defs/expr"
+            }
+          },
+          "required": [
+            "forall",
+            "value_type",
+            "value",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        "letrec": {
+          "type": "object",
+          "properties": {
+            "forall": {
+              "$ref": "#/$defs/names"
+            },
+            "bindings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "$ref": "#/$defs/type"
+                  },
+                  "lam": {
+                    "$ref": "#/$defs/expr"
+                  }
+                },
+                "required": [
+                  "type",
+                  "lam"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "body": {
+              "$ref": "#/$defs/expr"
+            }
+          },
+          "required": [
+            "forall",
+            "bindings",
+            "body"
+          ],
+          "additionalProperties": false
+        },
+        "match": {
+          "type": "object",
+          "properties": {
+            "forall": {
+              "$ref": "#/$defs/names"
+            },
+            "scrutinee": {
+              "$ref": "#/$defs/expr"
+            },
+            "cases": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pattern": {
+                    "$ref": "#/$defs/pattern"
+                  },
+                  "guard": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/$defs/expr"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "$ref": "#/$defs/expr"
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "guard",
+                  "body"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "forall",
+            "scrutinee",
+            "cases"
+          ],
+          "additionalProperties": false
+        },
+        "tuple": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/expr"
+          }
+        },
+        "record": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/name"
+            },
+            "type_args": {
+              "$ref": "#/$defs/types"
+            },
+            "fields": {
+              "$ref": "#/$defs/fieldValues"
+            }
+          },
+          "required": [
+            "type",
+            "type_args",
+            "fields"
+          ],
+          "additionalProperties": false
+        },
+        "update": {
+          "type": "object",
+          "properties": {
+            "base": {
+              "$ref": "#/$defs/expr"
+            },
+            "fields": {
+              "$ref": "#/$defs/fieldValues"
+            }
+          },
+          "required": [
+            "base",
+            "fields"
+          ],
+          "additionalProperties": false
+        },
+        "field": {
+          "type": "object",
+          "properties": {
+            "expr": {
+              "$ref": "#/$defs/expr"
+            },
+            "name": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "required": [
+            "expr",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "construct": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/name"
+            },
+            "tag": {
+              "$ref": "#/$defs/name"
+            },
+            "index": {
+              "$ref": "#/$defs/index"
+            },
+            "type_args": {
+              "$ref": "#/$defs/types"
+            },
+            "arg": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/expr"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "tag",
+            "index",
+            "type_args",
+            "arg"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "definition": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "value": {
+          "type": "object",
+          "properties": {
+            "forall": {
+              "$ref": "#/$defs/names"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "pattern": {
+              "$ref": "#/$defs/pattern"
+            },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slot": {
+                    "$ref": "#/$defs/index"
+                  },
+                  "name": {
+                    "$ref": "#/$defs/name"
+                  }
+                },
+                "required": [
+                  "slot",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "expr": {
+              "$ref": "#/$defs/expr"
+            }
+          },
+          "required": [
+            "forall",
+            "type",
+            "pattern",
+            "targets",
+            "expr"
+          ],
+          "additionalProperties": false
+        },
+        "rec": {
+          "type": "object",
+          "properties": {
+            "forall": {
+              "$ref": "#/$defs/names"
+            },
+            "bindings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "$ref": "#/$defs/name"
+                  },
+                  "type": {
+                    "$ref": "#/$defs/type"
+                  },
+                  "lam": {
+                    "$ref": "#/$defs/expr"
+                  }
+                },
+                "required": [
+                  "name",
+                  "type",
+                  "lam"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "forall",
+            "bindings"
+          ],
+          "additionalProperties": false
+        },
+        "native": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/name"
+            },
+            "symbol": {
+              "$ref": "#/$defs/name"
+            },
+            "arity": {
+              "$ref": "#/$defs/index"
+            },
+            "forall": {
+              "$ref": "#/$defs/names"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            }
+          },
+          "required": [
+            "name",
+            "symbol",
+            "arity",
+            "forall",
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

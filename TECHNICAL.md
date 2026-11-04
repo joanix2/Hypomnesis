@@ -303,15 +303,16 @@ FICHIER.json [--sortie DIR]` les régénère sans relancer le banc ni appeler Ol
 ## Certificats
 
 `src/hypomnesis/certify/` exporte la Core IR élaborée et annotée (prélude compris) en JSON,
-format `certificate/1.0.0` validé par `contracts/schemas/certificate-1.0.0.json` :
+format `certificate/1.1.0` validé par `contracts/schemas/certificate-1.1.0.json`
+(lecture 1.0 conservée) :
 
 - les variables locales sont des indices de de Bruijn (0 = lieur le plus proche) ;
 - les variables de motif sont des emplacements numérotés (`{"bind": k}`) ;
 - les variables de type sont nommées par définition et liées par des listes `forall` ;
-- les littéraux portent leur sorte.
+- les littéraux portent leur sorte ; les floats finis portent aussi leurs bits binary64.
 
 `load.py` fait l'opération inverse : il valide d'abord le certificat entier, une seule fois, par
-`SchemaRegistry` et `CERTIFICATE_SCHEMA_ID` (le JSON Schema est l'unique description de la
+`SchemaRegistry` et le schéma de leur version (le JSON Schema est l'unique description de la
 structure ; les problèmes deviennent une `CertificateError` qui garde le chemin JSON), puis ne
 fait plus que déconstruire. Il garde en code les contrôles qu'un schéma n'exprime pas : indice de
 de Bruijn hors portée, variable de type non liée, emplacement cible non lié, numérotation des
@@ -757,7 +758,7 @@ HYP-027 : `check --certify` appelle le checker Lean avec découverte explicite
 et délai fini. `_load_files` renvoie la session réellement chargée pour ne
 pas certifier un prélude vide après une entrée de langage. Le JSON final
 attend la fin du contrôle. Tests d'élaboration falsifiée et couverture
-explicite des six exemples : un accepté, cinq hors fragment. Le pont est
+explicite des six exemples : cinq acceptés, tour bloqué sur les alternatives. Le pont est
 opérationnel, mais HYP-027 reste ouvert pour la couverture totale, dépendant
 des extensions formelles. Guide : [certification.md](docs/verification/certification.md).
 
@@ -771,8 +772,19 @@ même permutés ou sous une garde. Champs inconnus, doublons, manques, mauvais
 types et confusion nominale sont refusés ; chaque définition émise est comparée
 à son annotation, même si elle n'est jamais utilisée. L'exemple deposit prouve
 150 et le propriétaire inchangé, encodé en points de code : les strings
-natives restent hors fragment. Audit : seulement propext et Quot.sound,
-comme avant. Aucune preuve complète de raffinement du décodeur/Python revendiquée.
+natives étaient encore hors fragment à cette étape. Aucune preuve complète
+de raffinement du décodeur/Python revendiquée.
+
+HYP-150 : Float Lean 4.35 possède un modèle logique binary64 pour les quatre
+opérations arithmétiques couvertes. String reste Unicode. BinOp fixe domaines
+et résultats ; le certificat ne peut inventer une signature. Les comparaisons
+d'ordre suivent le compare total Python, égalité IEEE distincte pour NaN.
+Division/modulo entiers : tdiv/tmod (vers zéro), zéro donne Res.error ; failwith
+est également une erreur explicite. P1–P7 sont étendus, evalOp_ty audité (P24).
+L'audit ajoute Classical.choice du modèle Float standard aux dépendances
+propext/Quot.sound, conformément à la politique existante, sans axiome maison.
+Le format 1.1 porte les bits des littéraux, y compris -0.0 ; concordance/finis/
+bornes contrôlés dans les deux lecteurs. Le schéma 1.0 reste immuable.
 
 ## Problem IR déclarative (HYP-051)
 

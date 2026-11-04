@@ -18,6 +18,8 @@ def patTypeOf (sig : Sig) : Pat → Ty → Option Ctx
   | .var, t => some [t]
   | .int _, .int => some []
   | .bool _, .bool => some []
+  | .float _, .float => some []
+  | .string _, .string => some []
   | .pair p₁ p₂, .prod t₁ t₂ =>
     match patTypeOf sig p₁ t₁, patTypeOf sig p₂ t₂ with
     | some b₁, some b₂ => some (b₂ ++ b₁)
@@ -35,6 +37,8 @@ def typeOf (sig : Sig) (Γ : Ctx) : Expr → Option Ty
   | .var i => Γ[i]?
   | .int _ => some .int
   | .bool _ => some .bool
+  | .float _ => some .float
+  | .string _ => some .string
   | .unit => some .unit
   | .lam t b => (typeOf sig (t :: Γ) b).map (.arrow t)
   | .fix t₁ t₂ b =>
@@ -67,7 +71,7 @@ def typeOf (sig : Sig) (Γ : Ctx) : Expr → Option Ty
     | _ => none
   | .binop op a b =>
     match typeOf sig Γ a, typeOf sig Γ b with
-    | some .int, some .int => some op.result
+    | some ta, some tb => if ta = op.domain ∧ tb = op.domain then some op.result else none
     | _, _ => none
   | .construct d c x =>
     match sig[d]? with
@@ -87,6 +91,10 @@ def typeOf (sig : Sig) (Γ : Ctx) : Expr → Option Ty
       | none => none
     | none => none
   | .fail t => some t
+  | .raise t message =>
+    match typeOf sig Γ message with
+    | some .string => some t
+    | _ => none
 
 variable {sig : Sig}
 
@@ -101,6 +109,12 @@ theorem patTypeOf_sound {p : Pat} {t : Ty} {bs : Ctx} (h : patTypeOf sig p t = s
   | bool b =>
     cases t <;> simp [patTypeOf] at h
     subst h; exact .bool
+  | float f =>
+    cases t <;> simp [patTypeOf] at h
+    subst h; exact .float
+  | string s =>
+    cases t <;> simp [patTypeOf] at h
+    subst h; exact .string
   | pair p₁ p₂ ih₁ ih₂ =>
     cases t with
     | prod t₁ t₂ =>
@@ -127,7 +141,7 @@ theorem patTypeOf_sound {p : Pat} {t : Ty} {bs : Ctx} (h : patTypeOf sig p t = s
 theorem patTypeOf_complete {p : Pat} {t : Ty} {bs : Ctx} (h : PatTy sig p t bs) :
     patTypeOf sig p t = some bs := by
   induction h with
-  | wild | var | int | bool => rfl
+  | wild | var | int | bool | float | string => rfl
   | pair _ _ ih₁ ih₂ => simp [patTypeOf, ih₁, ih₂]
   | ctor hd hc _ ih => simp [patTypeOf, hd, hc, ih]
 
@@ -138,6 +152,8 @@ theorem typeOf_sound {Γ : Ctx} {e : Expr} {t : Ty} (h : typeOf sig Γ e = some 
   | var i => exact .var h
   | int => simp [typeOf] at h; subst h; exact .int
   | bool => simp [typeOf] at h; subst h; exact .bool
+  | float => simp [typeOf] at h; subst h; exact .float
+  | string => simp [typeOf] at h; subst h; exact .string
   | unit => simp [typeOf] at h; subst h; exact .unit
   | lam t₁ b ih =>
     simp only [typeOf, Option.map_eq_some_iff] at h
@@ -212,10 +228,14 @@ theorem typeOf_sound {Γ : Ctx} {e : Expr} {t : Ty} (h : typeOf sig Γ e = some 
   | binop op a b iha ihb =>
     simp only [typeOf] at h
     split at h
-    · rename_i ha hb
-      simp at h
-      subst h
-      exact .binop (iha ha) (ihb hb)
+    · rename_i ta tb ha hb
+      split at h
+      · rename_i hab
+        rcases hab with ⟨rfl, rfl⟩
+        simp at h
+        subst h
+        exact .binop (iha ha) (ihb hb)
+      · simp at h
     · simp at h
   | construct d c x ih =>
     simp only [typeOf] at h
@@ -251,13 +271,21 @@ theorem typeOf_sound {Γ : Ctx} {e : Expr} {t : Ty} (h : typeOf sig Γ e = some 
       · simp at h
     · simp at h
   | fail t' => simp [typeOf] at h; subst h; exact .fail
+  | raise t' message ih =>
+    simp only [typeOf] at h
+    split at h
+    · rename_i hm
+      simp at h
+      subst h
+      exact .raise (ih hm)
+    · simp at h
 
 /-- **Complétude** : tout jugement dérivable est trouvé par `typeOf`. -/
 theorem typeOf_complete {Γ : Ctx} {e : Expr} {t : Ty} (h : HasType sig Γ e t) :
     typeOf sig Γ e = some t := by
   induction h with
   | var h => exact h
-  | int | bool | unit | fail => rfl
+  | int | bool | float | string | unit | fail => rfl
   | lam _ ih => simp [typeOf, ih]
   | fix _ ih => simp [typeOf, ih]
   | app _ _ ihf iha => simp [typeOf, ihf, iha]
@@ -269,6 +297,7 @@ theorem typeOf_complete {Γ : Ctx} {e : Expr} {t : Ty} (h : HasType sig Γ e t) 
   | binop _ _ iha ihb => simp [typeOf, iha, ihb]
   | construct hd hc _ ih => simp [typeOf, hd, hc, ih]
   | case _ hp _ _ ihx ih₁ ih₂ => simp [typeOf, ihx, patTypeOf_complete hp, ih₁, ih₂]
+  | raise _ ih => simp [typeOf, ih]
 
 /-- Le typage du fragment est décidable. -/
 theorem hasType_iff_typeOf {Γ : Ctx} {e : Expr} {t : Ty} :

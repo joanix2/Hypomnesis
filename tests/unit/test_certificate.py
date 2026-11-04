@@ -1,6 +1,8 @@
 """Certificats JSON de la Core IR élaborée (HYP-025)."""
 
 import json
+import math
+import struct
 from pathlib import Path
 
 import pytest
@@ -110,6 +112,42 @@ def test_literals_keep_their_kind():
     assert kinds == ["int", "float", "bool", "string", "unit"]
 
 
+@pytest.mark.parametrize("value", [-0.0, math.nextafter(0.0, 1.0), 0.1, 1.7976931348623157e308])
+def test_binary64_literal_round_trip_preserves_bits(value):
+    source = f"let x = {'-.' + repr(-value) if math.copysign(1, value) < 0 else repr(value)}"
+    session = session_for([])
+    session.load(source)
+    document = session_certificate(session)
+    lit = document["definitions"][-1]["value"]["expr"]["lit"]
+    assert lit["bits"] == int.from_bytes(struct.pack(">d", value))
+    reloaded = load_definitions(json.loads(json.dumps(document)))
+    interpreter = Interpreter(session.natives)
+    run_deep(lambda: interpreter.execute(reloaded))
+    actual = interpreter.globals["x"]
+    assert isinstance(actual, float)
+    assert struct.pack(">d", actual) == struct.pack(">d", value)
+
+
+def test_legacy_float_certificate_can_be_read_and_reexported():
+    document = certificate_of("let x = 0.5")
+    document["certificate_version"] = "1.0.0"
+    document = json.loads(
+        json.dumps(document), object_hook=lambda obj: {k: v for k, v in obj.items() if k != "bits"}
+    )
+    definitions = load_definitions(document)
+    session = Session()
+    again = export_certificate(session.checker.types_by_qname.values(), definitions)
+    assert again["certificate_version"] == "1.1.0"
+    assert again["definitions"][-1]["value"]["expr"]["lit"]["bits"] == 0x3FE0000000000000
+
+
+def test_python_loader_rejects_mismatched_float_bits():
+    document = certificate_of("let x = 0.5")
+    document["definitions"][-1]["value"]["expr"]["lit"]["bits"] = 0x3FF0000000000000
+    with pytest.raises(CertificateError, match="bits disagree"):
+        load_definitions(document)
+
+
 def test_loader_rejects_out_of_scope_index():
     certificate = certificate_of("let id x = x")
     lam = certificate["definitions"][-1]["value"]["expr"]["lam"]
@@ -163,7 +201,7 @@ INVALID_STRUCTURES = {
     "extra field": (_break_extra_field, "Additional properties are not allowed"),
     "wrong type": (_break_wrong_type, "is not of type 'integer'"),
     "two keys": (_break_two_keys, "too many properties"),
-    "unknown version": (_break_version, "'1.0.0' was expected"),
+    "unknown version": (_break_version, "unsupported certificate version"),
 }
 INVALID_PATHS = {
     "missing field": ".value",

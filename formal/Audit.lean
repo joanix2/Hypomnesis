@@ -9,6 +9,7 @@ import Hypomnesis
 open Hypomnesis.Core Hypomnesis.Epistemics
 
 #print axioms eval_safe
+#print axioms evalOp_ty
 #print axioms closed_never_stuck
 #print axioms typeOf_sound
 #print axioms typeOf_complete

@@ -8,6 +8,8 @@ the original.
 
 from __future__ import annotations
 
+import math
+import struct
 from collections.abc import Sequence
 from functools import cache
 from typing import Any, cast
@@ -25,7 +27,13 @@ def load_definitions(certificate: Json) -> list[ir.Definition]:
     holds, the loader only deconstructs. What a schema cannot say (scopes,
     bound type variables, slot numbering) is checked while loading.
     """
-    issues = _registry().issues(CERTIFICATE_SCHEMA_ID, certificate)
+    version = certificate.get("certificate_version")
+    if version not in ("1.0.0", "1.1.0"):
+        raise CertificateError(
+            f"$.certificate_version: unsupported certificate version: {version!r}"
+        )
+    schema = CERTIFICATE_SCHEMA_ID.rsplit("/", 1)[0] + "/" + str(version)
+    issues = _registry().issues(schema, certificate)
     if issues:
         raise CertificateError("invalid certificate: " + "; ".join(map(str, issues)))
     return [_Loader().definition(d) for d in cast(list[Any], certificate["definitions"])]
@@ -51,6 +59,13 @@ def _literal(lit: Any) -> object:
     if kind == "unit":
         return ()
     if kind == "float":
+        if "bits" in lit:
+            value = struct.unpack(">d", int(lit["bits"]).to_bytes(8, "big"))[0]
+            if not math.isfinite(value) or struct.pack(">d", float(lit["value"])) != struct.pack(
+                ">d", value
+            ):
+                raise CertificateError("float literal bits disagree with its finite value")
+            return value
         return float(value)
     if kind == "int":
         return int(value)  # the schema accepts 1.0 as an integer

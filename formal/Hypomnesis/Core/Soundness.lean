@@ -17,6 +17,8 @@ mutual
   inductive ValTy (sig : Sig) : Val → Ty → Prop where
     | int {n} : ValTy sig (.int n) .int
     | bool {b} : ValTy sig (.bool b) .bool
+    | float {f} : ValTy sig (.float f) .float
+    | string {s} : ValTy sig (.string s) .string
     | unit : ValTy sig .unit .unit
     | clo {env Γ t₁ t₂ b} :
         EnvTy sig env Γ → HasType sig (t₁ :: Γ) b t₂ → ValTy sig (.clo env b) (.arrow t₁ t₂)
@@ -34,11 +36,12 @@ mutual
 end
 
 /-- Un résultat est sûr à un type donné : valeur de ce type, budget épuisé, ou
-échec de filtrage. Seul `stuck` est exclu. -/
+échec de filtrage ou erreur explicite de primitive. Seul `stuck` est exclu. -/
 def Safe (sig : Sig) : Res → Ty → Prop
   | .ok v, t => ValTy sig v t
   | .timeout, _ => True
   | .matchFail, _ => True
+  | .error _, _ => True
   | .stuck, _ => False
 
 variable {sig : Sig}
@@ -85,6 +88,18 @@ theorem matchPat_sound {p : Pat} {t : Ty} {bs : Ctx} (hp : PatTy sig p t bs) :
     simp only [matchPat] at h
     split at h <;> simp at h
     subst h; exact EnvTy.nil
+  | float =>
+    intro v vs hv h
+    cases hv
+    simp only [matchPat] at h
+    split at h <;> simp at h
+    subst h; exact EnvTy.nil
+  | string =>
+    intro v vs hv h
+    cases hv
+    simp only [matchPat] at h
+    split at h <;> simp at h
+    subst h; exact EnvTy.nil
   | pair _ _ ih₁ ih₂ =>
     intro v vs hv h
     cases hv with
@@ -118,9 +133,17 @@ theorem Safe.bind {r : Res} {k : Val → Res} {t₁ t₂ : Ty}
   | stuck => exact absurd hr id
   | timeout => trivial
   | matchFail => trivial
+  | error => trivial
 
-theorem evalOp_ty (op : BinOp) (a b : Int) : ValTy sig (evalOp op a b) op.result := by
-  cases op <;> constructor
+theorem evalOp_ty (op : BinOp) {a b : Val}
+    (ha : ValTy sig a op.domain) (hb : ValTy sig b op.domain) :
+    Safe sig (evalOp op a b) op.result := by
+  cases op <;> cases ha <;> cases hb <;> simp only [evalOp] <;> first
+    | exact ValTy.int
+    | exact ValTy.bool
+    | exact ValTy.float
+    | exact ValTy.string
+    | split <;> first | trivial | exact ValTy.int
 
 /-- **Sûreté.** Pour tout budget, un terme bien typé évalué dans un
 environnement bien typé ne se bloque pas, et toute valeur produite a le type
@@ -138,6 +161,8 @@ theorem eval_safe (n : Nat) :
       simp [eval, hv, Safe, hvt]
     | int => exact ValTy.int
     | bool => exact ValTy.bool
+    | float => exact ValTy.float
+    | string => exact ValTy.string
     | unit => exact ValTy.unit
     | lam hb => exact ValTy.clo henv hb
     | fix hb => exact ValTy.rclo henv hb
@@ -167,9 +192,7 @@ theorem eval_safe (n : Nat) :
       | pair _ hb => exact hb
     | binop ha hb =>
       refine Safe.bind (ih henv ha) fun va hva => Safe.bind (ih henv hb) fun vb hvb => ?_
-      cases hva
-      cases hvb
-      exact evalOp_ty _ _ _
+      exact evalOp_ty _ hva hvb
     | construct hd hc he =>
       exact Safe.bind (ih henv he) fun v hv => ValTy.con hd hc hv
     | case hx hp h₁ h₂ =>
@@ -182,6 +205,10 @@ theorem eval_safe (n : Nat) :
         exact ih (EnvTy.append (matchPat_sound hp hv hm) henv) h₁
       · exact ih henv h₂
     | fail => trivial
+    | raise hm =>
+      refine Safe.bind (ih henv hm) fun v hv => ?_
+      cases hv
+      trivial
 
 /-- Corollaire pour un programme clos : jamais `stuck`. -/
 theorem closed_never_stuck {e : Expr} {t : Ty} (h : HasType sig [] e t) (n : Nat) :

@@ -1,8 +1,8 @@
-"""Export of the annotated Core IR as a JSON certificate (``certificate/1.0.0``).
+"""Export of the annotated Core IR as a JSON certificate (``certificate/1.1.0``).
 
 The certificate is what an independent checker (the verified Lean checker of
 HYP-026) re-typechecks without inference. Format, validated by
-``contracts/schemas/certificate-1.0.0.json``:
+``contracts/schemas/certificate-1.1.0.json``:
 
 * **Types** are ``{"con": name, "args": [...]}`` (including ``->`` and ``*``)
   or ``{"var": name}``; in type declarations, parameters are ``{"param": i}``.
@@ -24,14 +24,15 @@ HYP-026) re-typechecks without inference. Format, validated by
 from __future__ import annotations
 
 import math
+import struct
 from collections.abc import Iterable, Sequence
 
 from hypomnesis.ir import core as ir
 from hypomnesis.language.typesystem.infer import TypeInfo
 from hypomnesis.language.typesystem.types import TCon, TGen, TVar, Type, prune
 
-CERTIFICATE_VERSION = "1.0.0"
-CERTIFICATE_SCHEMA_ID = "https://schemas.example.org/hypomnesis/certificate/1.0.0"
+CERTIFICATE_VERSION = "1.1.0"
+CERTIFICATE_SCHEMA_ID = "https://schemas.example.org/hypomnesis/certificate/1.1.0"
 
 Json = dict[str, object]
 
@@ -291,7 +292,7 @@ def _literal(value: object) -> Json:
     if isinstance(value, float):
         if not math.isfinite(value):
             raise CertificateError("non-finite float literal")
-        return {"kind": "float", "value": value}
+        return {"kind": "float", "value": value, "bits": int.from_bytes(struct.pack(">d", value))}
     if isinstance(value, str):
         return {"kind": "string", "value": value}
     if value == ():

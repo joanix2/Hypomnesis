@@ -36,11 +36,11 @@ tous les fichiers de `demo/examples`. Le tableau ci-dessous est une mesure,
 | Exemple | Code Lean | Premier obstacle |
 |---|---|---|
 | basics/certifiable.hyp | 0 | accepté |
-| basics/tour.hyp | 2 | type string |
-| knowledge/plaque.hyp | 2 | type string |
-| knowledge/regles.hyp | 2 | type float |
-| mechanics/units.hyp | 2 | type float |
-| mechanics/plate.hyp, après units.hyp | 2 | type float |
+| basics/tour.hyp | 2 | motif alternatif |
+| knowledge/plaque.hyp | 0 | accepté |
+| knowledge/regles.hyp | 0 | accepté |
+| mechanics/units.hyp | 0 | accepté |
+| mechanics/plate.hyp, après units.hyp | 0 | accepté |
 
 Une assertion vérifie que chaque nouveau fichier d'exemple possède un cas
 de couverture explicite. Les obstacles ci-dessus sont les premiers rencontrés,
@@ -49,8 +49,9 @@ polymorphisme peuvent ensuite nécessiter des extensions).
 
 La certification de **tous** les exemples n'est donc pas terminée.
 HYP-021 couvre désormais les records nominaux, accès, mises à jour et motifs
-partiels (y compris les gardes et les champs permutés). HYP-150 traite les littéraux réels/chaînes
-et leurs primitives. Le pont HYP-027 est utilisable, mais son périmètre
+partiels (y compris les gardes et les champs permutés). HYP-150 couvre les
+flottants binary64, les chaînes Unicode et les primitives scalaires nécessaires.
+Les alternatives de motifs restent à traiter. Le pont HYP-027 est utilisable, mais son périmètre
 global reste ouvert tant que ces formes ne sont pas couvertes sans affaiblir
 le checker ni ses théorèmes.
 
@@ -58,3 +59,20 @@ P3 garantit le typage du terme **traduit et accepté dans le fragment Lean**.
 Ni le décodage ni le runtime Python n'ont de preuve complète de raffinement :
 le chemin de bout en bout combine théorème Lean et frontières testées.
 Voir [le catalogue](proprietes.md), pas de nouvelle preuve universelle revendiquée.
+
+## Scalaires et format 1.1
+
+L'export écrit `certificate/1.1.0`. Chaque littéral float fini porte ses
+64 bits IEEE dans `bits`, contrôlés contre sa valeur numérique. Cela
+préserve notamment le zéro négatif, perdu par le parseur numérique JSON
+Lean. Le loader Python lit encore 1.0 et peut réexporter en 1.1 ; Lean
+refuse explicitement les anciens littéraux float sans bits, au lieu de
+leur attribuer une valeur approximative. Le schéma 1.0 n'est pas modifié.
+
+Arithmétique Float de Lean 4.35 : binary64, pas nombres réels mathématiques.
+L'égalité est IEEE (NaN n'est pas égal à lui-même), mais `<`, `<=`, `>` et
+`>=` suivent **compare** du runtime : NaN est classé avant les autres valeurs.
+La division flottante par zéro conserve inf/NaN et le signe du zéro.
+La division entière tronque vers zéro ; division/modulo entiers par zéro
+et failwith produisent `Res.error`, distinct de stuck et Match_failure.
+Les opérations non inscrites au catalogue fermé restent hors fragment.

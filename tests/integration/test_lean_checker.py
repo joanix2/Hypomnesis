@@ -134,10 +134,10 @@ def test_cli_refuses_injected_miselaboration(tmp_path, capsys, monkeypatch):
 CASES = (
     (("basics/certifiable.hyp",), 0),
     (("basics/tour.hyp",), 2),
-    (("knowledge/plaque.hyp",), 2),
-    (("knowledge/regles.hyp",), 2),
-    (("mechanics/units.hyp",), 2),
-    (("mechanics/units.hyp", "mechanics/plate.hyp"), 2),
+    (("knowledge/plaque.hyp",), 0),
+    (("knowledge/regles.hyp",), 0),
+    (("mechanics/units.hyp",), 0),
+    (("mechanics/units.hyp", "mechanics/plate.hyp"), 0),
 )
 
 
@@ -243,3 +243,68 @@ def test_record_certificate_mutations_are_rejected(tmp_path, mutation):
         record["type"] = "B.t"
     result = run("check", document, tmp_path)
     assert result.returncode in (1, 3), result.stderr
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "let answer = if 0.1 +. 0.2 <> 0.3 then 99991 else 99992",
+        "let answer = if 1e-323 /. 5e-324 = 2.0 then 99991 else 99992",
+        "let answer = if 1.0 /. (-.0.0) < 0.0 then 99991 else 99992",
+        "let n = 0.0 /. 0.0\n"
+        "let answer = if n <> n && n <= 0.0 && not (n >= 0.0) && n <= n && not (n < n) "
+        "&& compare n n = 0 && compare n 0.0 < 0 then 99991 else 99992",
+        "let huge = 1e308 *. 1e308\n"
+        "let answer = if huge > 1e308 && huge = 1.0 /. 0.0 then 99991 else 99992",
+        'let answer = match "été" ^ "☀" with "été☀" -> 99991 | _ -> 99992',
+        "let answer = match 1.5 with 1.0 -> 99992 | 1.5 -> 99991 | _ -> 99992",
+        "let answer = if (-7) / 3 = -2 && (-7) mod 3 = -1 then 99991 else 99992",
+    ],
+)
+def test_scalar_semantics_agree_with_python(tmp_path, source):
+    session = Session()
+    session.load(source)
+    assert session.value("answer") == 99991
+    result = run("eval", session_certificate(session), tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "99991" in result.stdout and "99992" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("let answer = 1 / 0", "Division_by_zero"),
+        ("let answer = 1 mod 0", "Division_by_zero"),
+        ('let answer = 1 + failwith "explicite"', "Failure: explicite"),
+    ],
+)
+def test_primitive_errors_remain_distinct_from_stuck_and_match_failure(tmp_path, source, expected):
+    session = Session()
+    session.check(source)
+    result = run("eval", session_certificate(session), tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == expected
+
+
+@pytest.mark.parametrize("bits", [-1, 2**64, 0x7FF8000000000000, 0x3FF0000000000000])
+def test_float_literal_bits_are_checked(tmp_path, bits):
+    session = Session()
+    session.check("let x = 0.5")
+    document = session_certificate(session)
+    document["definitions"][-1]["value"]["expr"]["lit"]["bits"] = bits
+    result = run("check", document, tmp_path)
+    assert result.returncode == 3, result.stderr
+
+
+def test_native_signatures_are_not_trusted_from_the_certificate(tmp_path):
+    session = Session()
+    session.check("let x = 1.0 +. 2.0")
+    document = session_certificate(session)
+    native = next(
+        d["native"]
+        for d in document["definitions"]
+        if d.get("native", {}).get("symbol") == "float.add"
+    )
+    native["symbol"] = "int.add"
+    result = run("check", document, tmp_path)
+    assert result.returncode == 2, result.stderr

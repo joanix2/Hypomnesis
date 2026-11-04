@@ -16,6 +16,8 @@ namespace Hypomnesis.Core
 inductive Val where
   | int (n : Int)
   | bool (b : Bool)
+  | float (f : Float)
+  | string (s : String)
   | unit
   | clo (env : List Val) (body : Expr)
   | rclo (env : List Val) (body : Expr)
@@ -28,6 +30,7 @@ inductive Res where
   | stuck
   | timeout
   | matchFail
+  | error (message : String)
   deriving Repr
 
 def Res.bind : Res → (Val → Res) → Res
@@ -35,13 +38,36 @@ def Res.bind : Res → (Val → Res) → Res
   | .stuck, _ => .stuck
   | .timeout, _ => .timeout
   | .matchFail, _ => .matchFail
+  | .error message, _ => .error message
 
-def evalOp : BinOp → Int → Int → Val
-  | .add, a, b => .int (a + b)
-  | .sub, a, b => .int (a - b)
-  | .mul, a, b => .int (a * b)
-  | .eq, a, b => .bool (decide (a = b))
-  | .lt, a, b => .bool (decide (a < b))
+def floatCompare (a b : Float) : Int :=
+  if a.isNaN then (if b.isNaN then 0 else -1)
+  else if b.isNaN then 1 else if a < b then -1 else if b < a then 1 else 0
+
+def evalOp : BinOp → Val → Val → Res
+  | .add, .int a, .int b => .ok (.int (a + b))
+  | .sub, .int a, .int b => .ok (.int (a - b))
+  | .mul, .int a, .int b => .ok (.int (a * b))
+  | .div, .int a, .int b =>
+    if b == 0 then .error "Division_by_zero" else .ok (.int (a.tdiv b))
+  | .mod, .int a, .int b =>
+    if b == 0 then .error "Division_by_zero" else .ok (.int (a.tmod b))
+  | .eq, .int a, .int b => .ok (.bool (decide (a = b)))
+  | .lt, .int a, .int b => .ok (.bool (decide (a < b)))
+  | .fadd, .float a, .float b => .ok (.float (a + b))
+  | .fsub, .float a, .float b => .ok (.float (a - b))
+  | .fmul, .float a, .float b => .ok (.float (a * b))
+  | .fdiv, .float a, .float b => .ok (.float (a / b))
+  | .feq, .float a, .float b => .ok (.bool (a == b))
+  | .flt, .float a, .float b => .ok (.bool (floatCompare a b < 0))
+  | .fle, .float a, .float b => .ok (.bool (floatCompare a b <= 0))
+  | .fcompare, .float a, .float b => .ok (.int (floatCompare a b))
+  | .sconcat, .string a, .string b => .ok (.string (a ++ b))
+  | .seq, .string a, .string b => .ok (.bool (a == b))
+  | .slt, .string a, .string b => .ok (.bool (a < b))
+  | .scompare, .string a, .string b =>
+    .ok (.int (if a < b then -1 else if b < a then 1 else 0))
+  | _, _, _ => .stuck
 
 /-- Filtrage : les valeurs liées, la plus récente d'abord, ou `none`. -/
 def matchPat : Pat → Val → Option (List Val)
@@ -49,6 +75,8 @@ def matchPat : Pat → Val → Option (List Val)
   | .var, v => some [v]
   | .int n, .int m => if n = m then some [] else none
   | .bool b, .bool b' => if b = b' then some [] else none
+  | .float a, .float b => if a == b then some [] else none
+  | .string a, .string b => if a == b then some [] else none
   | .pair p₁ p₂, .pair a b =>
     match matchPat p₁ a, matchPat p₂ b with
     | some vs₁, some vs₂ => some (vs₂ ++ vs₁)
@@ -66,6 +94,8 @@ def eval : Nat → List Val → Expr → Res
       | none => .stuck
     | .int k => .ok (.int k)
     | .bool b => .ok (.bool b)
+    | .float f => .ok (.float f)
+    | .string s => .ok (.string s)
     | .unit => .ok .unit
     | .lam _ b => .ok (.clo env b)
     | .fix _ _ b => .ok (.rclo env b)
@@ -99,9 +129,7 @@ def eval : Nat → List Val → Expr → Res
     | .binop op a b =>
       (eval n env a).bind fun va =>
       (eval n env b).bind fun vb =>
-        match va, vb with
-        | .int x, .int y => .ok (evalOp op x y)
-        | _, _ => .stuck
+        evalOp op va vb
     | .construct _ c x => (eval n env x).bind fun v => .ok (.con c v)
     | .case x p e₁ e₂ =>
       (eval n env x).bind fun v =>
@@ -109,5 +137,10 @@ def eval : Nat → List Val → Expr → Res
         | some vs => eval n (vs ++ env) e₁
         | none => eval n env e₂
     | .fail _ => .matchFail
+    | .raise _ message =>
+      (eval n env message).bind fun v =>
+        match v with
+        | .string s => .error ("Failure: " ++ s)
+        | _ => .stuck
 
 end Hypomnesis.Core

@@ -50,7 +50,7 @@ l'interpréteur doit, **dans le même changement** :
 1. ✅ **Annoter l'élaboration** (HYP-024). `Checker` enregistre le type de chaque paramètre de
    lambda, les quantificateurs de chaque `let` et les instanciations de schémas polymorphes.
 2. ✅ **Exporter** (HYP-025). La Core IR est traduite en indices de de Bruijn et sérialisée en
-   JSON, selon un schéma versionné (`contracts/schemas/certificate-1.0.0.json`), ce qui
+   JSON, selon un schéma versionné (`contracts/schemas/certificate-1.1.0.json`, lecture 1.0 conservée), ce qui
    réutilise l'ADR 0004. CLI : `hypomnesis check --emit-certificate`.
 3. ✅ **Vérifier** (HYP-026). L'exécutable Lean `hypomnesis-check` relit le certificat, le
    traduit dans le fragment et applique `typeOf`. Le décodeur (`formal/Hypomnesis/Certificate.lean`)

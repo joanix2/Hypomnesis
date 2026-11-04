@@ -9,6 +9,7 @@ Stratégie (certificats, tests différentiels) : [docs/verification/strategie.md
 | `Hypomnesis/Core/Syntax.lean` | fragment de la Core IR (de Bruijn, lambdas annotées) |
 | `Hypomnesis/Core/Typing.lean` | typage déclaratif `HasType` |
 | `Hypomnesis/Core/Eval.lean` | interpréteur de référence à environnements et budget |
+| scalaires (Syntax, Typing, Eval, Check) | Float binary64, String Unicode, primitives fermées et erreurs explicites ; P1–P7 étendus, modèle Float standard audité |
 | `Hypomnesis/Core/Soundness.lean` | sûreté : un terme bien typé ne se bloque jamais |
 | `Hypomnesis/Core/Check.lean` | vérificateur exécutable, correct et complet ; décidabilité ; unicité |
 | `Hypomnesis/Core/Fuel.lean` | le budget ne change jamais un résultat obtenu |

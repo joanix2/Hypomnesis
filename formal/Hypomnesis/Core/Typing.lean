@@ -11,6 +11,8 @@ inductive PatTy (sig : Sig) : Pat → Ty → Ctx → Prop where
   | var {t} : PatTy sig .var t [t]
   | int {n} : PatTy sig (.int n) .int []
   | bool {b} : PatTy sig (.bool b) .bool []
+  | float {f} : PatTy sig (.float f) .float []
+  | string {s} : PatTy sig (.string s) .string []
   | pair {p₁ p₂ t₁ t₂ b₁ b₂} :
       PatTy sig p₁ t₁ b₁ → PatTy sig p₂ t₂ b₂ → PatTy sig (.pair p₁ p₂) (.prod t₁ t₂) (b₂ ++ b₁)
   | ctor {d c cs ta p bs} :
@@ -21,6 +23,8 @@ inductive HasType (sig : Sig) : Ctx → Expr → Ty → Prop where
   | var {Γ i t} : Γ[i]? = some t → HasType sig Γ (.var i) t
   | int {Γ n} : HasType sig Γ (.int n) .int
   | bool {Γ b} : HasType sig Γ (.bool b) .bool
+  | float {Γ f} : HasType sig Γ (.float f) .float
+  | string {Γ s} : HasType sig Γ (.string s) .string
   | unit {Γ} : HasType sig Γ .unit .unit
   | lam {Γ t₁ t₂ b} : HasType sig (t₁ :: Γ) b t₂ → HasType sig Γ (.lam t₁ b) (.arrow t₁ t₂)
   | fix {Γ t₁ t₂ b} :
@@ -37,7 +41,8 @@ inductive HasType (sig : Sig) : Ctx → Expr → Ty → Prop where
   | fst {Γ e t₁ t₂} : HasType sig Γ e (.prod t₁ t₂) → HasType sig Γ (.fst e) t₁
   | snd {Γ e t₁ t₂} : HasType sig Γ e (.prod t₁ t₂) → HasType sig Γ (.snd e) t₂
   | binop {Γ op a b} :
-      HasType sig Γ a .int → HasType sig Γ b .int → HasType sig Γ (.binop op a b) op.result
+      HasType sig Γ a op.domain → HasType sig Γ b op.domain →
+      HasType sig Γ (.binop op a b) op.result
   | construct {Γ d c cs ta e} :
       sig[d]? = some cs → cs[c]? = some ta → HasType sig Γ e ta →
       HasType sig Γ (.construct d c e) (.data d)
@@ -45,5 +50,7 @@ inductive HasType (sig : Sig) : Ctx → Expr → Ty → Prop where
       HasType sig Γ x tx → PatTy sig p tx bs → HasType sig (bs ++ Γ) e₁ t →
       HasType sig Γ e₂ t → HasType sig Γ (.case x p e₁ e₂) t
   | fail {Γ t} : HasType sig Γ (.fail t) t
+  | raise {Γ t message} :
+      HasType sig Γ message .string → HasType sig Γ (.raise t message) t
 
 end Hypomnesis.Core
