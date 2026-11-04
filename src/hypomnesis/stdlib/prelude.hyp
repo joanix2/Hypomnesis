@@ -225,6 +225,17 @@ module Problem = struct
     actions : action list;
     transitions : transition list;
   }
+
+  type sort = Real | Integer | Boolean
+  type typed_problem = { numeric : problem; sorts : (string * sort) list }
+  type scalar = Rational of (int * int) | IntegerValue of int | BooleanValue of bool
+  type verdict = Sat | Unsat | Unknown
+  type solution = {
+    verdict : verdict;
+    assignment : (string * scalar) list;
+    duration_ms : float;
+    reason : string option;
+  }
 end
 
 (* ---------------------------------------------------------------- json *)
@@ -345,6 +356,7 @@ module Effect = struct
     | Record of string * Json.t * string * support * (unit -> 'a t)
     | Retract of string * string * (string list -> 'a t)     (* key, reason -> invalidated *)
     | Note of string * (unit -> 'a t)                        (* report line *)
+    | SolveTyped of Problem.typed_problem * (Problem.solution -> 'a t)
 
   let return x = Done x
 
@@ -357,10 +369,12 @@ module Effect = struct
     | Record (key, v, m', s, k) -> Record (key, v, m', s, (fun u -> bind (k u) f))
     | Retract (key, why, k) -> Retract (key, why, (fun r -> bind (k r) f))
     | Note (text, k) -> Note (text, (fun u -> bind (k u) f))
+    | SolveTyped (p, k) -> SolveTyped (p, (fun r -> bind (k r) f))
 
   let observe sensor = Observe (sensor, return)
   let act actuator command = Act (actuator, to_json command, return)
   let solve problem = Solve (problem, return)
+  let solve_typed problem = SolveTyped (problem, return)
   let record key value meth support = Record (key, to_json value, meth, support, return)
   let retract key why = Retract (key, why, return)
   let note text = Note (text, return)

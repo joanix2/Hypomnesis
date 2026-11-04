@@ -30,7 +30,7 @@ from typing import Any
 from hypomnesis.backends import z3_solver
 from hypomnesis.effects.dispatcher import Actuator, Command, Dispatcher, Outcome, Payload
 from hypomnesis.effects.permissions import PermissionPolicy
-from hypomnesis.engine.bridge import to_problem
+from hypomnesis.engine.bridge import BridgeError, solution_value, to_problem
 from hypomnesis.engine.language import Language, LanguageError
 from hypomnesis.epistemics.knowledge import KnowledgeBase
 from hypomnesis.language.errors import EvaluationError
@@ -192,17 +192,20 @@ def run_procedure(
                 value = apply(
                     k, [python_to_json({"state": outcome.state, "result": outcome.result})]
                 )
-            elif op == "Solve":
+            elif op in ("Solve", "SolveTyped"):
                 problem, k = arg
                 p = to_problem(problem)
                 with tracer.span(
                     "solver.solve", solver=z3_solver.NAME, contraintes=len(p.constraints)
                 ):
                     solution = z3_solver.solve(p)
-                if solution.status == "sat" and solution.violations:
-                    raise EvaluationError(
-                        f"solution refusée par la vérification : {solution.violations}"
-                    )
+                try:
+                    checked = solution_value(p, solution)
+                except BridgeError as exc:
+                    raise EvaluationError(f"solution refusée par la vérification : {exc}") from exc
+                if op == "SolveTyped":
+                    value = apply(k, [checked])
+                    continue
                 answer: Value = NONE
                 if solution.status == "sat":
                     answer = _some(

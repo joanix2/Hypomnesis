@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/problem/1.1.0",
+  "title": "Typed Problem IR",
+  "type": "object",
+  "required": ["version", "description", "variables", "constraints", "target", "states", "actions", "transitions"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": "1.1.0"},
+    "description": {"type": "string"},
+    "variables": {"type": "array", "items": {"$ref": "#/$defs/variable"}},
+    "constraints": {"type": "array", "items": {"$ref": "#/$defs/constraint"}},
+    "target": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/pair"}]},
+    "states": {"type": "array", "items": {"$ref": "#/$defs/state"}},
+    "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+    "transitions": {"type": "array", "items": {"$ref": "#/$defs/transition"}}
+  },
+  "$defs": {
+    "name": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "number": {
+      "type": "object", "required": ["numerator", "denominator"], "additionalProperties": false,
+      "properties": {"numerator": {"type": "integer"}, "denominator": {"type": "integer", "minimum": 1}}
+    },
+    "scalar": {"anyOf": [{"$ref": "#/$defs/number"}, {"type": "boolean"}]},
+    "pair": {
+      "type": "array", "prefixItems": [{"$ref": "#/$defs/name"}, {"$ref": "#/$defs/number"}],
+      "minItems": 2, "maxItems": 2, "items": false
+    },
+    "scalarPair": {
+      "type": "array", "prefixItems": [{"$ref": "#/$defs/name"}, {"$ref": "#/$defs/scalar"}],
+      "minItems": 2, "maxItems": 2, "items": false
+    },
+    "pairs": {"type": "array", "items": {"$ref": "#/$defs/pair"}},
+    "scalarPairs": {"type": "array", "items": {"$ref": "#/$defs/scalarPair"}},
+    "variable": {
+      "type": "object", "required": ["name", "kind", "lower", "upper", "choices"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "kind": {"enum": ["real", "int", "bool"]},
+        "lower": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/number"}]},
+        "upper": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/number"}]},
+        "choices": {"type": "array", "items": {"$ref": "#/$defs/scalar"}}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "bool"}}},
+          "then": {"properties": {
+            "lower": {"type": "null"}, "upper": {"type": "null"},
+            "choices": {"items": {"type": "boolean"}}
+          }},
+          "else": {"properties": {"choices": {"items": {"$ref": "#/$defs/number"}}}}
+        }
+      ]
+    },
+    "constraint": {
+      "type": "object", "required": ["label", "terms", "op", "rhs"], "additionalProperties": false,
+      "properties": {"label": {"$ref": "#/$defs/name"}, "terms": {"$ref": "#/$defs/pairs"},
+        "op": {"enum": ["<=", ">=", "=="]}, "rhs": {"$ref": "#/$defs/number"}}
+    },
+    "state": {
+      "type": "object", "required": ["name", "values"], "additionalProperties": false,
+      "properties": {"name": {"$ref": "#/$defs/name"}, "values": {"$ref": "#/$defs/scalarPairs"}}
+    },
+    "action": {
+      "type": "object", "required": ["name", "preconditions", "effects"], "additionalProperties": false,
+      "properties": {"name": {"$ref": "#/$defs/name"}, "effects": {"$ref": "#/$defs/scalarPairs"},
+        "preconditions": {"type": "array", "items": {"$ref": "#/$defs/constraint"}}}
+    },
+    "transition": {
+      "type": "object", "required": ["name", "source", "action", "target"], "additionalProperties": false,
+      "properties": {"name": {"$ref": "#/$defs/name"}, "source": {"$ref": "#/$defs/name"},
+        "action": {"$ref": "#/$defs/name"}, "target": {"$ref": "#/$defs/name"}}
+    }
+  }
+}

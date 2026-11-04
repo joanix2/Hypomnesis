@@ -726,11 +726,21 @@ Le prélude garde `Problem.problem` et ajoute `Problem.planning_problem`, avec
 accepte les deux formes. Les nouveaux champs d'identité du prélude sont distincts
 pour préserver la résolution nominale des champs historiques.
 
-Le format `problem/1.0.0` est un JSON fermé et versionné : chaque nombre est une
+Le format `problem/1.1.0` est un JSON fermé et versionné : chaque nombre est une
 paire d'entiers numérateur/dénominateur positif. Schéma puis constructeurs assurent
 respectivement validation structurelle et sémantique. Z3 continue de résoudre
 uniquement la partie numérique ; les transitions ne sont pas un certificat
 d'exécutabilité. Voir [le guide](docs/architecture/problem-ir.md).
+
+HYP-052 : domaines real/int/bool explicites ; lecture JSON 1.0 conservée
+(réels historiques), écriture 1.1. Les booléens ne valent 0/1 que dans les
+contraintes linéaires. Z3 rend Fraction/int/bool, durée et raison d'unknown,
+avec délai configurable positif. Le noyau revérifie le modèle indépendamment
+du champ violations du plugin. `Problem.typed_problem` et `Effect.solve_typed`
+retournent `Problem.solution` nominal, statuts distincts et rationnels exacts.
+`Effect.solve` reste compatible (projection float, unsat/unknown réunis).
+Ni optimalité ni unsat ne disposent d'un certificat Lean. Pas de nouveau
+natif/Core IR ; exemple M1 `demo/programs/solveur/domaines.hyp`.
 
 ## Ordonnanceur local de worktrees (HYP-148)
 

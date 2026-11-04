@@ -1,0 +1,24 @@
+let numeric = {
+  Problem.variables = [
+    { Problem.name = "entier"; lower = Some 0.0; upper = Some 5.0; choices = [] };
+    { Problem.name = "reel"; lower = None; upper = None; choices = [] };
+    { Problem.name = "booleen"; lower = None; upper = None; choices = [] }
+  ];
+  constraints = [
+    { Problem.label = "deux"; terms = [("entier", 1.0)]; relation = Problem.Eq; bound = 2.0 };
+    { Problem.label = "tiers"; terms = [("reel", 3.0)]; relation = Problem.Eq; bound = 1.0 };
+    { Problem.label = "vrai"; terms = [("booleen", 1.0)]; relation = Problem.Eq; bound = 1.0 }
+  ];
+  target = None;
+}
+
+let problem = {
+  Problem.numeric = numeric;
+  sorts = [
+    ("entier", Problem.Integer);
+    ("reel", Problem.Real);
+    ("booleen", Problem.Boolean)
+  ];
+}
+
+let procedure = Effect.solve_typed problem
