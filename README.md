@@ -93,6 +93,13 @@ hypomnesis check demo/examples/mechanics/units.hyp demo/examples/mechanics/plate
 hypomnesis repl
 ```
 
+Le backend de régression est optionnel : `pip install -e '.[sklearn]'`.
+La suite complète de développement demande `pip install -e '.[dev,sklearn]'`
+et le paquet Codegen ; les tests du noyau seul se lancent avec
+`pytest tests --ignore=tests/optional`, sans scikit-learn ni Codegen.
+Exemple : `python examples/knowledge/estimate.py`.
+Voir [l'estimateur synthétique](docs/architecture/estimateurs.md).
+
 Exemple (§4.2 du cahier des charges) — les unités sont une bibliothèque, pas une
 connaissance du noyau :
 

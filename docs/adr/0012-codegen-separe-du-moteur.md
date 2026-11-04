@@ -38,3 +38,15 @@ point d'entrée des seuls tests symboliques.
 Cette décision précise la frontière d'empaquetage des fonctionnalités de l'ADR 0009,
 sans modifier les exigences de documentation ni la sémantique du langage. Aucun banc
 LLM réel ne fait partie de cette extraction.
+
+## Précision HYP-054 : estimateur scientifique optionnel
+
+L'extra explicite `sklearn` ajoute le backend de régression scientifique,
+pas de génération de programmes. Il ne fait partie ni des dépendances de
+base ni de `dev`, et aucune bibliothèque scientifique n'est importée avant
+sa construction explicite. Le job core-only reste sans ces bibliothèques.
+Le backend est générique ; données et sens physique restent en M2.
+Les tests de frontière n'autorisent scikit-learn que dans ce backend et
+dans cet extra, jamais Codegen, Ollama ou les autres dépendances LLM.
+La suite `tests/optional` exige cet extra ; `pytest tests` couvre le moteur
+et ces tests symboliques optionnels, tandis que le job noyau l'exclut.

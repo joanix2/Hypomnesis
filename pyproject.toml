@@ -30,6 +30,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+sklearn = [
+  "scikit-learn>=1.4",
+]
 lsp = [
   "pygls>=2.0,<3",
 ]

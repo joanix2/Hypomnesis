@@ -42,8 +42,10 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
   `dev`. Le compilateur, la documentation structurée, les solveurs, certificats et LSP restent au cœur.
 - CLI dédiée `hypomnesis-codegen decrire|benchmark-llm|graphiques-llm` ; anciennes commandes et
   imports `hypomnesis.llm.*` retirés sans alias.
-- Installation globale : `pip install -e '.[dev]' -e packages/codegen`. `pytest tests` teste le
-  moteur seul ; `pytest packages/codegen/tests` teste Codegen sans appel LLM. Les validateurs
+- Installation globale : `pip install -e '.[dev,sklearn]' -e packages/codegen`.
+  `pytest tests --ignore=tests/optional` teste le noyau sans backend scikit-learn ;
+  `pytest tests` ajoute les tests du backend optionnel. `pytest packages/codegen/tests`
+  teste Codegen sans appel LLM. Les validateurs
   `rapide` et `complet` couvrent les deux suites et exigent l'installation des deux paquets.
 
 ## Conventions

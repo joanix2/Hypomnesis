@@ -182,6 +182,15 @@ peut épuiser le budget. `language_rule` adapte une fonction pure
 `Json.t list -> Json.t option` : logique M2 dans le langage, pas dans Python.
 Exemple : `examples/knowledge/rules.py` ; détails dans le guide connaissances.
 
+HYP-054 : `backends/sklearn` charge scikit-learn à la construction seulement
+(extra `sklearn`). Régression linéaire déterministe, validation distincte,
+refus des entrées hors boîte d'entraînement, diagnostics `Result` et
+`Prediction` avec modèle/version/RMSE empirique. L'hôte enregistre Estimated
+avec ces métadonnées dans la source ; aucune résolution de MetaVar implicite.
+Le jeu synthétique versionné reste en M2 et ne certifie pas une pièce.
+Suite optionnelle `tests/optional`, exécutée par la validation complète,
+exclue du job core-only. Guide : [estimateurs.md](docs/architecture/estimateurs.md).
+
 Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
 révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une

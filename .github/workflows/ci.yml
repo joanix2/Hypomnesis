@@ -21,7 +21,7 @@ jobs:
           python -c "from importlib.util import find_spec; assert all(find_spec(m) is None for m in ['hypomnesis_codegen', 'ollama', 'sklearn', 'jinja2', 'matplotlib', 'scipy'])"
           hypomnesis check demo/examples/basics/certifiable.hyp
       - name: Test symbolic engine without codegen
-        run: pytest tests
+        run: pytest tests --ignore=tests/optional
       - name: Check symbolic types without codegen
         run: pyright
 
@@ -54,7 +54,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install
-        run: pip install '.[dev]' ./packages/codegen
+        run: pip install '.[dev,sklearn]' ./packages/codegen
       - name: Linters (pre-commit)
         # lean-build s'exécute dans le job « proofs »
         run: SKIP=lean-build pre-commit run --all-files --show-diff-on-failure
