@@ -8,8 +8,14 @@ version = "0.1.0"
 description = "A language for programmable knowledge and reasoning."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
-authors = [{ name = "joanix" }]
+license = { text = "MIT" }
+license-files = ["LICENSE"]
+authors = [{ name = "Joan DUSSAULD" }]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
 dependencies = [
   "lark>=1.2",
   "jsonschema[format-nongpl]>=4.21",

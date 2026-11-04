@@ -84,6 +84,16 @@ Mélanger les dimensions est refusé avant l'exécution :
                                         ^^^^^^^^^^^^^^^^^^^^
 ```
 
+## Licence
+
+Hypomnesis est distribué sous [licence MIT](LICENSE) : vous pouvez l'utiliser, le modifier et
+le redistribuer, y compris dans un logiciel fermé, à condition de conserver la mention de
+copyright et la licence. Les dépendances d'exécution (lark, jsonschema, referencing, z3-solver)
+sont également sous licences permissives. Pour contribuer, voir [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Le dépôt ne contient pas de poids de modèles de langage : les modèles utilisés pour les bancs
+d'essai restent soumis à leurs propres conditions.
+
 ## Développement
 
 ```bash
