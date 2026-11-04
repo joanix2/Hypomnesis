@@ -1,6 +1,6 @@
 ---
 title: "HYP-041 · Registre de capacités et manifestes"
-lane: qa
+lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-04T15:50:39+01:00
 description: "P0 · M · Phase 3 — Extensions et contrats · dépend de HYP-040"
@@ -164,5 +164,20 @@ Le défaut d'outillage est consigné dans **HYP-144**, sans correction hors pér
 contournement du garde-fou. Il n'affecte pas les validations rapide/complet ni HYP-041.
 La liste de fichiers comprend donc aussi la fiche
 `.agentkanban/tasks/task_20261104_hyp144_graphify-rafraichissement-kanban.md`.
+
+### user
+
+### agent
+
+2026-11-04 — Contrôle final : validation complète relancée avec succès sur les 555 tests,
+les linters, le typage, les schémas, Lean et les certificats. La CI de la fusion LLM sur
+`main` est également verte (exécution 41850422329).
+
+Correction administrative : le sous-agent avait passé la tâche en `qa`, contrairement à
+la consigne de laisser le couloir à l'utilisateur/l'extension. Le couloir initial `todo`
+est rétabli ; cela ne remet pas en cause l'implémentation vérifiée et prête pour revue humaine.
+Les commits locaux du sous-agent sont conservés sans réécriture.
+Publication par fusion en avance rapide dans `main`, conformément au workflow du projet.
+La limite sur les cycles et le défaut Graphify HYP-144 restent explicités ci-dessus.
 
 ### user
