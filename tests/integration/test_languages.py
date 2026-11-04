@@ -308,7 +308,7 @@ def test_cli_from_natural_language(tmp_path, capsys):
 
 def test_cli_procedure(capsys, tmp_path):
     args = ["lancer", str(VENTILATION), str(ROOT / "demo/programs/ventilation/salle_serveurs.hyp")]
-    assert main([*args, "--env", "panne=1", "--sortie", str(tmp_path)]) == 0
+    assert main([*args, "--mode", "production", "--env", "panne=1", "--sortie", str(tmp_path)]) == 0
     assert "hypothèse réfutée" in capsys.readouterr().out
 
 

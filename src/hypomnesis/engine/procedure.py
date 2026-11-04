@@ -153,7 +153,10 @@ def run_procedure(
             raise LanguageError(f"fabrique d'actionneur incompatible : {identifier}")
         dispatcher.register(_trace_execution(action, tracer))
     readings: dict[str, int] = {}
-    apply = language.session.interpreter.apply
+
+    def apply(callback: Value, arguments: list[Value]) -> Value:
+        with tracer.span("procedure.resume", boundary="pure"):
+            return language.session.interpreter.apply(callback, arguments)
 
     value: Value = language.session.value(entry)
     with tracer.span("hypomnesis.run", langage=language.name, mode=mode):

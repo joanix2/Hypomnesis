@@ -97,14 +97,15 @@ def test_refuted_hypothesis_invalidates_its_dependants_in_order(tmp_path):
         (8, "invalidated", "effet_attendu.1"),
         (9, "derived", "hypothese.refutee"),
     ]
-    assert list(kb.facts) == ["thermo-1#1", "decision.1", "thermo-1#2", "hypothese.refutee"]
+    assert list(kb.facts) == ["thermo-1#1", "decision.1", "thermo-2#1", "hypothese.refutee"]
     thermo = "{'sensor_id': 'thermo-1', 'celsius': %s} : observé (capteur thermo-1)"
     assert kb.explain("hypothese.refutee") == [
         "- hypothese.refutee = True : commande exécutée mais température non abaissée " + OBSERVED,
         f"  - decision.1 = 100 : Ventilation.decider {OBSERVED}",
         f"    - thermo-1#1 = {thermo % 31.0} {OBSERVED}",
         f"  - thermo-1#1 = {thermo % 31.0} {OBSERVED}",
-        f"  - thermo-1#2 = {thermo % 31.2} {OBSERVED}",
+        "  - thermo-2#1 = {'sensor_id': 'thermo-2', 'celsius': 31.2} : "
+        f"observé (capteur thermo-2) {OBSERVED}",
     ]
 
 

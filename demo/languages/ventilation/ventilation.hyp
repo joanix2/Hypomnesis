@@ -60,44 +60,62 @@ module Ventilation = struct
       @interne *)
   let effet_confirme avant apres = avant -. apres >= baisse_attendue
 
-  (** Température en °C lue dans un relevé du capteur (0.0 si absente).
+  (** Température en °C lue dans un relevé du capteur ; absence refusée.
       @interne *)
-  let celsius releve = Option.value (Json.num_field "celsius" releve) 0.0
+  let celsius releve =
+    match Json.num_field "celsius" releve with
+    | Some t -> t
+    | None -> failwith "relevé de température sans celsius numérique"
 
   (* Procédure de régulation : observer, décider, agir, vérifier l'effet sous
      l'hypothèse explicite que le ventilateur fonctionne ; recommencer au plus
      `budget` fois. Rend la conclusion. *)
   (** Boucle de régulation, itération `i` ; étape interne de `reguler`.
       @interne *)
-  let rec boucle i budget (inst : installation) cle_avant avant =
-    if i > budget then Effect.return "budget épuisé"
-    else
-      match decider avant with
-      | None ->
-        Effect.note (Float.to_string avant ^ " °C : sous le seuil, aucune action") >>= fun () ->
-        Effect.return "aucune action nécessaire"
-      | Some vitesse ->
+  let rec boucle i budget (inst : installation) confirmation cle_avant avant =
+    match decider avant with
+    | None ->
+      Effect.note (Float.to_string avant ^ " °C : sous le seuil, aucune action") >>= fun () ->
+      Effect.return "aucune action nécessaire"
+    | Some vitesse ->
+      if i > budget then Effect.return "budget épuisé"
+      else
         let n = string_of_int i in
         Effect.record ("decision." ^ n) vitesse "Ventilation.decider" (Effect.Derived [cle_avant]) >>= fun () ->
         Effect.record ("effet_attendu." ^ n) true "baisse attendue si le ventilateur fonctionne"
           (Effect.Derived ["decision." ^ n; "hypothese"]) >>= fun () ->
-        Effect.act "fan.set" { fan_id = inst.ventilateur; speed_percent = vitesse } >>= fun _ ->
-        Effect.observe inst.capteur >>= fun (cle_apres, releve) ->
-        let apres = celsius releve in
-        if effet_confirme avant apres then
-          Effect.record ("effet_confirme." ^ n) true "Ventilation.effet_confirme"
-            (Effect.Derived [cle_avant; cle_apres]) >>= fun () ->
-          Effect.note (Float.to_string avant ^ " → " ^ string_of_int vitesse ^ " % → "
-                       ^ Float.to_string apres ^ " °C : effet confirmé") >>= fun () ->
-          boucle (i + 1) budget inst cle_apres apres
-        else
-          Effect.retract "hypothese" "effet attendu non observé" >>= fun invalides ->
-          Effect.record "hypothese.refutee" true "commande exécutée mais température non abaissée"
-            (Effect.Derived ["decision." ^ n; cle_avant; cle_apres]) >>= fun () ->
-          Effect.note (Float.to_string avant ^ " → " ^ string_of_int vitesse ^ " % → "
-                       ^ Float.to_string apres ^ " °C : effet réfuté ; invalidés : "
-                       ^ String.concat ", " invalides) >>= fun () ->
-          Effect.return "hypothèse réfutée : le ventilateur ne fonctionne pas (alerte)"
+        Effect.act "fan.set" { fan_id = inst.ventilateur; speed_percent = vitesse } >>= fun resultat ->
+        match Json.str_field "state" resultat with
+        | None -> failwith "résultat de commande sans état"
+        | Some etat when etat <> "Completed" ->
+          Effect.note ("commande sans effet confirmé : " ^ etat) >>= fun () ->
+          Effect.return ("commande non confirmée : " ^ etat)
+        | Some _ ->
+          Effect.observe confirmation >>= fun (cle_apres, releve) ->
+          let apres = celsius releve in
+          if effet_confirme avant apres then
+            Effect.record ("effet_confirme." ^ n) true "Ventilation.effet_confirme"
+              (Effect.Derived [cle_avant; cle_apres]) >>= fun () ->
+            Effect.note (Float.to_string avant ^ " → " ^ string_of_int vitesse ^ " % → "
+                         ^ Float.to_string apres ^ " °C : effet confirmé") >>= fun () ->
+            boucle (i + 1) budget inst confirmation cle_apres apres
+          else
+            Effect.retract "hypothese" "effet attendu non observé" >>= fun invalides ->
+            Effect.record "hypothese.refutee" true "commande exécutée mais température non abaissée"
+              (Effect.Derived ["decision." ^ n; cle_avant; cle_apres]) >>= fun () ->
+            Effect.note (Float.to_string avant ^ " → " ^ string_of_int vitesse ^ " % → "
+                         ^ Float.to_string apres ^ " °C : effet réfuté ; invalidés : "
+                         ^ String.concat ", " invalides) >>= fun () ->
+            Effect.return "hypothèse réfutée : baisse attendue non observée (alerte)"
+
+  (** Régule avec un capteur de confirmation distinct après chaque action.
+      @quand la demande impose un second capteur de confirmation *)
+  let reguler_avec_confirmation (inst : installation) confirmation =
+    if inst.budget < 0 then failwith "budget de régulation négatif"
+    else
+      Effect.record "hypothese" true "le ventilateur fonctionne" (Effect.Assumed 0.9) >>= fun () ->
+      Effect.observe inst.capteur >>= fun (cle, releve) ->
+      boucle 1 inst.budget inst confirmation cle (celsius releve)
 
   (** Régule la température : observe le capteur, règle la vitesse du ventilateur si la
       température dépasse le seuil, vérifie l'effet, recommence au plus `budget` fois.
@@ -105,7 +123,5 @@ module Ventilation = struct
       @exemple « régule avec thermo-1 et fan-7, 6 tentatives max » →
         Ventilation.reguler installation *)
   let reguler (inst : installation) =
-    Effect.record "hypothese" true "le ventilateur fonctionne" (Effect.Assumed 0.9) >>= fun () ->
-    Effect.observe inst.capteur >>= fun (cle, releve) ->
-    boucle 1 inst.budget inst cle (celsius releve)
+    reguler_avec_confirmation inst inst.capteur
 end

@@ -88,6 +88,11 @@ def lire(env: Piece, identifier: str) -> dict[str, Any]:
     return env.message(identifier)
 
 
+@sensor("thermo-2")
+def confirmer(env: Piece, identifier: str) -> dict[str, Any]:
+    return env.message(identifier)
+
+
 @actuator("fan.set")
 def ventilateur(env: Piece) -> Actuator:
     def executer(payload: Mapping[str, Any]) -> dict[str, Any]:

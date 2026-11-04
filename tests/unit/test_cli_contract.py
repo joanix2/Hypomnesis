@@ -89,7 +89,15 @@ def test_lancer_unknown_mode_is_refused_before_loading(tmp_path, capsys):
 
 
 def test_lancer_repeated_env_options(tmp_path, capsys):
-    argv = ["lancer", str(VENTILATION), str(PROGRAM), "--sortie", str(tmp_path)]
+    argv = [
+        "lancer",
+        str(VENTILATION),
+        str(PROGRAM),
+        "--mode",
+        "production",
+        "--sortie",
+        str(tmp_path),
+    ]
     assert code([*argv, "--env", "a=1", "--env", "panne=1"]) == 0
     assert "hypothèse réfutée" in capsys.readouterr().out
 

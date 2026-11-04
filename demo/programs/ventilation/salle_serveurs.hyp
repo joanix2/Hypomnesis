@@ -7,4 +7,4 @@ let installation = {
   budget = 5;
 }
 
-let procedure = Ventilation.reguler installation
+let procedure = Ventilation.reguler_avec_confirmation installation "thermo-2"

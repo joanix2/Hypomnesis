@@ -191,6 +191,14 @@ Le jeu synthétique versionné reste en M2 et ne certifie pas une pièce.
 Suite optionnelle `tests/optional`, exécutée par la validation complète,
 exclue du job core-only. Guide : [estimateurs.md](docs/architecture/estimateurs.md).
 
+HYP-068 : le scénario ventilation utilise deux capteurs simulés distincts,
+avec API M2 `reguler_avec_confirmation` et wrapper `reguler` compatible.
+Seul Completed mène à la confirmation : simulation/rejet/échec/issue inconnue
+ne réfutent pas l'hypothèse physique. Le budget borne les actions et vérifie
+le seuil atteint lors de la dernière action. La trace distingue
+`procedure.resume` (continuation pure), `observer.read`, `command.dispatch`
+et `actuator.execute`. Guide : [retroaction.md](docs/architecture/retroaction.md).
+
 Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
 révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une

@@ -27,6 +27,10 @@ Une installation à réguler : un capteur, un ventilateur et un nombre maximal d
 
 ### Procédures (valeurs de type `… Effect.t`)
 
+`Ventilation.reguler_avec_confirmation` : Ventilation.installation -> string -> string Effect.t
+Régule avec un capteur de confirmation distinct après chaque action.
+- Utiliser quand : la demande impose un second capteur de confirmation
+
 `Ventilation.reguler` : Ventilation.installation -> string Effect.t
 Régule la température : observe le capteur, règle la vitesse du ventilateur si la température dépasse le seuil, vérifie l'effet, recommence au plus `budget` fois.
 - Utiliser quand : « régule », « surveille », « pilote », « maintiens la température »
