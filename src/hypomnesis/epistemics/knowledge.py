@@ -102,6 +102,25 @@ def _restore(snapshot: tuple[str, Any]) -> Any:
     return list(items) if kind == "list" else items
 
 
+def _same_value(left: tuple[str, Any], right: tuple[str, Any]) -> bool:
+    kind, lhs = left
+    if kind != right[0]:
+        return False
+    rhs = right[1]
+    if kind == "dict":
+        a, b = dict(lhs), dict(rhs)
+        return a.keys() == b.keys() and all(_same_value(a[k], b[k]) for k in a)
+    if kind in ("list", "tuple"):
+        return len(lhs) == len(rhs) and all(
+            _same_value(a, b) for a, b in zip(lhs, rhs, strict=True)
+        )
+    if kind == "record":
+        return lhs[0] == rhs[0] and _same_value(lhs[1], rhs[1])
+    if kind == "variant":
+        return lhs[0] == rhs[0] and lhs[2] == rhs[2] and _same_value(lhs[1], rhs[1])
+    return lhs == rhs
+
+
 def _provenance(value: Prov) -> Prov:
     if type(value) is Obs:
         _identifier(value.id)
@@ -179,6 +198,9 @@ class Fact:
     @property
     def value(self) -> Any:
         return _restore(self._value)
+
+    def same_value(self, other: Fact) -> bool:
+        return _same_value(self._value, other._value)
 
 
 @dataclass(frozen=True)
@@ -285,18 +307,49 @@ class KnowledgeBase:
         « par défaut », confidence 1 — which is never retracted, so the fact survives
         the retraction of any other source and keeps a readable support.
         """
-        provenance: Prov | None = None
-        for premise in premises:
-            p = self.facts[premise].provenance
-            provenance = p if provenance is None else provenance * p
-        if provenance is None:
-            provenance = obs(AXIOM)
+        provenance = self.provenance_of(premises)
         fact = Fact(key, value, provenance, method, tuple(premises))
         if not premises:
             self._declare_axiom()
         self._replace(key, fact)
         self._log("derived", key, f"{value!r} — {method} ← {', '.join(premises)}", fact)
         return fact
+
+    def provenance_of(self, premises: tuple[str, ...] | list[str]) -> Prov:
+        provenance: Prov | None = None
+        for premise in premises:
+            p = self.facts[premise].provenance
+            provenance = p if provenance is None else provenance * p
+        return obs(AXIOM) if provenance is None else provenance
+
+    def publish_fact(self, fact: Fact, *, sources: tuple[Source, ...] = ()) -> None:
+        """Publish a validated derivation and its new sources atomically."""
+        if not isinstance(fact, Fact) or type(sources) is not tuple:
+            raise ValueError("publication requires a Fact and an immutable tuple of sources")
+        pending: dict[str, Source] = {}
+        for source in sources:
+            if not isinstance(source, Source):
+                raise ValueError("publication requires valid sources")
+            previous = pending.get(source.id, self.sources.get(source.id))
+            if previous is not None and previous != source:
+                raise ValueError(f"source {source.id} is already declared differently")
+            pending[source.id] = source
+        identifiers = set(fact.provenance.observations())
+        if AXIOM in identifiers or AXIOM in pending:
+            axiom = Source(AXIOM, "default", "constante du programme", 1.0)
+            if pending.get(AXIOM, self.sources.get(AXIOM, axiom)) != axiom:
+                raise ValueError("incompatible program axiom source")
+            if AXIOM not in self.sources:
+                pending[AXIOM] = axiom
+        unknown = identifiers - (self.sources.keys() | pending.keys())
+        if unknown:
+            raise ValueError(f"undeclared provenance sources: {sorted(unknown)}")
+        missing = [key for key in fact.premises if key not in self.facts]
+        if missing:
+            raise ValueError(f"missing premises: {missing}")
+        self.sources.update(pending)
+        self._replace(fact.key, fact)
+        self._log("derived", fact.key, fact.method, fact)
 
     def _declare_axiom(self) -> None:
         if AXIOM not in self.sources:

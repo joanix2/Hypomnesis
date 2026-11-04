@@ -171,6 +171,17 @@ La vue ne certifie pas des observations et ne modifie pas la base réelle.
 Produits, alternatives et retraits sont comparés aux lectures Python ;
 exemple : `demo/examples/knowledge/plaque.hyp`.
 
+HYP-050 : `engine/rules.py` fournit le chaînage positif sous budget exact,
+`Conclusion`/`Rule`/`RuleReport`, alternatives de provenance par règle et
+conflits explicites. Les défauts ont une source Defaulted révocable retirée
+au prochain passage lorsqu'une observation remplace directement leur cible ;
+HYP-033 invalide puis le moteur recalcule les dépendants. Les contributions
+persistantes évitent les réécritures au point fixe. Publication individuelle
+validée, pas de transaction sur tout le passage. La récursion de provenance
+peut épuiser le budget. `language_rule` adapte une fonction pure
+`Json.t list -> Json.t option` : logique M2 dans le langage, pas dans Python.
+Exemple : `examples/knowledge/rules.py` ; détails dans le guide connaissances.
+
 Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
 révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une

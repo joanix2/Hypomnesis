@@ -1,0 +1,8 @@
+(* Règle M2 pure ; None signifie « non applicable », pas une valeur inconnue. *)
+let surface (entrees : Json.t list) : Json.t option =
+  match entrees with
+  | [Json.Int largeur; Json.Int hauteur] ->
+      if largeur > 0 && hauteur > 0
+      then Some (Json.Int (largeur * hauteur))
+      else None
+  | _ -> None

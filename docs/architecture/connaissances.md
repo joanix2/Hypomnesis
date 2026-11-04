@@ -182,6 +182,54 @@ confiance, jamais autorisée à se déclarer Observed elle-même (HYP-082).
 Ni ces propositions ni leur résolution ne changent automatiquement une
 KnowledgeBase ou son journal ; l'intégration des stratégies revient aux capacités.
 
+## Chaînage avant et défauts (HYP-050)
+
+`engine.rules.Rule(name, target, premises, evaluate, default=False)` décrit
+une règle pure à prémisses explicites. Le callback reçoit un tuple de valeurs
+détachées, retourne `Conclusion(value)` ou `None` si sa condition ne s'applique
+pas. `Conclusion(None)` conclut réellement la valeur nulle. Il ne doit lire
+aucun état externe ni lancer d'effet ; le moteur ne sandboxe pas Python.
+
+`RuleEngine(base, rules).run(budget=1000)` publie les conclusions dans la
+base et recommence jusqu'à un passage complet sans changement. Chaque règle
+visitée consomme une unité, même avec prémisses absentes. Le rapport contient
+`evaluations`, `published` et un statut `fixed_point` ou `budget_exhausted`.
+Atteindre exactement la limite après une publication ne prouve pas le point
+fixe : il faut encore vérifier l'absence de changement. Un budget nul
+n'évalue aucune règle ; un ensemble vide est déjà au point fixe.
+
+Les prémisses multiplient leurs provenances, répétitions comprises. Les
+contributions concordantes des règles sont additionnées une fois chacune,
+dans l'ordre de leurs noms ; un nouveau passage au point fixe ne réécrit
+pas le journal. Des valeurs incompatibles produisent `RuleConflict`,
+avec la cible et les faits concurrents, sans gagnant arbitraire. Les types
+scalaires restent distincts (`True` n'est pas `1`) et l'ordre des clés
+d'objets n'introduit pas de conflit. Ce contrôle n'est pas HYP-035.
+
+Un défaut ajoute sa propre source Defaulted révocable. Une observation
+remplaçant directement sa cible retire cette source lors du prochain
+`run`, invalide ses dépendants et permet leur recalcul. Observer une
+conclusion en aval ne retire pas les défauts de ses prémisses. Un défaut
+ne remplace jamais un fait externe. Une règle ordinaire sans prémisse
+reste une constante Defaulted sur `axiome`, non une observation.
+Les modifications d'observations utilisent `replace_observation`.
+
+Le moteur est positif, sans négation par absence. Les conclusions d'un
+passage sont publiées progressivement : un conflit ou une erreur de
+callback interrompt l'exécution mais n'annule pas les publications déjà
+validées. Chaque publication individuelle valide ses sources et prémisses
+avant modification. La récursion peut faire croître la provenance libre
+sans fin même avec une valeur stable ; le budget reste alors la limite,
+sans faux signal de point fixe. Réutiliser la même instance conserve
+les contributions et la gestion des défauts ; ce n'est pas un état durable.
+
+`language_rule(session, name, target, premises, function)` adapte une fonction
+Hypomnesis monomorphe `Json.t list -> Json.t option`, sans nouveau natif
+ni forme Core IR. Le DSL porte la logique métier ; Python fournit seulement
+les entrées et le chaînage générique. Exemple exécutable :
+`python examples/knowledge/rules.py`, utilisant
+[`regles.hyp`](../../demo/examples/knowledge/regles.hyp).
+
 ## Bibliothèque pure du langage (HYP-038)
 
 Le prélude expose `Knowledge` sans nouveau natif ni effet : types algébriques,
