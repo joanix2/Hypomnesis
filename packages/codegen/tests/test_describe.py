@@ -1,11 +1,13 @@
 """Catalogue de prompt compilé depuis l'auto-documentation d'un langage."""
 
+import json
+import shutil
 from pathlib import Path
 
 import pytest
 
 from hypomnesis.engine.language import load_language
-from hypomnesis.language.docs import declarations
+from hypomnesis.language.docs import declarations, published
 from hypomnesis_codegen.describe import catalogue
 
 LANGUAGES = Path(__file__).resolve().parents[3] / "demo" / "languages"
@@ -100,3 +102,64 @@ def test_catalogue_includes_transitive_imports_once():
     text = render("composition_a")
     for name in ("Booleen", "Arithmetique", "Contraintes", "CompositionA"):
         assert text.count(f"## Module {name}\n") == 1
+
+
+def test_mechanics_has_every_public_value_typed_within_a_measured_prompt_budget():
+    language = load_language(LANGUAGES / "mecanique", execute=False)
+    result = catalogue(language)
+    expected = {
+        d.path
+        for source in language.plan.source_files()
+        for d in published(declarations(source.text))
+        if d.kind == "value"
+    }
+    values = {v.path: v.signature for module in result.modules for v in module.values}
+    assert values == {path: language.session.type_of(path) for path in expected}
+    assert expected
+    assert len(result.render().encode("utf-8")) <= 16_384
+    assert "Ventilation" not in result.render()
+
+
+def test_static_plugin_contracts_permissions_and_adapters_are_exported(tmp_path, capsys):
+    from hypomnesis_codegen.cli import main
+
+    root = tmp_path / "mecanique"
+    shutil.copytree(LANGUAGES / "mecanique", root)
+    for path in (root / "adaptateurs").glob("*.py"):
+        path.write_text('raise AssertionError("adapter imported during description")')
+    manifest = {
+        "id": "geometry.export",
+        "version": "1.0.0",
+        "role": "Actuator",
+        "signature": {"input": "Json.t", "output": "Json.t"},
+        "input_schema": "https://example.test/input",
+        "output_schema": "https://example.test/output",
+        "permissions": ["geometry.write"],
+        "backend": {"kind": "python", "entry_point": "not_installed.factory"},
+        "error_policy": {"idempotent": True, "timeout_seconds": 1, "max_attempts": 1},
+    }
+    path = tmp_path / "plugin.json"
+    path.write_text(json.dumps(manifest))
+    args = ["decrire", str(root), "--plugin", str(path)]
+    assert main([*args, "--format", "json"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["plugins"][0]["permissions"] == ["geometry.write"]
+    assert result["plugins"][0]["signature"] == "Json.t -> Json.t"
+    assert result["contracts"] and result["adapters"]
+    assert main(args) == 0
+    text = capsys.readouterr().out
+    assert "geometry.export@1.0.0" in text
+    assert "Permissions requises, non accordées : geometry.write" in text
+    assert main(["decrire", str(root), "--plugin", str(tmp_path / "absent")]) == 1
+    assert "refusé" in capsys.readouterr().err
+
+
+def test_library_and_top_level_values_are_publishable(tmp_path):
+    (tmp_path / "langage.hyp").write_text(
+        'language racine = { version = "1.0.0" }\n(** Fonction identité. *)\nlet identite x = x\n'
+    )
+    result = catalogue(load_language(tmp_path, execute=False))
+    assert result.entry is None
+    assert "Bibliothèque sans procédure" in result.render()
+    assert result.modules[0].values[0].path == "identite"
+    assert result.modules[0].values[0].signature == "'a -> 'a"

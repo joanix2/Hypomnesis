@@ -25,6 +25,7 @@ Les anciennes commandes LLM quittent la CLI `hypomnesis`, sans alias de compatib
 ```bash
 hypomnesis-codegen decrire demo/languages/ventilation
 hypomnesis-codegen decrire demo/languages/mecanique --format json
+hypomnesis-codegen decrire demo/languages/mecanique --plugin chemin/manifestes/
 hypomnesis-codegen benchmark-llm demo/languages/ventilation --modeles MODELE --sans-graphiques
 hypomnesis-codegen graphiques-llm chemin/resultats.json
 ```
@@ -33,6 +34,15 @@ Les imports `hypomnesis.llm.*` deviennent `hypomnesis_codegen.*`.
 La traduction s'utilise via `hypomnesis_codegen.translation.translate`. Le compilateur
 reste responsable de vérifier les candidats ; le moteur conserve l'exécution et les
 permissions. Aucun serveur ni modèle n'est lancé à l'installation.
+
+`decrire` sélectionne le domaine par son langage et suit son DAG sans
+importer ses adaptateurs. Le JSON et le Markdown incluent les signatures
+publiques documentées, contrats et modules adaptateurs déclarés.
+`--plugin` publie les métadonnées des seuls manifestes fournis par l'hôte,
+sans charger leurs backends ; leurs permissions sont **requises**, jamais
+accordées par cette publication. Le catalogue mécanique est testé sous
+16 Kio UTF-8 ; ce budget explicite est une mesure de texte, pas une promesse
+sur le tokenizer d'un modèle donné.
 
 Les résultats vont par défaut dans `demo/sortie/benchmark-llm/`, ignoré dans Git.
 `benchmark.json`, les sources M2 et les exemples M1 restent des données des langages,
@@ -46,4 +56,5 @@ pytest packages/codegen/tests
 ```
 
 Les tests utilisent des clients simulés : aucun appel LLM ni téléchargement de modèle.
-Les instantanés du catalogue doivent rester identiques octet pour octet.
+Les instantanés du catalogue fixent le prompt octet pour octet ; tout changement
+intentionnel doit être documenté et remesuré avant comparaison des anciens bancs LLM.

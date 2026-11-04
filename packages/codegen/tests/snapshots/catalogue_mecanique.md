@@ -68,3 +68,8 @@ Estimateur par règle : épaisseur ≈ petit côté / 25.
 `Plaque.estimateur_abaque` : Plaque.estimateur
 Estimateur par abaque : épaisseur lue dans une table selon la surface.
 - Utiliser quand : la demande dit « abaque »
+
+## Frontières hôte
+Contrats du langage : contrats/geometry.export-1.0.0.json, contrats/geometry.export.result-1.0.0.json, contrats/thickness.reading-1.0.0.json.
+Modules adaptateurs déclarés (non importés) : adaptateurs/atelier.py, adaptateurs/export.py, adaptateurs/transcription.py.
+Les permissions sont accordées par l'hôte, jamais par le programme généré.

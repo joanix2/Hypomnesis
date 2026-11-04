@@ -35,3 +35,8 @@ Régule avec un capteur de confirmation distinct après chaque action.
 Régule la température : observe le capteur, règle la vitesse du ventilateur si la température dépasse le seuil, vérifie l'effet, recommence au plus `budget` fois.
 - Utiliser quand : « régule », « surveille », « pilote », « maintiens la température »
 - Exemple : « régule avec thermo-1 et fan-7, 6 tentatives max » → Ventilation.reguler installation
+
+## Frontières hôte
+Contrats du langage : contrats/temperature.read-1.0.0.json, contrats/temperature.reading-1.0.0.json, contrats/fan.set-1.0.0.json, contrats/fan.set.result-1.0.0.json.
+Modules adaptateurs déclarés (non importés) : adaptateurs/piece.py.
+Les permissions sont accordées par l'hôte, jamais par le programme généré.

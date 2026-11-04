@@ -9,10 +9,14 @@
 === Catalogue du langage « {{ c.language }} » ===
 {{ c.description }}
 
+{% if c.entry %}
 Tu n'utilises que les éléments de ce catalogue. Le programme se termine par `let {{ c.entry }} = …` qui appelle une procédure.
+{% else %}
+Bibliothèque sans procédure : ses éléments sont importables par un autre langage.
+{% endif %}
 {% for m in c.modules %}
 
-## Module {{ m.path }}
+## Module {{ m.path or '(racine)' }}
 {{ m.summary }}
 {% for tag, text in m.tags %}
 {{ tag_line(tag, text, '- ') }}
@@ -60,3 +64,17 @@ Tu n'utilises que les éléments de ce catalogue. Le programme se termine par `l
 {% endfor %}
 {% endif %}
 {% endfor %}
+
+## Frontières hôte
+Contrats du langage : {{ c.contracts | join(', ') or 'aucun' }}.
+Modules adaptateurs déclarés (non importés) : {{ c.adapters | join(', ') or 'aucun' }}.
+Les permissions sont accordées par l'hôte, jamais par le programme généré.
+{% if c.plugins %}
+
+## Plugins explicitement publiés par l'hôte
+{% for p in c.plugins %}
+- `{{ p.id }}@{{ p.version }}` ({{ p.role }}) : `{{ p.signature }}`
+  - Contrats : {{ p.input_schema }} → {{ p.output_schema }}
+  - Permissions requises, non accordées : {{ p.permissions | join(', ') or 'aucune' }}
+{% endfor %}
+{% endif %}

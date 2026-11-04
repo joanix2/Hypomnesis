@@ -20,12 +20,15 @@ class Format(StrEnum):
     JSON = "json"
 
 
-def _decrire(langage: Path, output_format: Format) -> int:
+def _decrire(langage: Path, output_format: Format, plugin_paths: list[Path] | None = None) -> int:
+    from hypomnesis.engine.registry import ExtensionRegistry, RegistryError
     from hypomnesis_codegen.describe import catalogue
 
     try:
-        published = catalogue(load_language(langage, execute=False))
-    except LanguageError as exc:
+        plugins = ExtensionRegistry()
+        plugins.load_paths(plugin_paths or [])
+        published = catalogue(load_language(langage, execute=False), plugins=plugins)
+    except (LanguageError, RegistryError) as exc:
         print(f"refusé : {exc}", file=sys.stderr)
         return 1
     text = (
@@ -112,9 +115,13 @@ def decrire_command(
     output_format: Annotated[
         Format, typer.Option("--format", help="format de sortie du catalogue")
     ] = Format.MD,
+    plugins: Annotated[
+        list[Path] | None,
+        typer.Option("--plugin", help="manifeste ou dossier de plugins publié par l'hôte"),
+    ] = None,
 ) -> None:
     """Exporter ce que le langage M2 dit de lui-même (catalogue du prompt LLM)."""
-    _exit_with(_decrire(langage, output_format))
+    _exit_with(_decrire(langage, output_format, plugins))
 
 
 @app.command("benchmark-llm")

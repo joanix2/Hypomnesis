@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from jinja2 import Environment, PackageLoader
 
 from hypomnesis.engine.language import Language
+from hypomnesis.engine.registry import ExtensionRegistry
 from hypomnesis.language.docs import Declaration, Doc, declarations, is_public, published
 
 # Display labels of the tag vocabulary; an unknown tag is shown under its own name.
@@ -64,11 +65,25 @@ class ModuleDoc(Described):
 
 
 @dataclass(frozen=True)
+class PluginDoc:
+    id: str
+    version: str
+    role: str
+    signature: str
+    input_schema: str
+    output_schema: str
+    permissions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Catalogue:
     language: str
     description: str
-    entry: str
+    entry: str | None
     modules: tuple[ModuleDoc, ...]
+    contracts: tuple[str, ...] = ()
+    adapters: tuple[str, ...] = ()
+    plugins: tuple[PluginDoc, ...] = ()
 
     def render(self) -> str:
         return _environment().get_template("catalogue.md.j2").render(c=self).strip() + "\n"
@@ -95,7 +110,7 @@ def _parts(doc: Doc | None, member: bool = False) -> tuple[str, tuple[tuple[str,
     return doc.summary, doc.tags
 
 
-def catalogue(language: Language) -> Catalogue:
+def catalogue(language: Language, *, plugins: ExtensionRegistry | None = None) -> Catalogue:
     """The documented, public face of a language."""
     found: list[Declaration] = []
     for source in language.plan.source_files():
@@ -103,9 +118,12 @@ def catalogue(language: Language) -> Catalogue:
 
     modules: list[ModuleDoc] = []
     shown = published(found)
-    for module in (d for d in shown if d.kind == "module"):
+    shown_modules = [d for d in shown if d.kind == "module"]
+    if any(d.kind in ("value", "type") and "." not in d.path for d in shown):
+        shown_modules.append(Declaration("module", "", Doc("Déclarations à la racine.")))
+    for module in shown_modules:
         summary, tags = _parts(module.doc)
-        prefix = module.path + "."
+        prefix = module.path + "." if module.path else ""
 
         def direct(d: Declaration, prefix: str = prefix) -> bool:
             return d.path.startswith(prefix) and "." not in d.path[len(prefix) :]
@@ -144,6 +162,20 @@ def catalogue(language: Language) -> Catalogue:
     return Catalogue(
         language.name,
         language.manifest.get("description", ""),
-        language.procedure["entry"],
+        language.manifest.get("procedure", {}).get("entry"),
         tuple(modules),
+        tuple(language.manifest.get("contracts", [])),
+        tuple(language.manifest.get("adapters", [])),
+        tuple(
+            PluginDoc(
+                item["id"],
+                item["version"],
+                item["role"],
+                f"{item['signature']['input']} -> {item['signature']['output']}",
+                item["input_schema"],
+                item["output_schema"],
+                tuple(item["permissions"]),
+            )
+            for item in (plugins.list() if plugins is not None else [])
+        ),
     )

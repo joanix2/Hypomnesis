@@ -721,6 +721,14 @@ langage et journalisées par `Tracer`. Le groupe enfant est arrêté et le proce
 direct récolté. Aucune relance implicite ; pas de bac à sable de sécurité.
 Voir [le guide](docs/architecture/backend-python.md).
 
+## Publication DSL (HYP-080)
+
+HYP-080 : le catalogue Codegen publie également les contrats et modules
+adaptateurs déclarés du langage sélectionné. `decrire --plugin` ajoute les
+métadonnées d'extensions fournies par l'hôte, signatures et permissions
+requises, sans importer leurs backends. Tests d'exhaustivité des valeurs
+publiques de Mechanics et budget mesuré <= 16 Kio UTF-8.
+
 ## Certification CLI (HYP-027)
 
 HYP-027 : `check --certify` appelle le checker Lean avec découverte explicite
