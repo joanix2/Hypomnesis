@@ -3,6 +3,7 @@ language ventilation = {
   description = "Régulation de température par ventilateur ; procédures écrites en Hypomnesis (effets comme valeurs).";
   sources = ["ventilation.hyp"];
   contracts = [
+    "contrats/temperature.read-1.0.0.json";
     "contrats/temperature.reading-1.0.0.json";
     "contrats/fan.set-1.0.0.json";
     "contrats/fan.set.result-1.0.0.json"

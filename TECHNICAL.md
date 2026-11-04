@@ -521,8 +521,21 @@ existante sans rappeler l'actionneur ; même id avec un autre contenu → `Dupli
 `sleep` injectables ; `Actuator.timeout` fixe l'échéance. Une exception ordinaire de l'actionneur donne
 `Failed` (pas de relance) ; `TransportError` (aucune réponse fiable : l'action a pu avoir lieu) donne une
 relance si idempotent, sinon `UnknownOutcome`. Une réponse tardive donne `TimedOut`. `Accepted` est dans
-la table mais n'est émis que par un transport asynchrone (HYP-063). Miroir de la propriété Lean HYP-066
+la table mais n'est pas émis par les transports synchrones HYP-063. Miroir de la propriété Lean HYP-066
 (`docs/verification/proprietes.md`) ; tests : `tests/unit/test_commands.py`.
+
+## Transports (HYP-063)
+
+`effects/transports/` définit `Transport`, `MemoryTransport`, `FileTransport`
+(JSONL append-only, curseur de lecture local) et `replay`. Chaque message est
+un instantané JSON strict validé par l'enveloppe et son contrat nommé, à
+l'envoi et à la réception. Le rejeu restitue les messages exacts, pas les
+effets physiques ; pas de garantie multi-processus ni de curseur durable.
+Les I/O du langage M2 ventilation utilisent ces transports pour requêtes,
+relevés, commandes et réponses. L'hôte choisit mémoire ou fichiers ; les
+manifestes restent descriptifs et les décorateurs restent le branchement I/O.
+Guide et exemple exécutable : [transports.md](docs/architecture/transports.md),
+`examples/robotics/transport.py`.
 
 ## Descriptions obligatoires (HYP-137)
 

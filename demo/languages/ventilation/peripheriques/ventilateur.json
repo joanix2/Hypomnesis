@@ -1,0 +1,20 @@
+{
+  "id": "fan.set",
+  "version": "1.0.0",
+  "role": "Actuator",
+  "description": "Réglage du ventilateur simulé, aucun matériel réel.",
+  "signature": { "input": "Json.t", "output": "Json.t" },
+  "input_schema": "https://schemas.example.org/hypomnesis/fan.set/1.0.0",
+  "output_schema": "https://schemas.example.org/hypomnesis/fan.set.result/1.0.0",
+  "permissions": ["actuator:fan.set"],
+  "backend": { "kind": "python", "entry_point": "adaptateurs/piece.py:ventilateur" },
+  "error_policy": {
+    "idempotent": false,
+    "timeout_seconds": 5,
+    "max_attempts": 1
+  },
+  "limitations": [
+    "Fabrique décorée d'actionneur ; la permission reste vérifiée par le dispatcher.",
+    "Pas de promesse de déduplication persistante côté périphérique."
+  ]
+}

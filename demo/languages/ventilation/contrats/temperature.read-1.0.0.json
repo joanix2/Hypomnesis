@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/temperature.read/1.0.0",
+  "title": "TemperatureReadRequest",
+  "type": "object",
+  "properties": {
+    "sensor_id": { "type": "string", "minLength": 1 }
+  },
+  "required": ["sensor_id"],
+  "additionalProperties": false
+}

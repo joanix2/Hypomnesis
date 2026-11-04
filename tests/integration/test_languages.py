@@ -9,6 +9,7 @@ import pytest
 from hypomnesis.cli import main
 from hypomnesis.contracts.registry import ContractError
 from hypomnesis.effects.permissions import PermissionPolicy
+from hypomnesis.effects.transports import FileTransport, MemoryTransport, replay
 from hypomnesis.engine.language import LanguageError, load_language
 from hypomnesis.engine.procedure import run_procedure
 from hypomnesis.epistemics.provenance import Support
@@ -20,6 +21,46 @@ VENTILATION = ROOT / "demo" / "languages" / "ventilation"
 PLAQUE = (ROOT / "demo" / "programs" / "mecanique" / "plaque_120x80.hyp").read_text()
 MESUREE = (ROOT / "demo" / "programs" / "mecanique" / "plaque_mesuree.hyp").read_text()
 SALLE = (ROOT / "demo" / "programs" / "ventilation" / "salle_serveurs.hyp").read_text()
+
+
+def test_ventilation_file_transport_records_and_replays_every_exchange(tmp_path):
+    language = load_language(VENTILATION)
+    report = run_procedure(
+        language,
+        SALLE,
+        mode="production",
+        out_dir=tmp_path,
+        environment={"transport": "files"},
+    )
+    assert report.commands and all(o.state == "Completed" for o in report.commands)
+    paths = list((tmp_path / "scenarios").glob("*.jsonl"))
+    assert len(paths) == 1
+    messages = [json.loads(line) for line in paths[0].read_text().splitlines()]
+    assert {m["schema_id"].split("/")[-2] for m in messages} == {
+        "temperature.read",
+        "temperature.reading",
+        "fan.set",
+        "fan.set.result",
+    }
+    for item in messages:
+        language.schemas.validate_message(item)
+    target = MemoryTransport(language.schemas)
+    assert replay(FileTransport(paths[0], language.schemas), target) == len(messages)
+    assert [target.receive() for _ in messages] == messages
+    assert target.receive() is None
+
+
+def test_simulated_device_manifests_are_valid_and_contracts_registered():
+    language = load_language(VENTILATION)
+    manifests = list((VENTILATION / "peripheriques").glob("*.json"))
+    assert len(manifests) == 2
+    for path in manifests:
+        manifest = json.loads(path.read_text())
+        language.schemas.validate(
+            "https://schemas.example.org/hypomnesis/extension-manifest/1.0.0", manifest
+        )
+        assert manifest["input_schema"] in language.schemas
+        assert manifest["output_schema"] in language.schemas
 
 
 def plaque(tmp_path, program=PLAQUE, **kwargs):

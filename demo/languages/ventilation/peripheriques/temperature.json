@@ -1,0 +1,20 @@
+{
+  "id": "temperature.read",
+  "version": "1.0.0",
+  "role": "Observer",
+  "description": "Relevé de température de la pièce simulée, aucune donnée matérielle réelle.",
+  "signature": { "input": "Json.t", "output": "Json.t" },
+  "input_schema": "https://schemas.example.org/hypomnesis/temperature.read/1.0.0",
+  "output_schema": "https://schemas.example.org/hypomnesis/temperature.reading/1.0.0",
+  "permissions": [],
+  "backend": { "kind": "python", "entry_point": "adaptateurs/piece.py:lire" },
+  "error_policy": {
+    "idempotent": false,
+    "timeout_seconds": 5,
+    "max_attempts": 1
+  },
+  "limitations": [
+    "Simulation synchrone mono-processus ; chaque lecture avance la physique.",
+    "Descripteur statique du périphérique, pas un backend de sous-processus."
+  ]
+}
