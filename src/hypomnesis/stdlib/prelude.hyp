@@ -251,6 +251,77 @@ end
 
 external to_json : 'a -> Json.t = "core.to_json"
 
+(* ---------------------------------------------------------- knowledge *)
+
+module Knowledge = struct
+  type support = Observed | Estimated | Defaulted | Hypothesis | Unsupported
+  type provenance =
+    | Zero
+    | One
+    | Source of string
+    | Plus of provenance * provenance
+    | Times of provenance * provenance
+
+  type 'a fact = {
+    key : string;
+    value : 'a;
+    provenance : provenance;
+    method : string;
+    premises : string list
+  }
+
+  type 'a t = {
+    sources : (string * support) list;
+    facts : 'a fact list;
+    retracted : string list
+  }
+
+  let empty () = { sources = []; facts = []; retracted = [] }
+  let rank grade = match grade with
+    | Observed -> 0 | Estimated -> 1 | Defaulted -> 2 | Hypothesis -> 3 | Unsupported -> 4
+  let joint a b = if rank a >= rank b then a else b
+  let alternative a b = if rank a <= rank b then a else b
+
+  let rec grade db proof = match proof with
+    | Zero -> Unsupported
+    | One -> Observed
+    | Source id ->
+      if List.mem id db.retracted then Unsupported
+      else (match List.assoc_opt id db.sources with
+        | Some support -> support
+        | None -> failwith ("Knowledge: unknown source " ^ id))
+    | Plus (a, b) -> alternative (grade db a) (grade db b)
+    | Times (a, b) -> joint (grade db a) (grade db b)
+
+  let lookup db key = List.find_opt (fun fact -> fact.key = key) db.facts
+  let value db key = Option.map (fun fact -> fact.value) (lookup db key)
+  let known db key = Option.is_some (lookup db key)
+  let require db key = match lookup db key with
+    | Some fact -> fact
+    | None -> failwith ("Knowledge: unresolved property " ^ key)
+  let support db key = grade db (require db key).provenance
+  let provenance db key = (require db key).provenance
+
+  let derive db key value method premises =
+    if key = "" || method = "" then failwith "Knowledge: key and method must not be empty"
+    else
+      let proofs = List.map (fun premise -> provenance db premise) premises in
+      let db, proof = match proofs with
+        | [] ->
+          let sources = match List.assoc_opt "axiome" db.sources with
+            | None -> ("axiome", Defaulted) :: db.sources
+            | Some Defaulted -> db.sources
+            | Some _ -> failwith "Knowledge: axiome must be Defaulted"
+          in
+          if List.mem "axiome" db.retracted then failwith "Knowledge: axiome is retracted"
+          else { db with sources = sources }, Source "axiome"
+        | first :: rest -> db, List.fold_left (fun p q -> Times (p, q)) first rest
+      in
+      let fact = { key = key; value = value; provenance = proof;
+                   method = method; premises = premises } in
+      { db with facts = fact :: List.filter (fun old -> old.key <> key) db.facts }
+end
+
 (* ------------------------------------------------------------- effects *)
 
 (* Effects as values (cahier des charges §10). A procedure is a value of type

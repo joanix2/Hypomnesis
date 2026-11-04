@@ -162,6 +162,15 @@ explicite et restent visibles après ce choix. Le support d'une proposition
 est un jugement hôte conservé avec sa provenance, pas une promotion automatique
 d'un fait de la base. Guide : [connaissances.md](docs/architecture/connaissances.md).
 
+HYP-038 : le prélude fournit `Knowledge` (base persistante, lookup/value
+optionnels, provenance/support, derive). Les fonctions sont écrites en
+Hypomnesis, sans ajout de natifs ni de Core IR. Le pont hôte
+`epistemics.language.snapshot_value` produit une vue `Json.t Knowledge.t`
+immuable ; un encodeur explicite est requis pour des valeurs nominales.
+La vue ne certifie pas des observations et ne modifie pas la base réelle.
+Produits, alternatives et retraits sont comparés aux lectures Python ;
+exemple : `demo/examples/knowledge/plaque.hyp`.
+
 Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
 révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une

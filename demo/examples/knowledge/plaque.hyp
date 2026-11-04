@@ -1,0 +1,24 @@
+(* Contexte fictif de démonstration ; aucune lecture du monde physique. *)
+open Knowledge
+
+let initial = {
+  sources = [("plan", Knowledge.Observed); ("estimation", Knowledge.Estimated)];
+  retracted = [];
+  facts = [
+    { key = "largeur"; value = 120.0; provenance = Knowledge.Source "plan";
+      method = "plan fourni"; premises = [] };
+    { key = "hauteur"; value = 80.0; provenance = Knowledge.Source "estimation";
+      method = "estimation"; premises = [] }
+  ]
+}
+
+let calculer_surface base =
+  let largeur = Option.get (Knowledge.value base "largeur") in
+  let hauteur = Option.get (Knowledge.value base "hauteur") in
+  Knowledge.derive base "surface" (largeur *. hauteur)
+    "produit des dimensions" ["largeur"; "hauteur"]
+
+let resultat = calculer_surface initial
+let surface = Knowledge.value resultat "surface"
+let support = Knowledge.support resultat "surface"
+let initial_inchange = not (Knowledge.known initial "surface")

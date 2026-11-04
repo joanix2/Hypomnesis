@@ -181,6 +181,81 @@ Une future sortie LLM doit être estampillée Hypothesis à sa frontière de
 confiance, jamais autorisée à se déclarer Observed elle-même (HYP-082).
 Ni ces propositions ni leur résolution ne changent automatiquement une
 KnowledgeBase ou son journal ; l'intégration des stratégies revient aux capacités.
+
+## Bibliothèque pure du langage (HYP-038)
+
+Le prélude expose `Knowledge` sans nouveau natif ni effet : types algébriques,
+records immuables et fonctions Hypomnesis ordinaires, utilisant uniquement
+les primitives du registre fermé déjà présent. Une base `'a Knowledge.t`
+est passée explicitement à chaque fonction ; aucune base globale n'est lue.
+
+| API | Résultat |
+|---|---|
+| `empty ()` | base vide persistante |
+| `lookup base key` | `'a fact option`, valeur et justification |
+| `value base key` | `'a option`, absence explicite sans sentinelle |
+| `known base key` | présence d'une valeur, indépendante de son support |
+| `support base key` | grade calculé depuis la provenance et les sources |
+| `provenance base key` | terme libre Source/Zero/One/Plus/Times |
+| `derive base key value method premises` | nouvelle base avec la conclusion et ses prémisses |
+
+Une dérivation multiplie les provenances des prémisses, y compris les
+répétitions. Une dérivation sans prémisse repose sur `axiome`, Defaulted,
+comme dans KnowledgeBase ; une source axiome incompatible ou retirée est
+refusée. Les alternatives prennent le meilleur support, les prémisses
+jointes le plus faible ; une source retirée vaut Unsupported.
+Clé absente dans `support`, source inconnue ou prémisse absente dans `derive`
+produisent une erreur explicite. `value` reste optionnelle.
+
+L'existence n'est pas confondue avec le support : une valeur explicitement
+présente dont la provenance vaut Zero est connue mais Unsupported.
+Une révision normale de KnowledgeBase retire les faits invalidés ; son
+instantané expose alors None pour ces clés. Cette bibliothèque ne lance
+pas elle-même la révision, ne modifie aucun journal et ne conclut pas
+automatiquement à l'absence de conflit logique (HYP-035).
+
+`epistemics.language.snapshot_value(base, encode=...)` est le pont hôte vers
+une vue `Json.t Knowledge.t`. Il capture les sources, faits, provenances et
+retraits dans des valeurs runtime immuables. Par défaut, les valeurs doivent
+être des données JSON strictes ; un fait nominal exige son encodeur explicite,
+par exemple `encode=lambda fact: codec.encode(fact.value)`. Aucun type
+nominal attendu n'est deviné depuis une charge non fiable.
+
+L'hôte peut fournir cet instantané à un programme par un symbole déclaré
+dans son propre registre, suivant ADR 0003 :
+
+```python
+from hypomnesis.epistemics.language import snapshot_value
+from hypomnesis.runtime.natives import default_registry
+
+view = snapshot_value(base)
+registry = default_registry()
+registry.register("app.context", 0, lambda: view)
+session = Session(registry)
+session.load('external context : Json.t Knowledge.t = "app.context"')
+session.load("""
+let result = Knowledge.derive context "conclusion" (Json.Bool true)
+  "regle du programme" ["objet.taille"]
+let grade = Knowledge.support result "conclusion"
+""")
+```
+
+Le symbole d'application n'est pas ajouté au registre par défaut. Les vues
+Knowledge sont des **données**, pas des attestations d'observation : un
+programme peut construire des exemples fictifs, sans créer d'observation
+dans la KnowledgeBase de l'hôte. Seul Effect.Observe conserve ce rôle dans
+les procédures ; enregistrer un résultat avec Effect.Record suit toujours
+ses contrôles et les prémisses de la base réelle. La provenance seule
+ne prouve pas que le calcul de la valeur dérivée exprime correctement
+une règle métier.
+
+Exemple autonome :
+[plaque.hyp](../../demo/examples/knowledge/plaque.hyp). Le calcul de surface
+prend une base en argument, produit un fait automatiquement Estimated et
+laisse l'entrée inchangée. Les tests générés comparent la lecture du support
+à l'implémentation Python pour produits, alternatives et retraits.
+Cette bibliothèque n'étend pas le fragment Lean prouvé : les tests Python
+et différentiels ne sont pas une preuve de raffinement.
 La provenance seule ne contient pas les déclarations de toutes ses sources :
 les faits dérivés nécessitent le contexte de sources de leur base pour évaluer
 support et confiance. Ce format est un instantané typé, pas l'export complet
