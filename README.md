@@ -84,6 +84,23 @@ Mélanger les dimensions est refusé avant l'exécution :
                                         ^^^^^^^^^^^^^^^^^^^^
 ```
 
+## VS Code
+
+L'extension [editors/vscode](editors/vscode/README.md) fournit la coloration `.hyp` et les
+diagnostics du compilateur pendant la frappe, sans exécuter les programmes édités.
+Installer `hypomnesis[lsp]` dans le Python du projet, puis construire et installer le VSIX :
+
+```bash
+pip install -e '.[lsp]'
+cd editors/vscode
+npm ci && npm test && npm run package
+code --install-extension hypomnesis.vsix
+```
+
+La construction nécessite Node.js 22 ou supérieur. La coloration fonctionne sans Python ;
+le linter utilise `.venv` par défaut, avec un contexte M2 automatique ou le réglage
+`hypomnesis.languageRoot`.
+
 ## Inspecter les extensions
 
 ```bash

@@ -1,0 +1,89 @@
+{
+  "name": "hypomnesis",
+  "displayName": "Hypomnesis",
+  "description": "Coloration syntaxique et diagnostics du compilateur Hypomnesis.",
+  "version": "0.1.0",
+  "publisher": "hypomnesis",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joanix2/Hypomnesis",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": ["Programming Languages", "Linters"],
+  "activationEvents": ["onLanguage:hypomnesis"],
+  "main": "./out/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "La coloration fonctionne ; le serveur Python exige un dossier approuvé."
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "hypomnesis",
+        "aliases": ["Hypomnesis", "hypomnesis"],
+        "extensions": [".hyp"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "hypomnesis",
+        "scopeName": "source.hypomnesis",
+        "path": "./syntaxes/hypomnesis.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Hypomnesis",
+      "properties": {
+        "hypomnesis.pythonPath": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Python contenant hypomnesis[lsp]. Vide : .venv du dossier, sinon python3 (python sous Windows)."
+        },
+        "hypomnesis.languageRoot": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Dossier M2 contenant langage.json, absolu ou relatif au dossier de travail. Vide : détection automatique."
+        },
+        "hypomnesis.debounceMs": {
+          "type": "integer",
+          "default": 300,
+          "minimum": 0,
+          "maximum": 5000,
+          "scope": "resource",
+          "description": "Délai après la dernière frappe avant vérification."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "test": "npm run compile && node --test test/*.test.cjs",
+    "test:host": "npm run compile && node test/run-host.cjs",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --out hypomnesis.vsix"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^11.0.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.91.0",
+    "@vscode/vsce": "^4.1.0",
+    "typescript": "^5.6.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.0.0"
+  }
+}

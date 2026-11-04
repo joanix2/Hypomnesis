@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T08:56:00+01:00
 description: "P2 · S · Outillage et visualisation · dépend de HYP-002"
+priority: P2
+tags: [dsl, metalangage, outillage, vscode]
 ---
 
 ## Conversation
@@ -35,3 +37,30 @@ Les fichiers `.hyp` n'ont aucune coloration dans VS Code. Une première extensio
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Demande utilisateur : ajouter la coloration et le linter VS Code. Plan intégré avec
+HYP-132 : extension dans `editors/vscode`, grammaire TextMate testée avec le moteur
+Oniguruma et contre les mots-clés Lark, configuration des commentaires et du repliement,
+paquet VSIX générable localement. Pas de modification de la syntaxe du langage.
+Checklist créée ; couloir conservé.
+
+### user
+
+### agent
+
+Implémentation livrée dans `editors/vscode/` : association `.hyp`, grammaire TextMate,
+commentaires imbriqués et documentaires, descriptions annotées, types, chaînes, nombres,
+opérateurs, parenthèses et repliement. Six tests Oniguruma verts, dont correspondance exacte
+des mots-clés avec Lark et tokenisation de `plaque.hyp` et `ventilation.hyp`.
+
+`npm ci`, compilation TypeScript, tests, génération VSIX et audit npm réussis
+(aucune vulnérabilité signalée). Paquet `editors/vscode/hypomnesis.vsix` généré, puis
+installé dans VS Code : `hypomnesis.hypomnesis@0.1.0` confirmé par la liste des extensions.
+Un test dans un hôte VS Code isolé confirme l'association du langage et les diagnostics.
+Documentation d'installation ajoutée ; job CI de construction ajouté, non encore exécuté
+à distance. Validation complète Python/Lean verte (671 tests), graphe rafraîchi.
+Checklist complétée, couloir laissé à l'utilisateur, pas de push.
+
+### user

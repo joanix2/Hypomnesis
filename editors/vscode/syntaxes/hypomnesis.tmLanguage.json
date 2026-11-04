@@ -1,0 +1,60 @@
+{
+  "name": "Hypomnesis",
+  "scopeName": "source.hypomnesis",
+  "patterns": [
+    {"include": "#documentation"},
+    {"include": "#comment"},
+    {"include": "#string"},
+    {"include": "#type-declaration"},
+    {"include": "#keywords"},
+    {"include": "#numbers"},
+    {"name": "storage.type.hypomnesis", "match": "\\b(?:int|float|string|bool|unit|list|option)\\b"},
+    {"include": "#type-variable"},
+    {"name": "entity.name.type.hypomnesis", "match": "\\b[A-Z][A-Za-z0-9_']*\\b"},
+    {"name": "keyword.operator.hypomnesis", "match": ">>=|\\|>|@@|->|::|\\|\\||&&|<>|<=|>=|\\*\\*|[+*/-]\\.|[=<>@^+*/|:-]"},
+    {"name": "punctuation.section.hypomnesis", "match": "[()\\[\\]{};,\\.]"}
+  ],
+  "repository": {
+    "type-declaration": {
+      "match": "\\b(type)\\s+(?:('[a-z_][A-Za-z0-9_']*|\\([^)]*\\))\\s+)?([a-z_][A-Za-z0-9_']*)",
+      "captures": {
+        "1": {"name": "keyword.control.hypomnesis"},
+        "2": {"patterns": [{"include": "#type-variable"}]},
+        "3": {"name": "entity.name.type.hypomnesis"}
+      }
+    },
+    "type-variable": {
+      "name": "entity.name.type.variable.hypomnesis",
+      "match": "'[a-z_][A-Za-z0-9_']*"
+    },
+    "documentation": {
+      "name": "comment.block.documentation.hypomnesis",
+      "begin": "\\(\\*\\*(?!\\))",
+      "end": "\\*\\)",
+      "patterns": [
+        {"include": "#comment"},
+        {"name": "storage.type.annotation.hypomnesis", "match": "@[a-z][a-z-]*"}
+      ]
+    },
+    "comment": {
+      "name": "comment.block.hypomnesis",
+      "begin": "\\(\\*",
+      "end": "\\*\\)",
+      "patterns": [{"include": "#comment"}]
+    },
+    "string": {
+      "name": "string.quoted.double.hypomnesis",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [{"name": "constant.character.escape.hypomnesis", "match": "\\\\."}]
+    },
+    "keywords": {
+      "name": "keyword.control.hypomnesis",
+      "match": "\\b(?:and|as|else|end|external|false|fun|function|if|in|let|match|mod|module|of|open|rec|struct|then|true|type|when|with)\\b"
+    },
+    "numbers": {
+      "name": "constant.numeric.hypomnesis",
+      "match": "\\b\\d[\\d_]*(?:\\.[\\d_]*)?(?:[eE][+-]?\\d+)?(?![A-Za-z_'])"
+    }
+  }
+}

@@ -310,6 +310,39 @@ semi-anneau. Propriétés : `docs/verification/proprietes.md`. Stratégie : `doc
 
 - `examples/basics/`, `examples/mechanics/` : tour du langage, plaque du §4.2.
 
+## Éditeur VS Code et serveur LSP (HYP-131/132)
+
+`editors/vscode/` déclare le langage `.hyp`, une grammaire TextMate (commentaires
+imbriqués/documentaires, mots-clés Lark, types, nombres et chaînes) et un client
+`vscode-languageclient`. Tests Oniguruma : `npm ci && npm test` dans ce dossier ;
+construction du paquet : `npm run package` (Node.js ≥ 22). Un job CI distinct vérifie
+la compilation TypeScript, la grammaire et le VSIX.
+
+Installer l'extra Python `lsp` (`pygls` 2) pour `hypomnesis-lsp`, ou
+`python -m hypomnesis.lsp.server` sur stdio. Le client choisit le `.venv` du dossier,
+sinon Python système, avec surcharge `hypomnesis.pythonPath`. Un serveur par dossier ;
+pas de lancement Python dans un espace non approuvé. Les réglages sont documentés dans
+`editors/vscode/README.md`.
+
+`lsp/analysis.py` appelle `Session.check` sur le prélude, les sources M2 précédentes
+du manifeste puis le document. Une session neuve par analyse évite les noms obsolètes ;
+aucun programme édité, contrat d'effet ou adaptateur Python n'est exécuté. Le contexte
+M2 vient du `langage.json` le plus proche, de `programs/<nom>` vers `languages/<nom>`,
+ou de `hypomnesis.languageRoot`. Les documents ouverts non enregistrés remplacent les
+sources disque. Une erreur de dépendance est signalée au début du document avec son
+chemin ; une erreur du document reprend exactement message, étape et étendue du compilateur.
+Les positions sont converties de coordonnées 1-based en positions LSP négociées
+(UTF-16 par défaut, UTF-8/32 possibles).
+
+`lsp/server.py` diffère l'analyse de 300 ms par défaut et annule les tâches obsolètes.
+`lsp/worker.py` isole chaque compilation dans un sous-processus tué à l'annulation ou
+au dépassement de 30 secondes. Les erreurs d'infrastructure sont journalisées et publiées
+comme diagnostics, jamais assimilées à un succès. Correction et fermeture effacent les
+diagnostics. Les tests Python parlent directement JSON-RPC/stdio au serveur ; le test
+`npm run test:host` vérifie également l'association du langage, l'apparition de l'erreur
+et sa disparition après correction non enregistrée dans un véritable hôte VS Code isolé.
+Pas de complétion, survol ou navigation dans ce lot.
+
 ## Graphe de connaissances (Graphify)
 
 `graphify-out/` (non versionné) contient le graphe du dépôt : code, docs, tickets. Il n'est
