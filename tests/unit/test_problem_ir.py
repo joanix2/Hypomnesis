@@ -85,6 +85,12 @@ def test_invalid_json_and_assignment():
         Problem.from_json(document)
     assert check_assignment(example(), {"thickness": True})
     assert check_assignment(example(), {})
+    document = example().to_json()
+    document["variables"][0]["lower"]["numerator"] = 1.0
+    with pytest.raises(ValueError, match="JSON integers"):
+        Problem.from_json(document)
+    decimal = Problem((Variable("x"),), (Constraint("decimal", (("x", 1),), "==", 0.1),))
+    assert check_assignment(decimal, {"x": 0.1}) == []
 
 
 def test_construct_plan_from_language():

@@ -102,7 +102,7 @@ class Constraint:
         object.__setattr__(self, "rhs", _number(self.rhs))
 
     def holds(self, assignment: dict[str, Number]) -> bool:
-        lhs = sum(Fraction(c) * Fraction(assignment[v]) for v, c in self.terms)
+        lhs = sum(Fraction(c) * _number(assignment[v]) for v, c in self.terms)
         rhs = Fraction(self.rhs)
         return {"<=": lhs <= rhs, ">=": lhs >= rhs, "==": lhs == rhs}[self.op]
 
@@ -176,6 +176,7 @@ class Problem:
             if not isinstance(self.target, tuple) or len(self.target) != 2:
                 raise ValueError("objective must be a variable/target pair")
             name, goal = self.target
+            _name(name)
             references.append(name)
             object.__setattr__(self, "target", (name, _number(goal)))
         if any(name not in names for name in references):
@@ -248,6 +249,8 @@ class Problem:
         SchemaRegistry.with_builtin_schemas().validate(SCHEMA_ID, document)
 
         def number(n: dict[str, int]) -> Fraction:
+            if type(n["numerator"]) is not int or type(n["denominator"]) is not int:
+                raise ValueError("rational components must be JSON integers, not floats")
             return Fraction(n["numerator"], n["denominator"])
 
         def pairs(xs: list) -> tuple[tuple[str, Number], ...]:
