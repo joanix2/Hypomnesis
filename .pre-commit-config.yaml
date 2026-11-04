@@ -59,7 +59,7 @@ repos:
         pass_filenames: false
       - id: kanban-check
         name: kanban (format et dépendances)
-        entry: python3 scripts/kanban.py check
+        entry: bash -c 'PY=.venv/bin/python; [ -x "$PY" ] || PY=$(command -v python3 || command -v python); exec "$PY" scripts/kanban.py check'
         language: system
         files: ^(\.agentkanban/.*|scripts/kanban\.py)$
         pass_filenames: false

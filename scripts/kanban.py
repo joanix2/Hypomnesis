@@ -5,7 +5,8 @@ Usage :
     python scripts/kanban.py status [--json]  # tâches prêtes, bloquées, en cours
     python scripts/kanban.py graph [--wait]   # injecte les tâches dans graphify-out/graph.json
 
-Bibliothèque standard uniquement : les hooks git l'exécutent avec n'importe quel python3.
+Dépendances : PyYAML (front-matter) et NetworkX (graphe des dépendances), donc à lancer avec
+l'environnement du projet (`.venv/bin/python`).
 
 Une tâche est *prête* si son couloir est `todo` et que toutes ses dépendances sont terminées,
 c'est-à-dire en `qa` (faites, en attente de vérification humaine) ou en `done` (vérifiées).
@@ -22,8 +23,10 @@ Injection dans Graphify : nœuds `HYP-NNN · titre` et relations
   contains     dossier → fichiers du graphe qu'il contient
 Tout ce qui est injecté porte `_origin: "kanban"` et est remplacé à chaque injection
 (idempotent). L'écriture se fait sous le verrou de reconstruction de Graphify
-(`graphify-out/.rebuild.lock`), et `--wait` attend la fin d'une reconstruction en cours :
-c'est le mode utilisé par les hooks git, après la reconstruction lancée par Graphify.
+(`graphify-out/.rebuild.lock`), et `--wait` attend la fin d'une reconstruction en cours.
+
+`status` affiche aussi le *chemin critique* : la plus longue chaîne de dépendances non terminées
+menant à une tâche P0 restante.
 """
 
 from __future__ import annotations
@@ -38,6 +41,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+import networkx as nx
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 KANBAN = ROOT / ".agentkanban"
@@ -75,28 +81,28 @@ class Task:
 # ------------------------------------------------------------------ lecture
 
 
-def _unquote(raw: str) -> str:
-    raw = raw.strip()
-    if len(raw) >= 2 and raw[0] == raw[-1] == '"':
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            return raw[1:-1]
-    if len(raw) >= 2 and raw[0] == raw[-1] == "'":
-        return raw[1:-1].replace("''", "'")
-    return raw
+class _FrontMatterLoader(yaml.SafeLoader):
+    """SafeLoader that keeps timestamps as written (the extension writes bare ISO dates)."""
+
+
+_FrontMatterLoader.yaml_implicit_resolvers = {
+    char: [(tag, regexp) for tag, regexp in resolvers if tag != "tag:yaml.org,2002:timestamp"]
+    for char, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
 
 
 def _front_matter(text: str) -> dict[str, str] | None:
+    """Champs du front-matter en chaînes ; None si absent, ValueError si ce n'est pas du YAML."""
     match = re.match(r"^---\n(.*?)\n---\n", text, re.S)
     if not match:
         return None
-    fields: dict[str, str] = {}
-    for line in match.group(1).splitlines():
-        key, sep, value = line.partition(":")
-        if sep and key.strip():
-            fields[key.strip()] = _unquote(value)
-    return fields
+    try:
+        data = yaml.load(match.group(1), Loader=_FrontMatterLoader)
+    except yaml.YAMLError as exc:
+        raise ValueError(str(exc).replace("\n", " ")) from exc
+    if not isinstance(data, dict):
+        raise ValueError("un dictionnaire clé: valeur est attendu")
+    return {str(key): "" if value is None else str(value) for key, value in data.items()}
 
 
 def _section_paths(text: str, heading: str) -> list[str]:
@@ -133,7 +139,11 @@ def load(errors: list[str]) -> dict[str, Task]:
             errors.append(f"{rel}: nom attendu task_<AAAAMMJJ>_hypNNN_<slug>.md")
             continue
         text = path.read_text(encoding="utf-8")
-        fm = _front_matter(text)
+        try:
+            fm = _front_matter(text)
+        except ValueError as exc:
+            errors.append(f"{rel}: front-matter invalide ({exc})")
+            continue
         if fm is None:
             errors.append(f"{rel}: front-matter absent")
             continue
@@ -198,36 +208,53 @@ def validate(tasks: dict[str, Task], known_lanes: list[str]) -> list[str]:
     return errors
 
 
-def cycles(tasks: dict[str, Task]) -> list[str]:
-    state: dict[str, int] = {}
-    found: list[str] = []
-
-    def visit(tid: str, stack: list[str]) -> None:
-        if state.get(tid) == 1:
-            found.append("cycle de dépendances : " + " → ".join([*stack[stack.index(tid) :], tid]))
-            return
-        if state.get(tid) == 2 or tid not in tasks:
-            return
-        state[tid] = 1
-        for dep in tasks[tid].depends_on:
-            visit(dep, [*stack, tid])
-        state[tid] = 2
-
+def dependency_graph(tasks: dict[str, Task]) -> nx.DiGraph:
+    """Graphe orienté tâche → dépendance (les dépendances inconnues sont ignorées)."""
+    graph = nx.DiGraph()
     for tid in sorted(tasks):
-        visit(tid, [])
-    return found
+        graph.add_node(tid, task=tasks[tid])
+    for t in tasks.values():
+        graph.add_edges_from((t.id, dep) for dep in t.depends_on if dep in tasks)
+    return graph
 
 
-def blockers(task: Task, tasks: dict[str, Task]) -> list[str]:
-    return [d for d in task.depends_on if d in tasks and tasks[d].lane not in FINISHED]
+def cycles(tasks: dict[str, Task]) -> list[str]:
+    found = []
+    for cycle in nx.simple_cycles(dependency_graph(tasks)):
+        start = cycle.index(min(cycle))  # canonical rotation: smallest identifier first
+        ring = [*cycle[start:], *cycle[:start]]
+        found.append("cycle de dépendances : " + " → ".join([*ring, ring[0]]))
+    return sorted(found)
 
 
-def is_ready(task: Task, tasks: dict[str, Task]) -> bool:
-    return task.lane == "todo" and not blockers(task, tasks)
+def blockers(task: Task, graph: nx.DiGraph) -> list[str]:
+    return [d for d in graph.successors(task.id) if graph.nodes[d]["task"].lane not in FINISHED]
 
 
-def unblocks(task_id: str, tasks: dict[str, Task]) -> list[str]:
-    return sorted(t.id for t in tasks.values() if task_id in t.depends_on)
+def is_ready(task: Task, graph: nx.DiGraph) -> bool:
+    return task.lane == "todo" and not blockers(task, graph)
+
+
+def unblocks(task_id: str, graph: nx.DiGraph) -> list[str]:
+    return sorted(graph.predecessors(task_id))
+
+
+def critical_path(tasks: dict[str, Task]) -> list[str]:
+    """Plus longue chaîne de dépendances non terminées vers une tâche P0 restante.
+
+    Rendue dans l'ordre d'exécution (dépendance d'abord, tâche P0 en dernier).
+    """
+    graph = dependency_graph(tasks)
+    open_tasks = graph.subgraph(t for t in tasks if tasks[t].lane not in FINISHED)
+    if not nx.is_directed_acyclic_graph(open_tasks):
+        return []  # cycles are reported by `check`; no meaningful path
+    best: list[str] = []
+    for tid in sorted(t for t in open_tasks if tasks[t].priority == "P0"):
+        reach = open_tasks.subgraph({tid, *nx.descendants(open_tasks, tid)})
+        path = nx.dag_longest_path(reach)  # tid is the only source, so the path starts there
+        if len(path) > len(best):
+            best = path
+    return best[::-1]
 
 
 # --------------------------------------------------------------------- graphe
@@ -306,6 +333,7 @@ def inject(graph: dict, tasks: dict[str, Task]) -> tuple[int, int]:
                 link(path_id, file_id, "contains")
         return path_id
 
+    deps = dependency_graph(tasks)
     task_ids = {t.id: f"kanban_{_slug(t.id)}" for t in tasks.values()}
     for t in tasks.values():
         node(
@@ -317,8 +345,8 @@ def inject(graph: dict, tasks: dict[str, Task]) -> tuple[int, int]:
             lane=t.lane,
             priority=t.priority,
             epic=t.epic,
-            ready=is_ready(t, tasks),
-            blocked_by=blockers(t, tasks),
+            ready=is_ready(t, deps),
+            blocked_by=blockers(t, deps),
         )
     for t in tasks.values():
         source = task_ids[t.id]
@@ -404,19 +432,29 @@ def _sort_key(t: Task) -> tuple[int, str]:
 
 
 def status(tasks: dict[str, Task]) -> dict[str, list[dict]]:
+    graph = dependency_graph(tasks)
     ordered = sorted(tasks.values(), key=_sort_key)
     return {
         "doing": [asdict(t) for t in ordered if t.lane == "doing"],
         "ready": [
-            {**asdict(t), "unblocks": unblocks(t.id, tasks)} for t in ordered if is_ready(t, tasks)
+            {**asdict(t), "unblocks": unblocks(t.id, graph)} for t in ordered if is_ready(t, graph)
         ],
         "blocked": [
-            {**asdict(t), "blocked_by": blockers(t, tasks)}
+            {**asdict(t), "blocked_by": blockers(t, graph)}
             for t in ordered
-            if t.lane == "todo" and blockers(t, tasks)
+            if t.lane == "todo" and blockers(t, graph)
         ],
         "qa": [asdict(t) for t in ordered if t.lane == "qa"],
         "done": [asdict(t) for t in ordered if t.lane == "done"],
+        "critical_path": [
+            {
+                "id": tid,
+                "priority": tasks[tid].priority,
+                "title": tasks[tid].title,
+                "labels": tasks[tid].labels,
+            }
+            for tid in critical_path(tasks)
+        ],
     }
 
 
@@ -440,6 +478,13 @@ def _print_status(report: dict[str, list[dict]]) -> None:
     for t in report["qa"]:
         print(line(t))
     print(f"\nTerminées et vérifiées : {len(report['done'])}")
+    path = report["critical_path"]
+    if path:
+        print(f"\nChemin critique vers P0 ({len(path)})")
+        for t in path:
+            print(line(t))
+    else:
+        print("\nChemin critique vers P0 : aucune tâche P0 restante")
 
 
 def main(argv: list[str] | None = None) -> int:

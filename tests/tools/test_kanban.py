@@ -125,6 +125,68 @@ def test_check_command_exit_codes(board, capsys):
     assert kanban.main(["check"]) == 1
 
 
+def test_cycle_message_starts_at_smallest_identifier(board):
+    board("001", deps="HYP-003")
+    board("002", deps="HYP-001")
+    board("003", deps="HYP-002")
+    cycles = [e for e in errors_of() if e.startswith("cycle de dépendances")]
+    assert cycles == ["cycle de dépendances : HYP-001 → HYP-003 → HYP-002 → HYP-001"]
+
+
+def test_front_matter_accepts_quoted_bare_and_colon_values():
+    text = (
+        "---\n"
+        'title: "HYP-001 · Titre : avec deux-points"\n'
+        "lane: todo\n"
+        "created: 2026-11-03T21:36:21+01:00\n"
+        "updated: 2026-11-03\n"
+        "description: 'l''extension'\n"
+        "---\n\nCorps\n"
+    )
+    assert kanban._front_matter(text) == {
+        "title": "HYP-001 · Titre : avec deux-points",
+        "lane": "todo",
+        "created": "2026-11-03T21:36:21+01:00",  # dates stay strings, as written
+        "updated": "2026-11-03",
+        "description": "l'extension",
+    }
+
+
+def test_front_matter_absent_and_invalid(board):
+    assert kanban._front_matter("pas de front-matter") is None
+    (kanban.TASKS / "task_20261103_hyp001_x.md").write_text("---\ntitle: [oups\n---\n\ncorps\n")
+    (kanban.TASKS / "task_20261103_hyp002_x.md").write_text("pas de front-matter")
+    errors = errors_of()
+    assert any("hyp001_x.md: front-matter invalide" in e for e in errors)
+    assert any("hyp002_x.md: front-matter absent" in e for e in errors)
+
+
+def test_critical_path_is_longest_open_chain_to_p0(board):
+    def p0(num: str, deps: str = "aucune", lane: str = "todo") -> None:
+        board(num, lane=lane, deps=deps)
+        path = next(kanban.TASKS.glob(f"task_*_hyp{num}_*.md"))
+        path.write_text(path.read_text().replace("**Priorité** P1", "**Priorité** P0"))
+
+    board("001", lane="qa")  # finished: not on the path
+    board("002", deps="HYP-001")
+    board("003", deps="HYP-002")
+    p0("004", deps="HYP-003")  # chain 002 → 003 → 004
+    board("005")
+    p0("006", deps="HYP-005")  # shorter chain 005 → 006
+    tasks = kanban.load([])
+    assert kanban.critical_path(tasks) == ["HYP-002", "HYP-003", "HYP-004"]
+    report = kanban.status(tasks)
+    assert [t["id"] for t in report["critical_path"]] == ["HYP-002", "HYP-003", "HYP-004"]
+
+
+def test_critical_path_empty_without_open_p0(board, capsys):
+    board("001")
+    board("002", deps="HYP-001")
+    assert kanban.critical_path(kanban.load([])) == []
+    assert kanban.main(["status"]) == 0
+    assert "aucune tâche P0 restante" in capsys.readouterr().out
+
+
 def _graph() -> dict:
     return {
         "directed": False,

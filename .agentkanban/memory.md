@@ -50,7 +50,7 @@ Détails d'implémentation : `TECHNICAL.md`.
 
 - Graphe de connaissances : `graphify query|path|explain|affected` sur `graphify-out/` (voir
   `CLAUDE.md`) ; il n'est pas reconstruit automatiquement : `./scripts/validate.sh graphe`.
-- Kanban : `python3 scripts/kanban.py status` (tâches prêtes ou bloquées), `check` (validation),
+- Kanban : `.venv/bin/python scripts/kanban.py status` (tâches prêtes ou bloquées, chemin critique vers P0), `check` (validation),
   `graph` (injection dans Graphify ; voir `CLAUDE.md`).
 - Sous-agents : `.claude/agents/` (`hyp-planner`, `hyp-implementer`, `hyp-prover`, `hyp-reviewer`), voir `AGENTS.md`.
 

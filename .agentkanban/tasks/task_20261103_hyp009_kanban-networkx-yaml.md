@@ -1,6 +1,6 @@
 ---
 title: "HYP-009 · Outil Kanban : NetworkX pour les dépendances, PyYAML pour le front-matter"
-lane: todo
+lane: doing
 created: 2026-11-03T21:36:21+01:00
 updated: 2026-11-03T21:36:21+01:00
 description: "P2 · S · Fondations et gouvernance · dépend de HYP-002 · migration vers bibliothèque"
