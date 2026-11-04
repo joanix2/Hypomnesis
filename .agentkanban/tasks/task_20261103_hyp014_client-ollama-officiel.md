@@ -38,4 +38,3 @@ description: "P1 · S · Fondations et gouvernance · dépend de HYP-002 · migr
 
 - Ticket de coordination : HYP-007
 - Conventions et définition de fini : `.agentkanban/memory.md` (« bibliothèques plutôt que code maison »)
-

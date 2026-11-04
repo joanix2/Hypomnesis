@@ -41,4 +41,3 @@ La CLI (`src/hypomnesis/cli.py`) est écrite avec `argparse`. Elle a grossi (`ru
 
 - `TECHNICAL.md` (commandes)
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

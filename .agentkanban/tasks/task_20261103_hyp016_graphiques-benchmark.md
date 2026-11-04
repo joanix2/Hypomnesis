@@ -38,4 +38,3 @@ Le banc `hypomnesis benchmark-llm` produit un tableau Markdown. Des graphiques r
 
 - Ticket de coordination : HYP-007
 - Conventions et définition de fini : `.agentkanban/memory.md` (« bibliothèques plutôt que code maison »)
-

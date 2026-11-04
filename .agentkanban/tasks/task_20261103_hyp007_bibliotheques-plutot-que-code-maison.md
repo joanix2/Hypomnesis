@@ -2,7 +2,7 @@
 title: "HYP-007 · Remplacer le code maison par des bibliothèques courantes"
 lane: todo
 created: 2026-11-03T21:29:19+01:00
-updated: 2026-11-03T21:29:19+01:00
+updated: 2026-11-04T08:55:00+01:00
 description: "P1 · S · Fondations et gouvernance · coordination des migrations vers des bibliothèques"
 ---
 
@@ -24,6 +24,7 @@ Relevé des endroits concernés :
 | graphe des tâches du Kanban, détection de cycles, tâches prêtes | **NetworkX** : `simple_cycles`, `topological_generations`, chemin critique | `scripts/kanban.py` |
 | client HTTP Ollama écrit avec `urllib` | client officiel **`ollama`** (Python) | `src/hypomnesis/llm/ollama.py` |
 | traceur de spans maison | **OpenTelemetry SDK** (exportateur en mémoire pour les rapports, OTLP ensuite ; recoupe HYP-070) | `src/hypomnesis/observability/trace.py` |
+| accesseurs de validation des certificats | **jsonschema**, avec le schéma déjà publié | `src/hypomnesis/certify/load.py` |
 | CLI `argparse` | **Typer** (ticket dédié HYP-006) | `src/hypomnesis/cli.py` |
 | tableaux du banc LLM en texte | **matplotlib** pour les graphiques (exactitude, latence, jetons par modèle) | `src/hypomnesis/llm/benchmark.py` |
 | estimateurs par règles | **scikit-learn** quand un vrai modèle appris est voulu (ticket HYP-054) | langages M2 |
@@ -40,7 +41,7 @@ Ce ticket coordonne les migrations ; chacune a son ticket, et celui-ci se termin
 | HYP-014 | client LLM → paquet officiel `ollama` |
 | HYP-015 | traceur maison → SDK OpenTelemetry (puis HYP-070) |
 | HYP-016 | graphiques du banc LLM → matplotlib |
-| HYP-017 | certificats et manifestes → modèles Pydantic |
+| HYP-017 | validation des certificats → `jsonschema` (déjà une dépendance) |
 | HYP-054 | estimateurs appris → scikit-learn (ticket existant) |
 
 #### Tâches proposées
@@ -64,4 +65,3 @@ Ce ticket coordonne les migrations ; chacune a son ticket, et celui-ci se termin
 
 - `.agentkanban/memory.md` (préférence « bibliothèques plutôt que code maison »)
 - Tickets liés : HYP-006 (Typer), HYP-054 (scikit-learn), HYP-070 (OpenTelemetry)
-
