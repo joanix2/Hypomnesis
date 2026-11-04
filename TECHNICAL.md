@@ -17,7 +17,7 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Primitives | `src/hypomnesis/runtime/natives.py` | registre fermé de primitives pures |
 | Prélude | `src/hypomnesis/stdlib/prelude.hyp` | bibliothèque standard en Hypomnesis |
 | Session | `src/hypomnesis/session.py` | enchaîne tout ; pile de 512 Mo pour la récursion profonde |
-| CLI | `src/hypomnesis/cli.py` | `run`, `check`, `repl` |
+| CLI | `src/hypomnesis/cli.py` | application Typer (Rich) : `run`, `check`, `repl`, `lancer`, `decrire`, `benchmark-llm`, `--version` ; `main(argv) -> int` convertit la sortie Click en entier (voir « CLI ») |
 
 ## Moteur, langages, procédures (ADR 0008, HYP-060)
 
@@ -38,8 +38,52 @@ enregistre ; seul le moteur crée des faits observés, lors d'une lecture de cap
 Briques M3 utilisées par l'interpréteur : `epistemics/` (provenance, connaissances),
 `ir/problem.py`, `backends/z3_solver.py`, `effects/dispatcher.py`, `observability/trace.py`.
 
+### Épistémique : graphe de provenance (NetworkX, HYP-008)
+
+La **source de vérité** reste le terme de provenance en semi-anneau de chaque fait
+(`epistemics/provenance.py`, miroir du modèle Lean) : support, confiance et « tient-il encore ? »
+en sont des évaluations. `KnowledgeBase.graph()` en dérive, à la demande, un `nx.DiGraph` :
+
+- nœuds `fact:<clé>` et `source:<id>` (préfixes : une clé de fait peut ressembler à un id de
+  source) ; une provenance peut citer une source non déclarée (`source:axiome`) ;
+- arêtes `source → fait` (la provenance du fait la mentionne, `kind="provenance"`) et
+  `prémisse → conclusion` (`kind="premise"`) ; `graph(detailed=True)` ajoute valeur, méthode,
+  support et confiance (nœuds faits), origine et confiance (nœuds sources).
+
+Usages : `retract_source` prend pour **ensemble candidat** les descendants des sources qui ne
+tiennent plus (retirées ou non déclarées), puis **décide par l'évaluation booléenne** de chaque
+candidat (substitution `x ↦ 0`, P10/P11) — un fait à deux dérivations (`plus`) survit si l'une tient
+encore ; `explain` parcourt les prédécesseurs `premise` (même rendu texte qu'avant) ;
+`provenance_graph()` exporte le graphe en JSON node-link (`nx.node_link_data(…, edges="edges")`,
+rechargeable par `nx.node_link_graph`), inclus par `ProcedureReport.to_json` sous la clé
+`provenance_graph`. Tests : `tests/unit/test_knowledge_graph.py`,
+`tests/property/test_knowledge_graph.py` (Hypothesis), `tests/integration/test_provenance_graph.py`
+(caractérisation).
+
+Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
+prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
+révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une
+même dérivation n'apparaissent qu'une fois dans l'explication.
+
 CLI : `hypomnesis lancer LANGAGE [PROGRAMME] [--demande …] [--mode …] [--env cle=valeur]
 [--sortie DIR] [--sans-permission]`.
+
+### CLI (Typer, HYP-006)
+
+`cli.py` déclare une fonction annotée par commande sur `app = typer.Typer(...)` (typer 0.27 : Click
+embarqué, aide rendue par Rich). Les options gardent leurs noms et défauts d'avant la migration ;
+`--mode` est l'énumération `Mode` (`simulate`, `dry-run`, `production`), `--format` l'énumération
+`Format` (`md`, `json`), `--env` une liste répétable. Les imports lourds (`llm`, `certify`, `engine`)
+restent dans les fonctions pour que `check` démarre vite.
+
+Codes de sortie : 0 succès ; 1 refus applicatif (erreur positionnée, `refusé : …` pour
+`lancer`/`decrire`) ; 64 `lancer` sans programme ni demande ; 2 erreur d'usage détectée par Click
+(option inconnue, `--mode` invalide, fichier `.hyp` de `run`/`check`/`lancer` ou dossier de
+`benchmark-llm` absent — refusés avant tout chargement). Le dossier `LANGAGE` de `lancer`/`decrire`
+n'est volontairement **pas** vérifié par Click : son absence est refusée par le code (`LanguageError`,
+code 1). `main(argv) -> int` appelle `app` en mode autonome et convertit le `SystemExit` en entier
+retourné : les tests l'appellent directement, le point d'entrée `hypomnesis` fait
+`sys.exit(main())`.
 
 ## Certificats
 
@@ -68,6 +112,25 @@ le fragment : `examples/basics/certifiable.hyp`.
 
 `src/hypomnesis/contracts/` : schémas JSON Schema 2020-12 (enveloppe, manifeste d'extension) et
 `SchemaRegistry` (validation des schémas à l'enregistrement, enveloppe puis payload).
+
+## Observabilité (HYP-015)
+
+`src/hypomnesis/observability/trace.py` : la classe `Tracer` est une façade au-dessus du SDK
+OpenTelemetry (`opentelemetry-sdk`). Chaque instance possède son propre `TracerProvider` (jamais
+de `set_tracer_provider` global) avec un `SimpleSpanProcessor(InMemorySpanExporter)` ; `tree()`
+et `export()` (clé `trace` de `rapport.json`) sont reconstruits depuis les spans terminés, triés
+par début. API : `span(nom, **attributs)` (gestionnaire de contexte ; le parent est la pile
+propre au `Tracer`, pas le contexte ambiant), `trace_id`, `spans`, `tree()`, `export()`,
+`current_context()`. Les identifiants sont exportés en hexadécimal (trace 32 caractères, span 16) ;
+le `trace_id` est fixé à la création du `Tracer` (générateur d'identifiants dédié). Les valeurs
+d'attributs non scalaires sont rendues par `repr`. Une exception ouvre le statut `error`
+(`StatusCode.ERROR`) puis est relancée.
+
+`trace_context(tracer)` renvoie `{"traceparent": "00-<trace>-<span>-<flags>"}` pour l'enveloppe de
+message (§9.6, schéma `envelope-1.0.0.json`) ; hors d'un span, l'identifiant de span est nul et
+le drapeau d'échantillonnage éteint. `Tracer(enabled=False)` utilise `NoOpTracerProvider` : aucun
+span, aucun effet sur les connaissances (ADR 0005, test `tests/unit/test_trace.py`).
+Export OTLP vers un collecteur : HYP-070 (non fait ici, aucun accès réseau).
 
 ## Vérification formelle
 
