@@ -7,6 +7,11 @@
   types, la théorie des modes et une méta-algèbre réflexive.
 - **Décision associée :** [ADR 0006](../adr/0006-m3-theorie-des-types-a-deux-niveaux.md) (proposée).
 
+Arbitrage HYP-005 du 4 novembre 2026 : les trois axes épistémiques du §4.3
+sont adoptés dans la [spécification v0.3](../specification/cahier-des-charges-v0.3.md).
+Le reste de cette note et l'ADR 0006 restent proposés pour expérimentation ;
+cette adoption partielle ne valide pas toute l'architecture type-théorique.
+
 ---
 
 ## 1. Le problème

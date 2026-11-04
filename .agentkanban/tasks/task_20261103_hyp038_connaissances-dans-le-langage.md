@@ -38,3 +38,13 @@ Les programmes Hypomnesis doivent pouvoir manipuler les connaissances (§2 OBJ-0
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Référence adoptée par HYP-005 : spécification v0.3 §7.1. Exposer les axes
+indépendamment ; `Derived` est une justification, son support vient des
+prémisses. L'exemple d'une prémisse estimée reste valable sans supposer
+l'absence de prémisses moins étayées. Conserver les primitives pures et le
+registre fermé ; les démonstrations suivent désormais `demo/` (ADR 0011).
+
+### user

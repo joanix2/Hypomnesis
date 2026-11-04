@@ -1,9 +1,9 @@
 ---
 title: "HYP-005 · Amender le cahier des charges en v0.3"
-lane: doing
+lane: qa
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-04T19:04:05+01:00
-description: "P1 · S · Fondations et gouvernance · dépend de HYP-003"
+updated: 2026-11-04T19:18:01+01:00
+description: "P1 · S · Fondations et gouvernance · décisions adoptées, ADR 0006 maintenue proposée"
 priority: P1
 tags: [architecture, documentation, humain, mvp]
 ---
@@ -94,5 +94,72 @@ en v0.3, liens relatifs valides et cinq critères OBJ-11 présents.
 La validation complète du dépôt est verte (785 tests et contrôles Python/Lean).
 La tâche demeure en `doing`, non déclarée terminée : les arbitrages humains
 et l'adoption finale restent ouverts.
+
+### user
+
+continue
+
+### agent
+
+Relecture du ticket et de sa checklist. Le brouillon et les contrôles sont
+déjà terminés ; seules les décisions humaines restent à prendre.
+Les trois choix ont été soumis de nouveau, mais aucune réponse de l'utilisateur
+n'est disponible. La consigne automatique de choisir une option pragmatique
+n'est pas enregistrée comme une adoption humaine.
+
+HYP-005 reste donc en attente d'arbitrage : OBJ-11, trois axes épistémiques,
+acceptation ou rejet de l'ADR 0006. Aucun changement de statut de l'ADR,
+aucune promotion de la v0.3 en référence et aucun passage en `qa`.
+Pas de sous-agent ni de modification du moteur dans cette reprise.
+
+### user
+
+fait moi prendre les décision alors
+
+### agent
+
+Présentation des décisions avec conséquences et recommandations :
+
+1. **Adopter OBJ-11 et ses cinq critères** : exigences de vérification Lean
+   pour le noyau, sans affirmer que leur couverture est déjà complète.
+2. **Adopter les trois axes épistémiques** : existence, support et cohérence
+   indépendants ; une information estimée peut aussi être contradictoire.
+   `Derived` désigne la justification, pas une fiabilité supplémentaire.
+3. **Garder l'ADR 0006 proposée et expérimenter**, recommandation prudente :
+   ne pas engager tout le calcul méta dépendant/modal/graduel pour avancer sur
+   le moteur. Alternative : accepter explicitement toute l'ADR comme cible.
+
+Le formulaire ne renvoie encore qu'une indication automatique d'indisponibilité,
+pas les choix de l'utilisateur. Aucune décision adoptée. Une réponse explicite
+dans la conversation permettra de consigner les arbitrages sans dépendre du formulaire.
+
+### user
+
+je suis d'accord vas y
+
+### agent
+
+Accord explicite sur les recommandations présentées : **adopter OBJ-11 et
+ses cinq critères**, **adopter les trois axes épistémiques**, **garder l'ADR
+0006 proposée pour expérimentation**.
+
+Ce dernier choix remplace, par décision humaine, l'alternative initiale
+« acceptée ou rejetée » du ticket. Il ne reste donc pas un arbitrage bloquant :
+l'architecture complète n'est ni adoptée ni rejetée, son expérimentation est
+autorisée. L'index ADR et la note M3 précisent l'adoption partielle des axes.
+
+La v0.3 devient référence ; la v0.2 reste inchangée. Les pointeurs courants,
+le catalogue de propriétés et les tickets HYP-030 à HYP-038 sont alignés
+par ajouts sans réécriture de leurs échanges historiques.
+Les critères formels restent des obligations cibles et non de nouvelles
+garanties prouvées. Aucun code moteur ou preuve Lean n'est modifié.
+
+Validation finale : v0.2 identique à sa version avant les amendements ;
+22 chapitres et cinq critères formels conservés ; liens relatifs vérifiés ;
+neuf tickets épistémiques alignés. Validation complète verte : 785 tests
+(708 cœur, 77 Codegen), linters, Pyright, schémas, build Lean, audit et
+vérificateur de certificats. Le validateur a aussi ajouté la fin de ligne
+manquante au ticket HYP-149, sans modifier sa proposition.
+HYP-005 et sa checklist passent en `qa`, pas en `done`.
 
 ### user

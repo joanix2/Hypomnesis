@@ -180,22 +180,22 @@ C'est la partie où la preuve a le plus de valeur, car les erreurs y sont physiq
 
 ---
 
-## 4. Proposition d'amendement du cahier des charges (v0.3)
+## 4. Amendement adopté du cahier des charges (v0.3)
 
-Un [brouillon complet de la v0.3](../specification/cahier-des-charges-v0.3.md)
-reprend cette proposition, avec les axes épistémiques et un suivi des critères.
-Il attend l'arbitrage humain HYP-005 ; ni son existence ni les exigences
-ci-dessous n'étendent la couverture des preuves actuelles.
+La [v0.3](../specification/cahier-des-charges-v0.3.md) adopte OBJ-11 et ses
+cinq critères suivant l'arbitrage humain HYP-005 du 4 novembre 2026, avec les
+axes épistémiques et un suivi des critères. Ces exigences cibles n'étendent
+pas la couverture des preuves actuelles.
 
-Le cahier des charges ne mentionne pas la vérification formelle. Texte proposé :
+La v0.2 ne mentionnait pas la vérification formelle. Objectif adopté en v0.3 :
 
 > **OBJ-11 — Vérification formelle.** Le noyau du langage, le vérificateur de types, le moteur
-> de révision et le runtime d'effets disposent d'une sémantique de référence en Lean 4. Les
+> de révision et le runtime d'effets doivent disposer d'une sémantique de référence en Lean 4. Les
 > propriétés de sûreté (typage, budgets, révision, séquencement des effets, au plus une
-> exécution) y sont prouvées. Le compilateur de production n'est pas prouvé directement : il
+> exécution) doivent y être prouvées. Le compilateur de production n'est pas prouvé directement : il
 > émet des certificats vérifiés par un noyau Lean prouvé correct.
 
-Critères d'acceptation à ajouter au §16.4 :
+Critères d'acceptation adoptés au §16.4 :
 
 - la sûreté du typage est prouvée pour la Core IR complète du MVP ;
 - chaque programme d'exemple produit un certificat accepté par le vérificateur Lean ;

@@ -37,3 +37,13 @@ tags: [epistemique, moteur-symbolique, python]
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Référence adoptée par HYP-005 : spécification v0.3 §7.1–7.3.
+Les noms `Observed` et `Derived` du journal sont des événements historiques,
+pas des statuts exclusifs des connaissances. La révision conserve séparément
+existence, support et cohérence ; OBJ-11 exige des preuves, sans déclarer
+déjà établie la correction de cet algorithme (HYP-036).
+
+### user

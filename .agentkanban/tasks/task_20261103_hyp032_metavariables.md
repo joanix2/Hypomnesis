@@ -36,3 +36,13 @@ tags: [epistemique, moteur-symbolique, python]
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-005 adopte les trois axes (spécification v0.3 §7.1). `Unknown` appartient
+à l'existence : métavariable non résolue, jamais valeur sentinelle.
+Chaque proposition conserve son support et sa provenance ; une inconnue
+sans proposition n'a pas de support concret inventé. La sélection par support
+ne supprime pas le constat d'incompatibilité sur l'axe de cohérence.
+
+### user

@@ -4,10 +4,11 @@
 - **Date :** 2026-11-03
 - **Analyse détaillée :** [m3-metalangage.md](../architecture/m3-metalangage.md)
 
-Le [brouillon v0.3](../specification/cahier-des-charges-v0.3.md) expose les
-amendements associés, mais ne vaut pas acceptation de cette ADR. L'arbitrage
-humain HYP-005 reste ouvert ; le calcul méta décrit ici n'est pas présenté
-comme déjà implémenté.
+L'arbitrage humain HYP-005 du 4 novembre 2026 adopte les trois axes
+épistémiques dans la [v0.3](../specification/cahier-des-charges-v0.3.md), mais
+maintient explicitement cette ADR **proposée pour expérimentation**.
+Il n'adopte pas l'ensemble du calcul méta dépendant, modal et gradué ;
+ce calcul n'est pas présenté comme déjà implémenté.
 
 ## Contexte
 

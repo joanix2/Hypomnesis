@@ -1,11 +1,11 @@
 # HYPOMNESIS
 ## Cahier des charges, architecture et plan d'implémentation
 
-**Version :** 0.3 (brouillon)
+**Version :** 0.3
 
 **Date :** 4 novembre 2026
 
-**Statut :** Amendements proposés, arbitrage humain HYP-005 requis
+**Statut :** Spécification de référence — amendements adoptés (HYP-005)
 
 **Nature :** Métalangage fonctionnel, symbolique, épistémique et extensible
 
@@ -13,25 +13,27 @@
 
 ## Journal des changements par rapport à la v0.2
 
-| Section | Amendement proposé |
+| Section | Amendement adopté |
 |---|---|
 | §2 | Ajouter OBJ-11 : sémantique de référence et compilation certifiante |
 | §7.1 | Séparer existence, support et cohérence ; `Derived` devient une forme de justification |
 | §16.4 | Ajouter cinq critères de vérification formelle avec périmètre et état explicites |
 
-La [v0.2](cahier-des-charges-v0.2.md) est conservée sans modification et reste
-la référence tant que HYP-005 n'a pas été arbitré. Ce brouillon reprend son contenu,
+La [v0.2](cahier-des-charges-v0.2.md) est conservée sans modification comme
+référence historique. La v0.3 reprend son contenu,
 hormis les amendements signalés ici ; il ne constitue pas une refonte de
 l'organisation du dépôt ou un inventaire de l'implémentation actuelle.
 Les numéros de versions de produits dans la feuille de route (§18) ne sont pas
 le numéro de révision de ce document.
 
-**Décisions encore ouvertes :** adoption d'OBJ-11 et de ses critères, adoption
-des trois axes épistémiques, acceptation ou rejet de l'[ADR 0006](../adr/0006-m3-theorie-des-types-a-deux-niveaux.md).
-L'ADR reste **proposée**. La cible méta dépendante, modale et graduée n'est pas
-présentée comme une fonctionnalité déjà disponible.
+**Décisions humaines du 4 novembre 2026 (HYP-005) :** adoption d'OBJ-11
+et de ses cinq critères, adoption des trois axes épistémiques et maintien
+de l'[ADR 0006](../adr/0006-m3-theorie-des-types-a-deux-niveaux.md) au statut
+**proposée**, pour expérimentation. L'adoption des axes n'emporte pas
+acceptation de toute cette architecture. La cible méta dépendante, modale
+et graduée n'est pas présentée comme une fonctionnalité déjà disponible.
 
-Les clauses nouvelles ci-dessous sont conditionnelles à leur adoption.
+Les clauses nouvelles ci-dessous sont des exigences cibles adoptées.
 Un objectif normatif ou un critère d'acceptation n'est pas une affirmation de preuve :
 les résultats effectivement établis et leurs limites sont suivis dans le
 [catalogue des propriétés](../verification/proprietes.md) et la
@@ -132,7 +134,7 @@ Tracer et mesurer chaque étape du raisonnement, de l'exécution, de la validati
 
 Permettre l'implémentation de nouveaux domaines sans modification du noyau d'Hypomnesis.
 
-## OBJ-11 — Vérification formelle (proposé)
+## OBJ-11 — Vérification formelle
 
 Le noyau du langage, le vérificateur de types, le moteur de révision et le runtime
 d'effets doivent disposer d'une sémantique de référence en Lean 4.
@@ -414,7 +416,7 @@ Les interfaces doivent rester indépendantes du backend.
 
 # 7. Modèle épistémique
 
-## 7.1 Axes des connaissances (proposé)
+## 7.1 Axes des connaissances
 
 Une connaissance ne doit plus être classée par un statut unique mélangeant
 inconnue, origine et contradiction. Trois axes sont distincts :
@@ -439,7 +441,7 @@ de provenance déclaré, pas une promotion arbitraire par un plugin.
 
 Correspondance avec les sept statuts historiques :
 
-| Statut v0.2 | Lecture dans les axes proposés |
+| Statut v0.2 | Lecture dans les axes adoptés |
 |---|---|
 | `Observed` | Support d'une valeur acquise par une observation ou source |
 | `Estimated` | Support d'une proposition issue d'un estimateur |
@@ -452,7 +454,7 @@ Correspondance avec les sept statuts historiques :
 Le journal peut conserver des événements nommés `Observed` ou `Derived` :
 ces événements ne réintroduisent pas un statut exclusif des connaissances.
 La persistance et les APIs devront exposer ces distinctions sans supprimer
-l'historique lors de la migration. Ce brouillon ne modifie aucun format JSON
+l'historique lors de la migration. Cette spécification ne modifie aucun format JSON
 existant à lui seul.
 
 ## 7.2 Provenance
@@ -1336,7 +1338,7 @@ Le MVP sera accepté si :
 - Les métriques essentielles sont visibles dans Grafana.
 - Une transcription LLM peut être validée avant exécution.
 
-### Critères supplémentaires proposés pour OBJ-11
+### Critères supplémentaires pour OBJ-11
 
 - La sûreté du typage est prouvée pour la Core IR complète du MVP.
 - Chaque programme d'exemple produit un certificat accepté par le vérificateur Lean.
@@ -1345,13 +1347,13 @@ Le MVP sera accepté si :
   pour le modèle du runtime d'effets.
 - Aucune preuve ne contient `sorry`, et les axiomes utilisés sont audités en CI.
 
-Ces critères sont des obligations proposées, **pas tous satisfaits actuellement**.
+Ces critères sont des obligations adoptées, **pas tous satisfaits actuellement**.
 Le fragment formalisé, les hypothèses, les exclusions et les propriétés prouvées
 doivent être identifiés par référence au catalogue et à l'audit Lean.
 Une fonctionnalité hors fragment doit produire un refus explicite de certification,
 jamais un succès ou une garantie élargie par défaut.
 
-Suivi de couverture au moment de ce brouillon :
+Suivi de couverture au moment de l'adoption :
 
 | Critère | État et suivi |
 |---|---|

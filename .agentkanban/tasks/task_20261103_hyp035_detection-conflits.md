@@ -37,3 +37,12 @@ Statut `Conflict` (§7.1) : informations incompatibles ; contradictions signalé
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-005 adopte les axes du §7.1 de la spécification v0.3. `Conflict` relève
+de la cohérence, indépendamment du support. Une préférence pour le meilleur
+support ne doit pas masquer les incompatibilités ni effacer leurs provenances.
+Les critères historiques de détection restent applicables.
+
+### user

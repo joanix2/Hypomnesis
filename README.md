@@ -7,7 +7,7 @@ concepts, connaissances, règles, contraintes, et capacités d'action contrôlé
 ni les solveurs, ni les bibliothèques scientifiques : il fournit un langage typé pour les
 décrire, les composer et contrôler leurs interactions.
 
-- Spécification : [docs/specification/cahier-des-charges-v0.2.md](docs/specification/cahier-des-charges-v0.2.md)
+- Spécification : [docs/specification/cahier-des-charges-v0.3.md](docs/specification/cahier-des-charges-v0.3.md)
 - Bilan MVP (critères du §16.4) : [docs/mvp-bilan.md](docs/mvp-bilan.md)
 - Architecture et avancement : [docs/architecture/overview.md](docs/architecture/overview.md)
 - Référence du langage : [docs/language/reference.md](docs/language/reference.md)

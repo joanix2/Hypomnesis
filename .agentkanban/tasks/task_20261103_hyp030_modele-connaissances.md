@@ -38,3 +38,13 @@ tags: [epistemique, moteur-symbolique, python]
 - `docs/specification/cahier-des-charges-v0.2.md`
 - `docs/architecture/m3-metalangage.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Arbitrage humain HYP-005 du 4 novembre 2026 : les trois axes sont adoptés.
+La réserve initiale de retour aux sept statuts est levée ; utiliser
+`docs/specification/cahier-des-charges-v0.3.md` §7.1 comme référence.
+Existence, support et cohérence sont indépendants ; `Derived` désigne la
+justification et non un grade. Cette décision n'adopte pas toute l'ADR 0006.
+
+### user

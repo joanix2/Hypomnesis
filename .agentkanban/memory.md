@@ -3,12 +3,13 @@
 ## Projet
 
 Métalangage fonctionnel (syntaxe OCaml) pour définir des DSL métiers : connaissances, règles,
-contraintes, effets contrôlés. Spécification : `docs/specification/cahier-des-charges-v0.2.md`.
+contraintes, effets contrôlés. Spécification : `docs/specification/cahier-des-charges-v0.3.md`.
 Détails d'implémentation : `TECHNICAL.md`.
 
-Le cahier v0.3 est un brouillon HYP-005 soumis à arbitrage humain : OBJ-11,
-trois axes épistémiques et décision sur l'ADR 0006 non adoptés à ce stade.
-La v0.2 reste la référence ; ne pas confondre exigences proposées et garanties prouvées.
+Arbitrage humain HYP-005 : OBJ-11 et ses cinq critères formels ainsi que les
+trois axes épistémiques sont adoptés dans la v0.3. La v0.2 reste intacte comme
+historique. L'ADR 0006 reste proposée pour expérimentation ; l'adoption des
+axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
 
 ## Niveaux d'abstraction (ADR 0008) — règle structurante
 

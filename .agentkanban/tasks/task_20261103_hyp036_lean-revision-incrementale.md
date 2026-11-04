@@ -36,3 +36,12 @@ Prouver sur un modèle du moteur que l'algorithme de HYP-033 est exact, et que l
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-005 adopte OBJ-11 et les axes épistémiques en spécification v0.3.
+Le modèle de révision devra respecter cette séparation et le journal en ajout
+seul. La correction incrémentale reste une obligation de ce ticket, non une
+preuve acquise par l'adoption de la spécification.
+
+### user

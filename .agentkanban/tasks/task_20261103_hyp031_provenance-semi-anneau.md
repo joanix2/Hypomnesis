@@ -39,3 +39,12 @@ Formalisé et prouvé dans `formal/Hypomnesis/Epistemics/Provenance.lean` (P9–
 
 - `formal/Hypomnesis/Epistemics/Provenance.lean`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-005 adopte les trois axes (spécification v0.3 §7.1). Le support est une
+lecture de la provenance, distincte de la confiance et du coût ; `Derived`
+n'est pas un grade supplémentaire. Conserver la fidélité aux théorèmes Lean
+et tester la propagation sans promotion artificielle du support.
+
+### user

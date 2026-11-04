@@ -34,3 +34,12 @@ Si le moteur signale `Conflict`, l'incompatibilité est réellement dérivable d
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-005 adopte OBJ-11 et la spécification v0.3 §7.1 : `Conflict` appartient
+à la cohérence, pas au support. La preuve devra établir une incompatibilité
+réelle sans confondre estimation, inconnue et contradiction ; elle demeure
+à réaliser dans ce ticket.
+
+### user

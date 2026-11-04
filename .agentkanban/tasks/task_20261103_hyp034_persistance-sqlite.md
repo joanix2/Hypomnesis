@@ -37,3 +37,12 @@ tags: [epistemique, moteur-symbolique, persistance, python]
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-005 adopte la v0.3 et les trois axes épistémiques. Le stockage, le rejeu
+et les migrations versionnées doivent préserver existence, support, cohérence,
+provenance et historique ; la migration ne doit pas réduire ces axes à un
+statut unique. L'adoption documentaire ne modifie aucun format existant seule.
+
+### user

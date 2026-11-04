@@ -4,9 +4,11 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 `docs/adr/`, la vision dans `docs/specification/`, l'avancement dans `.agentkanban/tasks/`.
 
 La [v0.3 du cahier des charges](docs/specification/cahier-des-charges-v0.3.md)
-est un **brouillon** de HYP-005 : OBJ-11, axes épistémiques et critères formels
-attendent un arbitrage humain. La v0.2 reste la référence ; l'ADR 0006 reste
-proposée. Ce brouillon n'ajoute aucune garantie Lean au runtime existant.
+est la référence depuis l'arbitrage humain HYP-005 : OBJ-11, ses cinq critères
+formels et les trois axes épistémiques sont adoptés comme cibles.
+La v0.2 est conservée intacte ; l'ADR 0006 reste proposée pour expérimentation,
+sans engagement sur toute son architecture. L'adoption n'ajoute aucune
+garantie Lean au runtime existant.
 
 ## Pipeline du langage
 
