@@ -8,12 +8,10 @@ explicit automaton lives in ``commands.py``):
     Created → Validated → Authorized → Dispatched → Completed
                  ↘ Rejected      ↘ Rejected   ↘ Failed / TimedOut / UnknownOutcome
 
-1. the payload is validated against the actuator's JSON Schema;
-2. the permission is checked against the host's policy;
-3. business constraints (actuator-specific, pure functions) are checked;
-4. the mode decides: ``simulate`` returns a fictitious result, ``dry-run``
-   stops before dispatch, ``production`` calls the actuator;
-5. the actuator's result is validated against its result schema.
+JSON structure, contracts, host permissions, business and safety constraints,
+then required human approval are checked before selecting the execution mode.
+Real and simulated responses are validated. Production optionally observes
+the physical effect after recording the result. Every check is recorded.
 
 The actuator is never reached by an invalid or unauthorised command, and a
 command identifier is dispatched at most once: giving the same command again
@@ -25,9 +23,11 @@ the outcome is ``UnknownOutcome``. The clock and the sleep are injected.
 from __future__ import annotations
 
 import itertools
+import json
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, field
 from typing import Any
 
 from hypomnesis.contracts.registry import SchemaRegistry
@@ -39,6 +39,9 @@ from hypomnesis.effects.commands import (
     TransportError,
     may_retry,
 )
+from hypomnesis.effects.permissions import PermissionPolicy
+from hypomnesis.language.errors import EvaluationError
+from hypomnesis.runtime.json import data_to_json
 
 MODES = ("simulate", "dry-run", "production")
 Payload = Mapping[str, Any]
@@ -62,6 +65,9 @@ class Actuator:
     retry: RetryPolicy = NO_RETRY
     #: Seconds allowed from creation of the command; ``None`` = no deadline.
     timeout: float | None = None
+    safety: Callable[[Payload], list[str]] = lambda _: []
+    requires_human: bool = False
+    observe_effects: Callable[[Payload, dict[str, Any]], list[str]] | None = None
 
 
 @dataclass(frozen=True)
@@ -75,11 +81,19 @@ class DuplicateCommand(ValueError):
     """The same ``command_id`` was given for a different command."""
 
 
+@dataclass(frozen=True)
+class PipelineCheck:
+    stage: str
+    passed: bool
+    detail: str = ""
+
+
 @dataclass
 class Outcome:
     command: Command
     record: CommandRecord
     result: dict[str, Any] | None = None
+    checks: list[PipelineCheck] = field(default_factory=list)
 
     @property
     def states(self) -> list[tuple[str, str]]:  # (state, detail)
@@ -107,11 +121,15 @@ class Dispatcher:
         on_transition: Callable[[Command, str, str], None] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
+        policy: PermissionPolicy | None = None,
+        approve: Callable[[Command], bool] | None = None,
     ) -> None:
         if mode not in MODES:
             raise ValueError(f"mode {mode!r} inconnu ({', '.join(MODES)})")
         self.registry = registry
         self.permissions = set(permissions)
+        self.policy = policy
+        self._approve = approve
         self.mode = mode
         self.actuators: dict[str, Actuator] = {}
         self.history: list[Outcome] = []
@@ -149,29 +167,101 @@ class Dispatcher:
             if self._on_transition:
                 self._on_transition(command, state.value, detail)
 
+        def gate(stage: str, validate: Callable[[], list[str]]) -> bool:
+            try:
+                violations = validate()
+                if type(violations) is not list or any(type(v) is not str for v in violations):
+                    raise ValueError("validation must return a list of violations")
+            except Exception as exc:
+                violations = [f"{type(exc).__name__}: {exc}"]
+            outcome.checks.append(PipelineCheck(stage, not violations, "; ".join(violations)))
+            if violations:
+                label = {
+                    "business": "contraintes métier",
+                    "safety": "sécurité",
+                    "approval": "validation humaine",
+                }[stage]
+                move(State.REJECTED, f"{label} : " + "; ".join(violations))
+            return not violations
+
         if self._on_transition:
             self._on_transition(command, State.CREATED.value, "")
         if actuator is None:
             move(State.REJECTED, f"actionneur inconnu {command.actuator}")
             return outcome
+        try:
+            json.dumps(dict(command.payload), allow_nan=False)
+            data_to_json(dict(command.payload))
+        except (TypeError, ValueError, EvaluationError) as exc:
+            outcome.checks.append(PipelineCheck("structure", False, str(exc)))
+            move(State.REJECTED, f"structure JSON : {exc}")
+            return outcome
+        outcome.checks.append(PipelineCheck("structure", True))
+        if (
+            actuator.command_schema not in self.registry
+            or actuator.result_schema not in self.registry
+        ):
+            outcome.checks.append(PipelineCheck("contract", False, "contrat inconnu"))
+            move(State.REJECTED, "contrat inconnu")
+            return outcome
         issues = self.registry.issues(actuator.command_schema, dict(command.payload))
+        if "command_id" in command.payload and command.payload["command_id"] != command.id:
+            outcome.checks.append(PipelineCheck("contract", False, "command_id incompatible"))
+            move(State.REJECTED, "command_id incompatible")
+            return outcome
+        outcome.checks.append(PipelineCheck("contract", not issues, "; ".join(map(str, issues))))
         if issues:
             move(State.REJECTED, "contrat : " + "; ".join(map(str, issues)))
             return outcome
         move(State.VALIDATED, actuator.command_schema)
-        if actuator.permission not in self.permissions:
+        permitted = (
+            self.policy.permits(actuator.permission)
+            if self.policy is not None
+            else actuator.permission in self.permissions
+        )
+        outcome.checks.append(PipelineCheck("permission", permitted, actuator.permission))
+        if not permitted:
             move(State.REJECTED, f"permission refusée : {actuator.permission}")
             return outcome
-        violations = actuator.constraints(command.payload)
-        if violations:
-            move(State.REJECTED, "contraintes métier : " + "; ".join(violations))
+        if not gate("business", lambda: actuator.constraints(deepcopy(dict(command.payload)))):
             return outcome
+        if not gate("safety", lambda: actuator.safety(deepcopy(dict(command.payload)))):
+            return outcome
+        if actuator.requires_human:
+
+            def approval() -> list[str]:
+                approved = (
+                    self._approve is not None
+                    and self._approve(
+                        Command(command.id, command.actuator, deepcopy(dict(command.payload)))
+                    )
+                    is True
+                )
+                return [] if approved else ["validation humaine requise ou refusée"]
+
+            if not gate("approval", approval):
+                return outcome
         move(State.AUTHORIZED, actuator.permission)
         if self.mode == "dry-run":
             move(State.DRY_RUN, "validée et autorisée, non exécutée")
             return outcome
         if self.mode == "simulate":
-            outcome.result = actuator.simulate(command.payload)
+            try:
+                outcome.result = actuator.simulate(deepcopy(dict(command.payload)))
+            except Exception as exc:
+                detail = f"{type(exc).__name__}: {exc}"
+                outcome.checks.append(PipelineCheck("response", False, detail))
+                move(State.REJECTED, "simulation : " + detail)
+                return outcome
+            issues = self._response_issues(actuator, outcome.result)
+            outcome.checks.append(PipelineCheck("response", not issues, "; ".join(issues)))
+            if issues:
+                outcome.result = None
+                move(
+                    State.REJECTED,
+                    "réponse simulée non conforme : " + "; ".join(map(str, issues)),
+                )
+                return outcome
             move(State.SIMULATED, "réponse fictive")
             return outcome
         if outcome.record.expired(self._clock()):
@@ -180,12 +270,23 @@ class Dispatcher:
         self._execute(actuator, outcome, move)
         return outcome
 
+    def _response_issues(self, actuator: Actuator, result: Any) -> list[str]:
+        if not isinstance(result, dict):
+            return ["la réponse doit être un objet JSON"]
+        try:
+            json.dumps(result, allow_nan=False)
+            data_to_json(result)
+        except (TypeError, ValueError, EvaluationError) as exc:
+            return [f"structure JSON : {exc}"]
+        return list(map(str, self.registry.issues(actuator.result_schema, result)))
+
     def _execute(
         self, actuator: Actuator, outcome: Outcome, move: Callable[[State, str], None]
     ) -> None:
         """Hand the command to the actuator; retry only when ``may_retry`` allows it."""
         record = outcome.record
         move(State.DISPATCHED, "")
+        outcome.checks.append(PipelineCheck("execute", True, "adaptateur appelé"))
         while True:
             try:
                 result = actuator.execute(outcome.command.payload)
@@ -216,9 +317,26 @@ class Dispatcher:
         if record.expired(self._clock()):
             move(State.TIMED_OUT, "réponse reçue après l'échéance")
             return
-        issues = self.registry.issues(actuator.result_schema, result)
+        issues = self._response_issues(actuator, result)
+        outcome.checks.append(PipelineCheck("response", not issues, "; ".join(issues)))
         if issues:
             move(State.FAILED, "réponse non conforme : " + "; ".join(map(str, issues)))
             return
         outcome.result = result
+        outcome.checks.append(PipelineCheck("result", True, "résultat enregistré"))
+        if actuator.observe_effects is not None:
+            try:
+                violations = actuator.observe_effects(
+                    deepcopy(dict(outcome.command.payload)), deepcopy(result)
+                )
+                if type(violations) is not list or any(type(v) is not str for v in violations):
+                    raise ValueError("observation must return a list of violations")
+            except Exception as exc:
+                violations = [f"{type(exc).__name__}: {exc}"]
+            outcome.checks.append(
+                PipelineCheck("observation", not violations, "; ".join(violations))
+            )
+            if violations:
+                move(State.FAILED, "observation réelle : " + "; ".join(violations))
+                return
         move(State.COMPLETED, "")

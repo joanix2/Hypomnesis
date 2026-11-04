@@ -454,6 +454,16 @@ graphify explain "Session"
 Pour enrichir les relations sémantiques des documents (spécification, notes, tickets), lancer
 `/graphify . --update` dans Claude Code : cette étape utilise des sous-agents.
 
+## Validation des effets (HYP-062)
+
+Validation des effets HYP-062 : le dispatcher journalise séparément les
+contrôles dans `Outcome.checks` et `commands[].checks` des rapports.
+`PermissionPolicy` permet les autorisations exactes et refus prioritaires ;
+`Actuator.safety`, `requires_human` et `observe_effects` complètent le pipeline.
+L'hôte fournit `policy` et `approve` au dispatcher ou à `run_procedure`.
+Guide de l'ordre des étapes, modes et limites :
+[validation-effets.md](docs/architecture/validation-effets.md).
+
 ## Kanban
 
 `scripts/kanban.py` (PyYAML pour le front-matter, NetworkX pour le graphe des dépendances ; à

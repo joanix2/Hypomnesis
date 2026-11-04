@@ -8,6 +8,7 @@ import pytest
 
 from hypomnesis.cli import main
 from hypomnesis.contracts.registry import ContractError
+from hypomnesis.effects.permissions import PermissionPolicy
 from hypomnesis.engine.language import LanguageError, load_language
 from hypomnesis.engine.procedure import run_procedure
 from hypomnesis.epistemics.provenance import Support
@@ -115,6 +116,17 @@ def test_command_escaping_the_output_directory_is_rejected(tmp_path):
     )
     assert all("contraintes métier" in o.states[-1][1] for o in report.commands)
     assert not (tmp_path / "evasion.svg").exists()
+
+
+def test_host_policy_and_validation_audit_reach_the_procedure_report(tmp_path):
+    report = plaque(tmp_path, mode="production", policy=PermissionPolicy())
+    assert report.commands
+    for command in report.to_json()["commands"]:
+        assert command["states"][-1][0] == "Rejected"
+        assert command["checks"][-1]["stage"] == "permission"
+        assert command["checks"][-1]["passed"] is False
+        assert not any(c["stage"] == "execute" for c in command["checks"])
+    assert not list(tmp_path.glob("*.svg"))
 
 
 def test_ill_typed_program_is_refused_before_any_effect(tmp_path):

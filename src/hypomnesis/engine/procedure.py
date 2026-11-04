@@ -22,12 +22,14 @@ bounded (§11). Nothing here names a domain.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from hypomnesis.backends import z3_solver
-from hypomnesis.effects.dispatcher import Actuator, Dispatcher, Outcome
+from hypomnesis.effects.dispatcher import Actuator, Command, Dispatcher, Outcome
+from hypomnesis.effects.permissions import PermissionPolicy
 from hypomnesis.engine.bridge import to_problem
 from hypomnesis.engine.language import Language, LanguageError
 from hypomnesis.epistemics.knowledge import KnowledgeBase
@@ -88,7 +90,13 @@ class ProcedureReport:
             },
             "provenance_graph": kb.provenance_graph(),
             "commands": [
-                {"id": o.command.id, "states": o.states, "result": o.result} for o in self.commands
+                {
+                    "id": o.command.id,
+                    "states": o.states,
+                    "result": o.result,
+                    "checks": [asdict(check) for check in o.checks],
+                }
+                for o in self.commands
             ],
             "journal": [
                 {"seq": e.seq, "kind": e.kind, "key": e.key, "detail": e.detail} for e in kb.journal
@@ -106,6 +114,8 @@ def run_procedure(
     environment: dict[str, Any] | None = None,
     permissions: frozenset[str] | None = None,
     max_steps: int = 1000,
+    policy: PermissionPolicy | None = None,
+    approve: Callable[[Command], bool] | None = None,
 ) -> ProcedureReport:
     proc = language.procedure
     if proc["kind"] != "program":
@@ -128,7 +138,7 @@ def run_procedure(
         if permissions is None
         else permissions
     )
-    dispatcher = Dispatcher(language.schemas, set(granted), mode)
+    dispatcher = Dispatcher(language.schemas, set(granted), mode, policy=policy, approve=approve)
     for identifier in actuators:
         action = adapters.get("actuator", identifier)(env if env is not None else out_dir)
         if not isinstance(action, Actuator) or action.id != identifier:
