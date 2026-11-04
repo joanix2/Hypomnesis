@@ -17,7 +17,7 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | Primitives | `src/hypomnesis/runtime/natives.py` | registre fermé de primitives pures |
 | Prélude | `src/hypomnesis/stdlib/prelude.hyp` | bibliothèque standard en Hypomnesis |
 | Session | `src/hypomnesis/session.py` | enchaîne tout ; pile de 512 Mo pour la récursion profonde |
-| CLI | `src/hypomnesis/cli.py` | application Typer (Rich) : `run`, `check`, `repl`, `lancer`, `decrire`, `benchmark-llm`, `--version` ; `main(argv) -> int` convertit la sortie Click en entier (voir « CLI ») |
+| CLI | `src/hypomnesis/cli.py` | application Typer (Rich) : `run`, `check`, `repl`, `plugins list\|show`, `lancer`, `decrire`, `benchmark-llm`, `--version` ; `main(argv) -> int` convertit la sortie Click en entier (voir « CLI ») |
 
 ## Moteur, langages, procédures (ADR 0008, HYP-060)
 
@@ -28,6 +28,7 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 | `engine/language.py` | chargement d'un paquet `languages/<langage>/` : manifeste validé (`language-manifest/1.0.0`), sources Hypomnesis, contrats, adaptateurs confinés au paquet |
 | `engine/procedure.py` | **interpréteur d'effets** : exécute une valeur `'a Effect.t` (observer, agir, résoudre, enregistrer, retirer, noter), borné en nombre d'étapes |
 | `engine/bridge.py` | valeur Hypomnesis → JSON ; `Problem.problem` → Problem IR |
+| `engine/registry.py` | registre statique de manifestes d'extensions et résolution SemVer, sans chargement de backend |
 
 Bibliothèque standard (prélude, M3) : `Json.t`, `to_json` (primitive pure), `Problem`,
 `Effect` (`'a Effect.t`, `return`, `bind`, `observe`, `act`, `solve`, `record`, `retract`,
@@ -225,6 +226,13 @@ origines en cas d'échec. Les cycles du graphe sélectionné sont refusés aprè
 (pas de recherche d'une autre solution acyclique) ; garde-fou de 10 000 tours du résolveur.
 Les URI de schémas et les points d'entrée restent des métadonnées : aucune lecture distante,
 aucun import ni contrôle d'existence de backend.
+
+CLI : `hypomnesis plugins list --manifest CHEMIN [--manifest CHEMIN …] [--role ROLE]` ;
+`hypomnesis plugins show ID --manifest CHEMIN [--version VERSION]`. `--manifest` est placé sur
+la sous-commande `list` ou `show`. Sortie JSON indentée uniquement sur stdout (tableau des
+manifestes complets pour `list`, objet pour `show`) ; pas de chemin = registre vide. Pas de
+résolution à l'inspection, même si une dépendance est absente. Codes 0 succès, 1 refus applicatif
+(`refusé : …` sur stderr, stdout vide), 2 erreur d'usage (dont chemin inexistant).
 
 ## Contrats
 

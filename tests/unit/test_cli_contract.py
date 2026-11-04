@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -124,3 +125,108 @@ def test_decrire_unknown_format_is_refused():
 
 def test_benchmark_requires_models():
     assert code(["benchmark-llm", str(VENTILATION)]) != 0
+
+
+def test_plugins_list_uses_only_explicit_manifests(tmp_path, capsys, extension_manifest):
+    (tmp_path / "manifest.json").write_text(json.dumps(extension_manifest()))
+    assert code(["plugins", "list"]) == 0
+    output = capsys.readouterr()
+    assert json.loads(output.out) == []
+    assert output.err == ""
+
+
+def test_plugins_list_files_directory_and_role(tmp_path, capsys, extension_manifest):
+    directory = tmp_path / "manifests"
+    directory.mkdir()
+    manifests = [
+        extension_manifest("a", "1.0.0", "Observer"),
+        extension_manifest("a", "2.0.0", "Solver"),
+        extension_manifest("b", "1.0.0", "Solver", description="Métadonnées lisibles"),
+    ]
+    for index, manifest in enumerate(manifests[:2]):
+        (directory / f"{index}.json").write_text(json.dumps(manifest))
+    extra = tmp_path / "extra.json"
+    extra.write_text(json.dumps(manifests[2]))
+    (directory / "ignored.py").write_text("raise AssertionError('must not execute')")
+    paths = ["--manifest", str(directory), "--manifest", str(extra)]
+    assert code(["plugins", "list", *paths]) == 0
+    output = capsys.readouterr()
+    assert json.loads(output.out) == [manifests[1], manifests[0], manifests[2]]
+    assert "\n  {" in output.out
+    assert "Métadonnées lisibles" in output.out
+    assert output.err == ""
+    assert code(["plugins", "list", *paths, "--role", "Solver"]) == 0
+    assert json.loads(capsys.readouterr().out) == [manifests[1], manifests[2]]
+
+
+def test_plugins_show_latest_or_exact_version(tmp_path, capsys, extension_manifest):
+    old, latest = extension_manifest(), extension_manifest(version="2.0.0")
+    for name, manifest in (("old", old), ("latest", latest)):
+        (tmp_path / f"{name}.json").write_text(json.dumps(manifest))
+    args = ["plugins", "show", "sample", "--manifest", str(tmp_path)]
+    assert code(args) == 0
+    assert json.loads(capsys.readouterr().out) == latest
+    assert code([*args, "--version", "1.0.0"]) == 0
+    assert json.loads(capsys.readouterr().out) == old
+    assert code([*args, "--version", "9.0.0"]) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "refusé :" in output.err and "9.0.0" in output.err
+
+
+@pytest.mark.parametrize("command", ["list", "show"])
+def test_plugins_inspection_neither_resolves_nor_imports(
+    command, tmp_path, capsys, extension_manifest, trapped_backend
+):
+    manifest = extension_manifest(dependencies=[("absent", ">=1.0.0,<2")])
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest))
+    args = ["plugins", command, *(["sample"] if command == "show" else [])]
+    assert code([*args, "--manifest", str(path)]) == 0
+    output = capsys.readouterr()
+    assert json.loads(output.out) == (manifest if command == "show" else [manifest])
+    assert output.err == ""
+    assert not trapped_backend.exists()
+
+
+@pytest.mark.parametrize("content", ["not JSON", "[]", '{"id": "invalid"}'])
+def test_plugins_invalid_manifest_has_no_partial_output(
+    content, tmp_path, capsys, extension_manifest
+):
+    (tmp_path / "a.json").write_text(json.dumps(extension_manifest()))
+    (tmp_path / "z.json").write_text(content)
+    assert code(["plugins", "list", "--manifest", str(tmp_path)]) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "refusé :" in output.err
+
+
+def test_plugins_conflicting_duplicate_is_refused(tmp_path, capsys, extension_manifest):
+    (tmp_path / "a.json").write_text(json.dumps(extension_manifest()))
+    (tmp_path / "b.json").write_text(json.dumps(extension_manifest(description="different")))
+    assert code(["plugins", "list", "--manifest", str(tmp_path)]) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "different content" in output.err
+
+
+def test_plugins_unknown_id_and_role_are_application_errors(capsys):
+    assert code(["plugins", "show", "absent"]) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "refusé :" in output.err and "absent" in output.err
+    assert code(["plugins", "list", "--role", "Wizard"]) == 1
+    assert "unknown role" in capsys.readouterr().err
+
+
+def test_plugins_missing_file_and_invalid_usage_exit_2(tmp_path, capsys):
+    assert code(["plugins", "list", "--manifest", str(tmp_path / "absent.json")]) == 2
+    assert code(["plugins", "show"]) == 2
+    assert code(["plugins", "list", "--unknown"]) == 2
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize("args", [["plugins", "--help"], ["plugins", "show", "--help"]])
+def test_plugins_help_succeeds(args, capsys):
+    assert code(args) == 0
+    assert "Usage:" in capsys.readouterr().out

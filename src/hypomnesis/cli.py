@@ -85,6 +85,28 @@ def _pairs(items: list[str]) -> dict[str, str]:
     return dict(item.split("=", 1) for item in items if "=" in item)
 
 
+def _plugins(
+    manifests: list[Path],
+    *,
+    identifier: str | None = None,
+    version: str | None = None,
+    role: str | None = None,
+) -> int:
+    from hypomnesis.engine.registry import ExtensionRegistry, RegistryError
+
+    try:
+        registry = ExtensionRegistry()
+        registry.load_paths(manifests)
+        metadata = (
+            registry.list(role=role) if identifier is None else registry.show(identifier, version)
+        )
+    except RegistryError as exc:
+        print(f"refusé : {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(metadata, indent=2, ensure_ascii=False))
+    return 0
+
+
 class Mode(StrEnum):
     """Execution mode of a M1 program (forwarded to the procedure engine)."""
 
@@ -268,6 +290,21 @@ app = typer.Typer(
     add_completion=False,
 )
 
+plugins_app = typer.Typer(help="Inspecter les manifestes statiques, sans charger les backends.")
+app.add_typer(plugins_app, name="plugins")
+
+ManifestPaths = Annotated[
+    list[Path] | None,
+    typer.Option(
+        "--manifest",
+        exists=True,
+        readable=True,
+        metavar="CHEMIN",
+        help="manifeste JSON ou dossier (*.json immédiats) ; répétable, "
+        "aucune découverte implicite",
+    ),
+]
+
 SourceFiles = Annotated[
     list[Path],
     typer.Argument(
@@ -347,6 +384,29 @@ def check_command(
 def repl_command() -> None:
     """Boucle interactive (toplevel)."""
     _exit_with(_repl(Session()))
+
+
+@plugins_app.command("list")
+def plugins_list_command(
+    manifest: ManifestPaths = None,
+    role: Annotated[
+        str | None, typer.Option("--role", help="filtrer par rôle (ex. Solver, Observer)")
+    ] = None,
+) -> None:
+    """Lister toutes les versions des extensions en JSON, sans résoudre leurs dépendances."""
+    _exit_with(_plugins(manifest or [], role=role))
+
+
+@plugins_app.command("show")
+def plugins_show_command(
+    identifier: Annotated[str, typer.Argument(help="identifiant de l'extension")],
+    manifest: ManifestPaths = None,
+    version: Annotated[
+        str | None, typer.Option("--version", help="version exacte ; défaut : la plus récente")
+    ] = None,
+) -> None:
+    """Afficher un manifeste complet en JSON, sans charger ni exécuter son backend."""
+    _exit_with(_plugins(manifest or [], identifier=identifier, version=version))
 
 
 @app.command("lancer")

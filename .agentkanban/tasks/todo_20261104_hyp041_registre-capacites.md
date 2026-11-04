@@ -13,11 +13,11 @@ description: "Checklist HYP-041 : registre statique, dépendances et CLI"
       indexation id/rôle/version, protection contre les doublons contradictoires et mutations.
 - [x] Résoudre les contraintes de version et dépendances transitives avec diagnostics des
       dépendances absentes, conflits et cycles ; produire l'ordre de chargement.
-- [ ] Ajouter `hypomnesis plugins list|show` sans import de backend, avec options de manifestes
+- [x] Ajouter `hypomnesis plugins list|show` sans import de backend, avec options de manifestes
       explicites et erreurs applicatives cohérentes avec la CLI.
-- [ ] Tester les manifestes invalides, versions multiples, contraintes, résolution transitive,
+- [x] Tester les manifestes invalides, versions multiples, contraintes, résolution transitive,
       conflits, cycles et inspection sans exécution de Python.
-- [ ] Documenter l'API et les commandes dans `TECHNICAL.md` et la documentation pertinente.
+- [x] Documenter l'API et les commandes dans `TECHNICAL.md` et la documentation pertinente.
 - [ ] Lancer les validations ciblées, puis `rapide` et `complet` ; actualiser le graphe si disponible.
 - [ ] Consigner le bilan, les limites et les résultats dans la tâche ; laisser la décision
       de passage en `done` à l'utilisateur.

@@ -84,6 +84,25 @@ Mélanger les dimensions est refusé avant l'exécution :
                                         ^^^^^^^^^^^^^^^^^^^^
 ```
 
+## Inspecter les extensions
+
+```bash
+hypomnesis plugins list --manifest extensions/ --manifest autre-extension.json
+hypomnesis plugins list --manifest extensions/ --role Solver
+hypomnesis plugins show mon.extension --manifest extensions/ --version 1.0.0
+```
+
+`--manifest` est répétable : fichier JSON ou dossier dont seuls les `*.json` immédiats sont
+lus. Sans chemin, le registre est vide ; aucune découverte implicite. La sortie est du JSON
+indenté : `list` affiche toutes les versions, `show` le manifeste complet (version la plus récente
+si `--version` est omis). Aucun backend n'est importé ou exécuté ; une dépendance absente
+n'empêche pas l'inspection.
+
+L'API `ExtensionRegistry` valide les manifestes, protège les métadonnées par copie et résout
+explicitement les dépendances SemVer avec backtracking (`resolve({"mon.extension": ">=1.0.0,<2"})`).
+Voir [TECHNICAL.md](TECHNICAL.md#registre-statique-des-extensions-hyp-041) pour l'API et les limites.
+Le chargement effectif des backends reste hors de ce registre statique.
+
 ## Licence
 
 Hypomnesis est distribué sous [licence MIT](LICENSE) : vous pouvez l'utiliser, le modifier et
