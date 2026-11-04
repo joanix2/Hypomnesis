@@ -48,5 +48,3 @@ Critères : pas de corps de fonction ni d'élément non public ✓ (`test_undocu
 Reste : la commande `hypomnesis describe` (export JSON et Markdown, HYP-080) et l'affichage du budget de taille.
 
 ### user
-
-

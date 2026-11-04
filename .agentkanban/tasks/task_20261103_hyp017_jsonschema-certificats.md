@@ -65,4 +65,3 @@ Fait (commit `3ac747e`) :
 - Les modifications non commitées de `TECHNICAL.md` d'un autre agent (section Kanban) n'ont pas été incluses dans mon commit : seul mon paragraphe l'est.
 
 ### user
-

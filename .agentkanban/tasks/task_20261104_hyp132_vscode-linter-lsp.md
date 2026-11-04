@@ -39,4 +39,3 @@ Voir les erreurs du DSL directement dans l'éditeur, en réutilisant le vrai com
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

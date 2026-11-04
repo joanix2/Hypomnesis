@@ -36,4 +36,3 @@ Première étape de la branche fine-tuning : un grand modèle (professeur) produ
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

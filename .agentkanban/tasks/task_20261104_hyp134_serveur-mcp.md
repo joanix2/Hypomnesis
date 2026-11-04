@@ -37,4 +37,3 @@ Exposer les langages à n'importe quel client compatible MCP, sans intégration 
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

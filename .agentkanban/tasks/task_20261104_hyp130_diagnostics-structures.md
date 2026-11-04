@@ -38,4 +38,3 @@ Le linter VS Code, le serveur MCP et les agents LLM ont tous besoin des erreurs 
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

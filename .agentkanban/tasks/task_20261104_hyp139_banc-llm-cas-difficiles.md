@@ -49,5 +49,3 @@ Critère « aucun modèle n'atteint 100 % au premier essai » : tenu pour qwen3:
 Reste : répétitions avec intervalles de confiance (à température 0 les essais sont déterministes : il faut soit une température > 0, soit des intervalles de Wilson sur les cas) et temps de chargement compté à part.
 
 ### user
-
-

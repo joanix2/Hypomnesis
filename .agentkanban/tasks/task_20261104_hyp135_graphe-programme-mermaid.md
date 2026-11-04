@@ -40,4 +40,3 @@ Première visualisation des programmes et des langages. Mermaid n'est qu'une sor
 
 - Lié à HYP-008 (graphe de provenance des faits)
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

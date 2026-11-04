@@ -49,5 +49,3 @@ Mesures (détail dans l'ADR 0009) : pour un 4B, les exemples n'apportent rien de
 Reste : injection sous budget de taille (les 5 paires sont ajoutées sans limite de longueur) et un jeu de paires plus grand, où fixes et recherchés pourraient se séparer.
 
 ### user
-
-

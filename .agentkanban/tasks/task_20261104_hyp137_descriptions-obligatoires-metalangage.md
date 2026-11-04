@@ -51,5 +51,3 @@ Pour générer un prompt à partir d'un langage (HYP-138), chaque mot de ce lang
 Reste : l'**erreur de compilation** quand un élément public n'a pas de description (il faut d'abord la notion de « public », HYP-012) et le test de propriétés « Core IR et certificats identiques avec ou sans descriptions » (vrai par construction, puisque ce sont des commentaires pour la grammaire, mais à prouver par un test).
 
 ### user
-
-

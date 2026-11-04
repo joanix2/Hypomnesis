@@ -63,32 +63,6 @@ rechargeable par `nx.node_link_graph`), inclus par `ProcedureReport.to_json` sou
 Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
 révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une
-
-### Épistémique : graphe de provenance (NetworkX, HYP-008)
-
-La **source de vérité** reste le terme de provenance en semi-anneau de chaque fait
-(`epistemics/provenance.py`, miroir du modèle Lean) : support, confiance et « tient-il encore ? »
-en sont des évaluations. `KnowledgeBase.graph()` en dérive, à la demande, un `nx.DiGraph` :
-
-- nœuds `fact:<clé>` et `source:<id>` (préfixes : une clé de fait peut ressembler à un id de
-  source) ; une provenance peut citer une source non déclarée (`source:axiome`) ;
-- arêtes `source → fait` (la provenance du fait la mentionne, `kind="provenance"`) et
-  `prémisse → conclusion` (`kind="premise"`) ; `graph(detailed=True)` ajoute valeur, méthode,
-  support et confiance (nœuds faits), origine et confiance (nœuds sources).
-
-Usages : `retract_source` prend pour **ensemble candidat** les descendants des sources qui ne
-tiennent plus (retirées ou non déclarées), puis **décide par l'évaluation booléenne** de chaque
-candidat (substitution `x ↦ 0`, P10/P11) — un fait à deux dérivations (`plus`) survit si l'une tient
-encore ; `explain` parcourt les prédécesseurs `premise` (même rendu texte qu'avant) ;
-`provenance_graph()` exporte le graphe en JSON node-link (`nx.node_link_data(…, edges="edges")`,
-rechargeable par `nx.node_link_graph`), inclus par `ProcedureReport.to_json` sous la clé
-`provenance_graph`. Tests : `tests/unit/test_knowledge_graph.py`,
-`tests/property/test_knowledge_graph.py` (Hypothesis), `tests/integration/test_provenance_graph.py`
-(caractérisation).
-
-Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
-prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
-révision reste correcte (elle se fonde sur les provenances). Deux prémisses identiques dans une
 même dérivation n'apparaissent qu'une fois dans l'explication.
 
 CLI : `hypomnesis lancer LANGAGE [PROGRAMME] [--demande …] [--mode …] [--env cle=valeur]

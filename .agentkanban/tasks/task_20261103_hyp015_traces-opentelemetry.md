@@ -63,4 +63,3 @@ HYP-015 implémenté : `Tracer` est désormais une façade au-dessus du SDK Open
 - `./scripts/validate.sh complet` : tests, Lean, certificats OK ; le hook `pre-commit` signale un échec uniquement parce que le hook `pyright` (0 erreur) « a modifié des fichiers » : il s'agit des fiches kanban d'autres agents (HYP-006…) régénérées pendant leur travail en parallèle, pas de mes fichiers.
 
 ### user
-

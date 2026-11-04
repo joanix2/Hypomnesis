@@ -35,4 +35,3 @@ Les fichiers `.hyp` n'ont aucune coloration dans VS Code. Une première extensio
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

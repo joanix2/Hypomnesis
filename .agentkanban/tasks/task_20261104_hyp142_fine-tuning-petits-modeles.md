@@ -38,4 +38,3 @@ Tester si un petit modèle affiné égale, sur un langage donné, un modèle plu
 #### Références
 
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

@@ -74,4 +74,3 @@ Validation : `./scripts/validate.sh rapide` vert, `./scripts/validate.sh complet
 - **TECHNICAL.md** contenait des modifications non commitées d'autres agents (HYP-006). Je n'ai commité que ma section, en indexant uniquement mon hunk.
 
 ### user
-

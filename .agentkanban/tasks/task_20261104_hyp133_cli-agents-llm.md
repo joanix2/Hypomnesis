@@ -36,4 +36,3 @@ Un agent doit pouvoir découvrir un langage, vérifier un programme et le simule
 
 - À coordonner avec HYP-006 (migration vers Typer)
 - Conventions et définition de fini : `.agentkanban/memory.md`
-

@@ -39,4 +39,3 @@ Mermaid convient aux diagrammes statiques, mais les pipelines réels demandent d
 
 - Piste ultérieure : vue dans VS Code (HYP-131), états d'une exécution en direct.
 - Conventions et définition de fini : `.agentkanban/memory.md`
-
