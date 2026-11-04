@@ -192,8 +192,39 @@ type-théorique de chacune (§4.4 de `docs/architecture/m3-metalangage.md`) est 
 - `safe.py` : `guarded` convertit toute `Exception` d'un plugin en `Result` en échec
   (`capability.raised`) ; règle : **jamais d'exception brute vers le noyau**.
 
-Un plugin ne décide rien : il rend valeur et certificat, le noyau gradue et vérifie. Le registre
-et les manifestes sont l'objet de HYP-041.
+Un plugin ne décide rien : il rend valeur et certificat, le noyau gradue et vérifie.
+
+### Registre statique des extensions (HYP-041)
+
+`engine/registry.py` expose `ExtensionRegistry(manifests=(), *, schemas=None)` ; par défaut,
+`SchemaRegistry.with_builtin_schemas()` valide chaque manifeste contre `MANIFEST_ID`.
+Le registre ne charge **jamais** le backend, ne vérifie pas ses protocoles et ne modifie pas
+le registre natif fermé du noyau (ADR 0003). Le chargement effectif relève de HYP-044.
+
+- `add(manifest)` et `add_many(manifests)` : copies profondes, validation du lot entier avant
+  mutation ; doublon id/version identique accepté, contradictoire refusé.
+- `load(path)` / `load_paths(paths)` : fichiers JSON ou dossiers (`*.json` immédiats, triés,
+  sans récursion), enregistrement atomique de l'ensemble des chemins.
+- `ids(role=None)`, `versions(id)`, `list(role=None)`, `show(id, version=None)` : index id/rôle/version ;
+  toutes les versions sont inspectables sans résoudre les dépendances. `show` sans version
+  choisit la plus récente ; les données retournées sont des copies profondes.
+- `resolve({id: contrainte, ...})` : fermeture transitive, une version par id, backtracking
+  via `resolvelib` ; versions les plus récentes d'abord, puis ordre topologique NetworkX
+  (dépendances avant dépendants, ordre lexical pour les ex æquo). Aucun état n'est modifié.
+
+Versions : SemVer 2.0.0 (`semantic-version`, pas PEP 440), préversions arbitraires et métadonnées
+de build acceptées par le schéma du manifeste. Contraintes : syntaxe `SimpleSpec`, par exemple
+`>=1.0.0,<2`, `*`, `=1.2.3-preview.custom`. Une préversion peut satisfaire une plage selon les
+règles de `SimpleSpec` ; pour la fixer, utiliser l'égalité explicite. À précédence SemVer égale
+(build différent), le texte de la version départage de façon déterministe.
+
+Erreurs publiques (toutes dérivent de `RegistryError`, lui-même `ValueError`) :
+`InvalidManifestError`, `DuplicateManifestError`, `MissingDependencyError`,
+`VersionConflictError`, `DependencyCycleError`. La résolution indique les contraintes et leurs
+origines en cas d'échec. Les cycles du graphe sélectionné sont refusés après résolution
+(pas de recherche d'une autre solution acyclique) ; garde-fou de 10 000 tours du résolveur.
+Les URI de schémas et les points d'entrée restent des métadonnées : aucune lecture distante,
+aucun import ni contrôle d'existence de backend.
 
 ## Contrats
 

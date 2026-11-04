@@ -95,6 +95,19 @@ def test_manifest_validation(registry):
     registry.validate(MANIFEST_ID, MANIFEST)
 
 
+@pytest.mark.parametrize(
+    "version", ["1.0.0-preview.custom", "1.0.0+build.01", "1.0.0-preview.custom+build.01"]
+)
+def test_manifest_accepts_full_semver(registry, version):
+    registry.validate(MANIFEST_ID, {**MANIFEST, "version": version})
+
+
+@pytest.mark.parametrize("version", ["1.0", "1.0.0-01", "1.0.0-a..b", "1.0.0+", "01.0.0"])
+def test_manifest_rejects_invalid_semver(registry, version):
+    with pytest.raises(ContractError):
+        registry.validate(MANIFEST_ID, {**MANIFEST, "version": version})
+
+
 def test_non_idempotent_extensions_cannot_retry(registry):
     manifest = {**MANIFEST, "error_policy": {**MANIFEST["error_policy"], "max_attempts": 3}}
     with pytest.raises(ContractError):
