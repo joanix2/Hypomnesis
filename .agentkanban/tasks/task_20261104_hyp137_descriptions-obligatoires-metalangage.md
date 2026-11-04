@@ -1,8 +1,8 @@
 ---
 title: "HYP-137 · Descriptions obligatoires dans le métalangage"
-lane: todo
+lane: doing
 created: 2026-11-04T08:56:00+01:00
-updated: 2026-11-04T08:56:00+01:00
+updated: 2026-11-04T14:55:00+01:00
 description: "P1 · M · Langage · dépend de HYP-002"
 ---
 

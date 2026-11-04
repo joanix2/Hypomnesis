@@ -8,6 +8,7 @@ from hypomnesis.engine.language import load_language
 from hypomnesis.llm.describe import catalogue
 
 LANGUAGES = Path(__file__).resolve().parents[2] / "languages"
+SNAPSHOTS = Path(__file__).resolve().parent / "snapshots"
 
 
 def render(name: str) -> str:
@@ -38,6 +39,13 @@ def test_catalogue_is_generic_across_languages():
     text = render("ventilation")
     assert "`Ventilation.reguler`" in text and "`budget : int`" in text
     assert "Plaque" not in text
+
+
+@pytest.mark.parametrize("name", ["mecanique", "ventilation"])
+def test_rendered_catalogue_matches_the_measured_snapshot(name):
+    """The prompt text was measured on the LLM bench: it must not drift, byte for byte."""
+    expected = (SNAPSHOTS / f"catalogue_{name}.md").read_bytes()
+    assert render(name).encode("utf-8") == expected
 
 
 def test_catalogue_names_the_entry_point():
