@@ -206,6 +206,25 @@ module Problem = struct
     constraints : constraint list;
     target : (string * float) option;  (* minimise the distance to this value *)
   }
+
+  type state = { state_id : string; values : (string * float) list }
+  type action = {
+    action_id : string;
+    preconditions : constraint list;
+    effects : (string * float) list;
+  }
+  type transition = {
+    transition_id : string;
+    from_state : string;
+    action_ref : string;
+    to_state : string;
+  }
+  type planning_problem = {
+    base_problem : problem;
+    states : state list;
+    actions : action list;
+    transitions : transition list;
+  }
 end
 
 (* ---------------------------------------------------------------- json *)

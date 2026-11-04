@@ -13,7 +13,7 @@ from __future__ import annotations
 from fractions import Fraction
 from typing import Any
 
-from hypomnesis.ir.problem import Constraint, Problem, Variable
+from hypomnesis.ir.problem import Action, Constraint, Problem, State, Transition, Variable
 from hypomnesis.language.errors import EvaluationError
 from hypomnesis.runtime.json import value_to_data
 from hypomnesis.runtime.values import RecordValue, Value, Variant, iter_list
@@ -40,8 +40,18 @@ def _number(x: Value) -> Fraction:
 
 def to_problem(value: Value) -> Problem:
     """``Problem.problem`` (Hypomnesis) → :class:`hypomnesis.ir.problem.Problem`."""
+    try:
+        return _to_problem(value)
+    except ValueError as exc:
+        raise BridgeError(str(exc)) from exc
+
+
+def _to_problem(value: Value) -> Problem:
     if not isinstance(value, RecordValue):
         raise BridgeError("Problem.problem attendu")
+    planning = value if value.type_name == "Problem.planning_problem" else None
+    if planning is not None:
+        value = planning.get("base_problem")
     variables = []
     for v in iter_list(value.get("variables")):
         lower, upper = option(v.get("lower")), option(v.get("upper"))
@@ -68,4 +78,36 @@ def to_problem(value: Value) -> Problem:
         tuple(variables),
         constraints,
         None if target is None else (target[0], _number(target[1])),
+        states=()
+        if planning is None
+        else tuple(
+            State(s.get("state_id"), tuple((n, _number(x)) for n, x in iter_list(s.get("values"))))
+            for s in iter_list(planning.get("states"))
+        ),
+        actions=()
+        if planning is None
+        else tuple(
+            Action(
+                a.get("action_id"),
+                tuple(
+                    Constraint(
+                        c.get("label"),
+                        tuple((n, _number(x)) for n, x in iter_list(c.get("terms"))),
+                        relations[c.get("relation").tag],
+                        _number(c.get("bound")),
+                    )
+                    for c in iter_list(a.get("preconditions"))
+                ),
+                tuple((n, _number(x)) for n, x in iter_list(a.get("effects"))),
+            )
+            for a in iter_list(planning.get("actions"))
+        ),
+        transitions=()
+        if planning is None
+        else tuple(
+            Transition(
+                t.get("transition_id"), t.get("from_state"), t.get("action_ref"), t.get("to_state")
+            )
+            for t in iter_list(planning.get("transitions"))
+        ),
     )
