@@ -26,6 +26,10 @@ ruff check . && ruff format --check .
 pyright
 ```
 
+La validation complète, preuves Lean et vérificateur de certificats compris, se lance avec
+`./scripts/validate.sh complet` sur Linux et macOS (Python ≥ 3.11, dépendances `dev` et
+version Lean indiquée dans `formal/lean-toolchain` nécessaires).
+
 Ne contournez pas un validateur (`noqa`, `type: ignore`, test désactivé, `sorry` dans les
 preuves Lean) : corrigez la cause.
 
