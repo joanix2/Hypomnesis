@@ -1,6 +1,6 @@
 ---
 title: "HYP-051 · Problem IR : variables, domaines, contraintes, objectifs"
-lane: doing
+lane: qa
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-04T18:22:06+01:00
 description: "P0 · M · Phase 4 — Raisonnement hybride · dépend de HYP-002"
@@ -49,5 +49,27 @@ du prélude si nécessaires, schéma et tests spécifiques,
 `docs/architecture/problem-ir.md`. Pas de nouveau natif partagé sans coordination.
 Le coordinateur conserve les tickets, checklists et documents centraux.
 Trois worktrees isolés, intégration séquentielle validée, aucun push.
+
+### user
+
+### agent
+
+Livré dans `58fb7bc` et `4717011`, puis intégré après HYP-044.
+Structures de problème immuables avec contrôles des références/domaines/nombres,
+états/actions/transitions déclaratifs, JSON `problem/1.0.0` exact et schéma.
+Le pont accepte le problème historique et `Problem.planning_problem` ;
+les champs nouveaux évitent de masquer les champs nominaux existants.
+La vérification des solutions conserve l'interprétation décimale des flottants.
+
+Seize tests dédiés : aller-retour Hypothesis de rationnels/grands entiers,
+refus des formes invalides, domaines et références, construction depuis `.hyp`,
+rigidité/plage d'épaisseur et résolution Z3 indépendante. Les démonstrations
+existantes restent vertes. Objectif limité à la proximité existante ;
+les transitions ne sont ni exécutées ni résolues par le solveur numérique.
+
+Validation complète verte après intégration séquentielle : Python, Codegen,
+schémas, Lean/audit/certificat. Core IR et interpréteur inchangés.
+Sous-agents sans outils : réalisation et relecture directe par le coordinateur,
+pas de revue indépendante réussie revendiquée. Passage en `qa`, aucun push.
 
 ### user

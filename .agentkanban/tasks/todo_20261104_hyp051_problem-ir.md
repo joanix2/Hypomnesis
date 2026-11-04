@@ -1,6 +1,6 @@
 ---
 title: "TODO HYP-051 · Problem IR"
-lane: doing
+lane: qa
 created: 2026-11-04T18:22:06+01:00
 updated: 2026-11-04T18:22:06+01:00
 description: "Compléter les structures, le pont langage et le format JSON"
@@ -10,9 +10,9 @@ tags: [moteur-symbolique, python, solveurs]
 
 # Itération 1
 
-- [ ] Compléter variables, domaines, contraintes et objectifs sans réécrire les consommateurs.
-- [ ] Représenter états, actions et transitions déclaratifs sans exécution.
-- [ ] Valider immutabilité, identités, références, domaines et nombres.
-- [ ] Ajouter sérialisation JSON versionnée et schéma, avec rationnels et grands entiers exacts.
-- [ ] Construire depuis .hyp ; démontrer épaisseur/rigidité et transition déclarative.
-- [ ] Tester aller-retour, erreurs, pont, Z3 et démonstrations ; documenter et valider complètement.
+- [x] Compléter variables, domaines, contraintes et objectifs sans réécrire les consommateurs.
+- [x] Représenter états, actions et transitions déclaratifs sans exécution.
+- [x] Valider immutabilité, identités, références, domaines et nombres.
+- [x] Ajouter sérialisation JSON versionnée et schéma, avec rationnels et grands entiers exacts.
+- [x] Construire depuis .hyp ; démontrer épaisseur/rigidité et transition déclarative.
+- [x] Tester aller-retour, erreurs, pont, Z3 et démonstrations ; documenter et valider complètement.

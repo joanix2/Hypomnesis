@@ -574,3 +574,54 @@ le besoin actuel, pas une interdiction de réexaminer une bibliothèque si ce be
 Aucune nouvelle migration d'infrastructure retenue dans ce périmètre : aucun nouveau ticket
 nécessaire. HYP-054 (estimateur appris) et HYP-070 (instrumentation/OTLP) restent des travaux
 distincts, pas des conditions supplémentaires de clôture des sept remplacements.
+
+## Backend Python contractuel (HYP-044)
+
+`backends/python/PythonBackend` reçoit une `PreparedExtension` et les permissions
+accordées par l'hôte. Il réutilise les codecs et contrats de HYP-042, refuse les
+préconditions non interprétées et n'importe jamais le plugin dans le processus hôte.
+`register(natives, symbol)` autorise une primitive sur un registre explicite, à
+utiliser par une déclaration `external` correspondant à la signature préparée.
+
+Chaque appel valide l'entrée avant import, communique en JSON avec un sous-processus,
+puis valide/décode la sortie. Le délai couvre le démarrage du worker et l'import ;
+expiration et crash sont des `BackendError` typées, également visibles depuis le
+langage et journalisées par `Tracer`. Le groupe enfant est arrêté et le processus
+direct récolté. Aucune relance implicite ; pas de bac à sable de sécurité.
+Voir [le guide](docs/architecture/backend-python.md).
+
+## Problem IR déclarative (HYP-051)
+
+`ir/problem.py` conserve les variables bornées/discrètes, contraintes linéaires et
+l'objectif de proximité. Ses structures de problème valident immutabilité,
+identités, références, domaines et nombres finis, normalisés en rationnels.
+`check_assignment` interprète les flottants selon leur écriture décimale, comme
+la construction du problème.
+
+`State`, `Action`, `Transition` ajoutent la description d'un plan sans exécution.
+Le prélude garde `Problem.problem` et ajoute `Problem.planning_problem`, avec
+`base_problem`, états, actions et transitions. Le pont `engine.bridge.to_problem`
+accepte les deux formes. Les nouveaux champs d'identité du prélude sont distincts
+pour préserver la résolution nominale des champs historiques.
+
+Le format `problem/1.0.0` est un JSON fermé et versionné : chaque nombre est une
+paire d'entiers numérateur/dénominateur positif. Schéma puis constructeurs assurent
+respectivement validation structurelle et sémantique. Z3 continue de résoudre
+uniquement la partie numérique ; les transitions ne sont pas un certificat
+d'exécutabilité. Voir [le guide](docs/architecture/problem-ir.md).
+
+## Ordonnanceur local de worktrees (HYP-148)
+
+`scripts/parallel.py` réutilise `scripts/kanban.py` et fournit `plan`, `prepare`,
+`status`, `record`, `integrate`. La CLI prépare et suit les travaux ; la conversation
+principale lance les agents, sans SDK ajouté. Trois travaux actifs par défaut.
+Les chemins/globs et interfaces réservées sont comparés conservativement, et les
+modifications réelles sont vérifiées avant attestation.
+
+L'état et les logs résident sous le répertoire Git commun `parallel/`, hors index,
+avec verrou exclusif et écritures atomiques. Les validations sont réellement
+exécutées et liées au SHA ; elles deviennent périmées après un nouveau commit.
+L'intégration prépare un merge sans commit, valide l'arbre combiné et refuse
+les mutations du validateur. Conflit ou échec conserve l'état pour intervention,
+sans reset, suppression automatique, push ou changement de couloir.
+Voir [la CLI et ses limites](docs/outillage/ordonnanceur-parallele.md).

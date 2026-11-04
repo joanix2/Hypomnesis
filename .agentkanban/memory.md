@@ -83,6 +83,11 @@ Détails d'implémentation : `TECHNICAL.md`.
 - Kanban : `.venv/bin/python scripts/kanban.py status` (tâches prêtes ou bloquées, chemin critique vers P0), `check` (validation),
   `graph` (injection dans Graphify ; voir `CLAUDE.md`).
 - Sous-agents : `.claude/agents/` (`hyp-planner`, `hyp-implementer`, `hyp-prover`, `hyp-reviewer`), voir `AGENTS.md`.
+- Lots parallèles : `.venv/bin/python scripts/parallel.py --json plan`, puis
+  `prepare`, `status`, `record`, `integrate` ; trois travaux actifs par défaut.
+  Les agents restent pilotés par la conversation, chacun dans son worktree et
+  son environnement propre ; la CLI ne lance aucun agent et ne pousse jamais.
+  Guide : `docs/outillage/ordonnanceur-parallele.md`.
 
 ## Définition de fini (toutes tâches)
 
@@ -113,7 +118,10 @@ Détails d'implémentation : `TECHNICAL.md`.
   et contrôles documentés, validation humaine finale encore requise.
 - HYP-007 reste en `todo`, bloqué pour clôture par HYP-014 (`doing`) et sa comparaison
   réelle avant/après. HYP-139 reste `doing`, mesures GPU réelles non attestées.
-- Branche de travail : `main`, dernier commit d'implémentation `6e2962f`.
-  Dernière validation intégrée : 735 tests (658 moteur, 77 Codegen), Python/Lean verts.
+- HYP-044 (backend Python contractuel), HYP-051 (Problem IR/JSON/plans déclaratifs)
+  et HYP-148 (CLI d'ordonnancement) sont implémentés, intégrés localement et en `qa`.
+- Branche de travail : `main`, lot préparé depuis `2deee5b` et intégré sur
+  `integration/symbolique`, puis avance rapide locale de `main`.
+  Dernière validation intégrée : 784 tests (707 moteur, 77 Codegen), Python/Lean verts.
   Les derniers commits locaux ne sont pas poussés ; la CI distante attestée pour
   HYP-004 concerne `7d89099`.

@@ -104,6 +104,32 @@ L'API Python `TypeCodec(checker, signature)` génère un JSON Schema et encode/d
 types clos avec contrôle strict ; voir l'[ADR 0010](../adr/0010-types-et-json-reversible.md)
 pour la migration et les limites de vérification statique des contrats.
 
+### Problèmes et plans déclaratifs (HYP-051)
+
+`Problem.problem` contient `variables`, `constraints`, `target` : domaines bornés
+ou discrets, contraintes linéaires et objectif optionnel de proximité.
+`Problem.planning_problem` l'enveloppe dans `base_problem` et ajoute `states`,
+`actions`, `transitions`. Les identifiants sont `state_id`, `action_id`,
+`transition_id` ; une transition référence `from_state`, `action_ref`, `to_state`.
+Les valeurs d'état et effets sont des listes de couples nom/valeur.
+
+Le pont Python `engine.bridge.to_problem` accepte les deux formes et contrôle
+leurs invariants. Décrire une action ne l'exécute pas ; le solveur numérique
+n'effectue pas de recherche de plan. Le contrat JSON versionné préserve les
+rationnels et grands entiers de l'IR ; les champs numériques du prélude restent
+des flottants, sans nouvelle garantie de précision arbitraire dans le langage.
+Voir [Problem IR](../architecture/problem-ir.md).
+
+### Extensions Python explicites (HYP-044)
+
+L'hôte prépare une extension via `ExtensionRegistry.prepare`, puis crée un
+`PythonBackend` et enregistre son symbole dans un `NativeRegistry` explicite.
+Une déclaration `external` doit utiliser la signature d'entrée/sortie préparée.
+L'appel valide les contrats avant/après un worker Python isolé, sans import par
+`check` ou le LSP. Les erreurs remontent comme `BackendError` d'exécution ;
+aucun accès Python arbitraire ni relance automatique n'est ajouté au langage.
+Voir [backend Python](../architecture/backend-python.md).
+
 ## Descriptions (langages M2)
 
 Un commentaire `(** … *)` placé juste avant une déclaration (module, type, champ, constructeur,

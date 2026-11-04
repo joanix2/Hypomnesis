@@ -243,3 +243,37 @@ réinjecté : 181 nœuds et 863 relations. Bilan du tableau : 70 `todo`, 2 `doin
 aucun code ni test changé. Modifications non committées et non poussées.
 
 ### user
+
+Continuer avec plusieurs tickets symboliques sur des worktrees séparés.
+Plan confirmé : HYP-044, HYP-051 et nouvel ordonnanceur réutilisable HYP-148,
+maximum trois travaux, intégration locale séquentielle validée, aucun push.
+
+### agent
+
+Kanban committé dans `baa3130`, cadrage/checklists dans `2deee5b`.
+Trois branches et worktrees isolés plus un worktree d'intégration préparés,
+environnements Python séparés vérifiés. Les agents d'implémentation et de revue
+n'avaient aucun outil disponible : aucun changement de leur part. Reprise directe
+par le coordinateur, sans prétendre à une exécution parallèle réussie des agents.
+
+HYP-044, HYP-051 et HYP-148 sont livrés sur leurs branches puis intégrés
+séquentiellement, avec validation complète après chaque merge. Backend Python
+contractuel avec timeout, Problem IR/JSON/plans déclaratifs, CLI locale de
+coordination des worktrees. Lot intégré : 784 tests et validation Python/Lean verts.
+Les trois tickets passent en `qa`, jamais en `done`. Revue indépendante non
+réalisée faute d'outils ; relecture directe et tests enregistrés dans chaque ticket.
+Documentation centrale et graphe à rafraîchir avant avance rapide finale de `main`.
+Aucun travail LLM ni push.
+
+### user
+
+### agent
+
+Validation finale de l'arbre consolidé réussie : 784 tests collectés et exécutés,
+707 moteur et 77 Codegen, sans tests ignorés sur cette dernière exécution ;
+Ruff, Pyright des deux paquets, schémas, Kanban, Lean/audit/certificat verts.
+Graphify rafraîchi sans appel LLM et relations Kanban réinjectées.
+102 tickets valides. Les branches de travail sont conservées ; la branche
+d'intégration propre est prête pour l'avance rapide locale de `main`.
+
+### user
