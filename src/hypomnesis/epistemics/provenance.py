@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from enum import IntEnum
+from math import inf
 from typing import Generic, TypeVar
 
 K = TypeVar("K")
@@ -147,3 +148,7 @@ BOOLEAN: Semiring[bool] = Semiring(False, True, lambda a, b: a or b, lambda a, b
 
 #: Viterbi semiring: confidence of the best derivation.
 CONFIDENCE: Semiring[float] = Semiring(0.0, 1.0, max, lambda a, b: a * b)
+
+#: Tropical semiring on nonnegative costs: cheapest alternative, summed premises.
+#: ``inf`` means no derivation, and a premise-free proof has zero cost.
+COST: Semiring[float] = Semiring(inf, 0.0, min, lambda a, b: a + b)

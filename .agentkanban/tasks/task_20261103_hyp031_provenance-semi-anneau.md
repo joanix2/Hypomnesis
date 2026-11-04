@@ -1,6 +1,6 @@
 ---
 title: "HYP-031 · Provenance en semi-anneau (implémentation Python)"
-lane: todo
+lane: qa
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · M · Phase 2 — Moteur épistémique · dépend de HYP-030"
@@ -46,5 +46,18 @@ HYP-005 adopte les trois axes (spécification v0.3 §7.1). Le support est une
 lecture de la provenance, distincte de la confiance et du coût ; `Derived`
 n'est pas un grade supplémentaire. Conserver la fidélité aux théorèmes Lean
 et tester la propagation sans promotion artificielle du support.
+
+### user
+
+objectif finir les P0
+
+### agent
+
+Début du lot P0, sans sous-agent. Les termes, la substitution et trois
+lectures existent déjà ; la suite de propriétés annoncée dans la docstring
+est absente. Compléter le coût tropical et ajouter effectivement les quatre
+propriétés générées correspondant aux énoncés Lean. La comparaison de
+confiance se fera sur rationnels exacts pour ne pas confondre arrondis
+flottants et lois mathématiques. Checklist créée avant implémentation.
 
 ### user

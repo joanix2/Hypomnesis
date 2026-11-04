@@ -93,7 +93,7 @@ def test_invalid_metadata_is_rejected(build):
 def test_failed_record_does_not_change_facts_sources_or_journal():
     kb = KnowledgeBase()
     kb.observe("a", 1, "sensor")
-    before = (dict(kb.sources), dict(kb.facts), list(kb.journal))
+    before = (dict(kb.sources), dict(kb.facts), kb.journal)
     with pytest.raises(ValueError):
         kb.observe("b", object(), "sensor")
     assert before == (kb.sources, kb.facts, kb.journal)

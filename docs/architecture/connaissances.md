@@ -41,8 +41,42 @@ Les genres de source, identifiants non vides et confiances dans `[0, 1]` sont
 contrôlés avant enregistrement. Un échec de construction n'ajoute ni fait,
 ni source, ni événement au journal. Un numéro local peut être consommé :
 les identifiants ne promettent pas une séquence sans trous.
-La base et son journal restent mutables ; HYP-030 ne prétend pas avoir rendu
-`KnowledgeBase` persistante ou pure.
+La base reste mutable ; HYP-030 ne prétend pas avoir rendu `KnowledgeBase`
+persistante ou pure. Depuis HYP-033, `journal` expose un tuple en lecture
+seule d'événements gelés, chacun pouvant conserver un instantané de fait.
+
+## Provenance et révision (HYP-031, HYP-033)
+
+Les quatre lectures sont `SUPPORT`, `BOOLEAN`, `CONFIDENCE` (Viterbi) et
+`COST` (tropical) dans `epistemics.provenance`. Le coût utilise des nombres
+non négatifs : `min` choisit une alternative, `+` additionne les prémisses,
+`inf` signifie aucune dérivation et `0` une preuve sans prémisse.
+La confiance flottante approxime le modèle exact, testé sur rationnels.
+Les tests générés citent les énoncés Lean `eval_subst`, `holds_after_retract`,
+`retract_unrelated` et `support_mono` ; ce sont des tests Python, pas une
+preuve de correction du moteur Python.
+
+`revision.dependency_index` construit l'index inverse observation → clés
+depuis les provenances actuelles. L'index est reconstruit à la demande,
+car les dictionnaires historiques de la base restent accessibles ; pas de
+cache susceptible d'ignorer un fait ajouté par l'hôte. Seuls les faits qui
+mentionnent une source retirée sont évalués pour décider l'invalidation.
+`revision.recompute` est la référence exhaustive, comparée sur des bases
+générées à plusieurs retraits successifs. Une dérivation alternative survit
+si une source suffit encore ; support et confiance ignorent alors les sources
+retirées. Les constantes `axiome` ne peuvent pas être rétractées.
+
+`replace_observation` valide la nouvelle valeur avant tout changement, retire
+la source précédente et enregistre la nouvelle observation. Les conclusions
+invalidées deviennent des métavariables : la méthode d'un fait est un libellé,
+pas du code à réexécuter implicitement. Le moteur de règles ou l'appelant doit
+les dériver à nouveau. L'ancien `observe` conserve sa sémantique de remplacement
+local, sans retrait implicite de l'ancienne source.
+
+Le journal comporte notamment `observed`, `derived`, `replaced`, `retracted`,
+`invalidated`, `revised`. Les anciens faits sont conservés dans les événements
+de remplacement et d'invalidation. Ni le tuple retourné ni un événement
+ne permettent d'effacer ou réécrire l'histoire par l'API publique.
 
 ## Contrat JSON
 

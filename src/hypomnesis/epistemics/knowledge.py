@@ -13,10 +13,10 @@ place, so revisions keep the history (cahier des charges §7.3).
 
 The provenance terms stay the source of truth for support, confidence and "does
 it still hold". :meth:`KnowledgeBase.graph` derives from them a NetworkX
-dependency graph (source → fact, premise → conclusion) that supplies the
-*candidate* set for revision (descendants), the premise tree of explanations and
-a node-link export; the final verdict on a candidate remains the Boolean
-evaluation of its provenance, which is exact when a fact has several derivations.
+dependency graph (source → fact, premise → conclusion) for explanations and
+node-link export. Revision uses the inverse observation index in ``revision``;
+its final verdict remains Boolean evaluation of provenance, which is exact
+when a fact has several derivations.
 """
 
 from __future__ import annotations
@@ -30,7 +30,6 @@ from typing import Any
 import networkx as nx
 
 from hypomnesis.epistemics.provenance import (
-    BOOLEAN,
     CONFIDENCE,
     SUPPORT,
     Obs,
@@ -43,6 +42,7 @@ from hypomnesis.epistemics.provenance import (
     evaluate,
     obs,
 )
+from hypomnesis.epistemics.revision import invalidated
 from hypomnesis.runtime.values import RecordValue, Variant
 
 FACT = "fact:"  # node-id prefixes: a fact key may look like a source id
@@ -221,6 +221,7 @@ class Event:
     kind: str  # "observed" | "estimated" | "derived" | "retracted" | "invalidated" | "unknown"
     key: str
     detail: str
+    fact: Fact | None = None
 
 
 @dataclass
@@ -228,14 +229,19 @@ class KnowledgeBase:
     sources: dict[str, Source] = field(default_factory=dict)
     facts: dict[str, Fact] = field(default_factory=dict)
     unknowns: dict[str, Unknown] = field(default_factory=dict)
-    journal: list[Event] = field(default_factory=list)
+    _journal: list[Event] = field(default_factory=list, init=False, repr=False)
     retracted: set[str] = field(default_factory=set)
     _ids: Any = field(default_factory=lambda: itertools.count(1), repr=False)
 
     # -------------------------------------------------------------- input
 
-    def _log(self, kind: str, key: str, detail: str) -> None:
-        self.journal.append(Event(len(self.journal) + 1, kind, key, detail))
+    @property
+    def journal(self) -> tuple[Event, ...]:
+        """Read-only history; events and their concrete fact snapshots are frozen."""
+        return tuple(self._journal)
+
+    def _log(self, kind: str, key: str, detail: str, fact: Fact | None = None) -> None:
+        self._journal.append(Event(len(self._journal) + 1, kind, key, detail, fact))
 
     def _source(self, kind: str, origin: str, confidence: float) -> Source:
         return Source(f"{kind[:3]}-{next(self._ids)}", kind, origin, confidence)
@@ -268,7 +274,7 @@ class KnowledgeBase:
         fact = Fact(key, value, obs(source.id), f"{method} ({origin})")
         self.sources[source.id] = source
         self._replace(key, fact)
-        self._log(event, key, f"{value!r} — {origin} [{source.id}]")
+        self._log(event, key, f"{value!r} — {origin} [{source.id}]", fact)
         return fact
 
     def derive(self, key: str, value: Any, method: str, premises: list[str]) -> Fact:
@@ -289,7 +295,7 @@ class KnowledgeBase:
         if not premises:
             self._declare_axiom()
         self._replace(key, fact)
-        self._log("derived", key, f"{value!r} — {method} ← {', '.join(premises)}")
+        self._log("derived", key, f"{value!r} — {method} ← {', '.join(premises)}", fact)
         return fact
 
     def _declare_axiom(self) -> None:
@@ -297,6 +303,8 @@ class KnowledgeBase:
             self.sources[AXIOM] = Source(AXIOM, "default", "constante du programme", 1.0)
 
     def _replace(self, key: str, fact: Fact) -> None:
+        if key in self.facts:
+            self._log("replaced", key, "ancienne conclusion conservée", self.facts[key])
         self.facts[key] = fact
         self.unknowns.pop(key, None)
 
@@ -314,23 +322,32 @@ class KnowledgeBase:
             raise ValueError(f"la source {AXIOM!r} (constantes du programme) n'est pas rétractable")
         self.retracted.add(source_id)
         self._log("retracted", source_id, reason)
-        graph = self.graph(detailed=False)
-        # Candidates: everything downstream of a retracted source.
-        candidates: set[str] = set()
-        for node, data in graph.nodes(data=True):
-            if data["kind"] == "source" and not self._holds(node.removeprefix(SOURCE)):
-                candidates |= nx.descendants(graph, node)
-        invalidated = []
-        for key, fact in list(self.facts.items()):
-            if FACT + key not in candidates:
-                continue
-            # The graph only over-approximates: a fact with another derivation survives.
-            if not evaluate(fact.provenance, BOOLEAN, self._holds):
-                del self.facts[key]
-                self.unknowns[key] = Unknown(key, f"invalidée : {reason}")
-                self._log("invalidated", key, f"dépendait de {source_id}")
-                invalidated.append(key)
-        return invalidated
+        keys = invalidated(self.facts, self.retracted)
+        for key in keys:
+            fact = self.facts.pop(key)
+            self.unknowns[key] = Unknown(key, f"invalidée : {reason}")
+            self._log("invalidated", key, f"dépendait de {source_id}", fact)
+        return keys
+
+    def replace_observation(self, key: str, value: Any, origin: str, reason: str) -> Fact:
+        """Retract a direct observation and invalidate its dependent conclusions.
+
+        The new value does not silently re-execute derivation methods. Invalidated
+        properties remain metavariables until rules or the caller derive them again.
+        """
+        source_id = self.source_id(key)
+        if self.sources[source_id].kind != "observation":
+            raise ValueError("only a direct observation can be replaced")
+        old = self.facts[key]
+        if old.provenance != obs(source_id) or old.premises:
+            raise ValueError("only a direct observation can be replaced")
+        Source("validation", "observation", origin)
+        Fact(key, value, obs(source_id), "validation")
+        self._log("replaced", key, reason, old)
+        self.retract_source(source_id, reason)
+        new = self.observe(key, value, origin)
+        self._log("revised", key, reason, new)
+        return new
 
     def _holds(self, source_id: str) -> bool:
         # A source holds until retracted; an unknown id is never silently dropped.
@@ -342,11 +359,17 @@ class KnowledgeBase:
         return self.facts[key].value
 
     def support(self, key: str) -> Support:
-        return evaluate(self.facts[key].provenance, SUPPORT, lambda s: self.sources[s].support)
+        return evaluate(
+            self.facts[key].provenance,
+            SUPPORT,
+            lambda s: self.sources[s].support if self._holds(s) else Support.UNSUPPORTED,
+        )
 
     def confidence(self, key: str) -> float:
         return evaluate(
-            self.facts[key].provenance, CONFIDENCE, lambda s: self.sources[s].confidence
+            self.facts[key].provenance,
+            CONFIDENCE,
+            lambda s: self.sources[s].confidence if self._holds(s) else 0.0,
         )
 
     def sources_of(self, key: str) -> list[Source]:

@@ -136,7 +136,8 @@ en sont des évaluations. `KnowledgeBase.graph()` en dérive, à la demande, un 
   `prémisse → conclusion` (`kind="premise"`) ; `graph(detailed=True)` ajoute valeur, méthode,
   support et confiance (nœuds faits), origine et confiance (nœuds sources).
 
-Usages : `retract_source` prend pour **ensemble candidat** les descendants des sources retirées, puis **décide par l'évaluation booléenne** de chaque
+Usages : depuis HYP-033, `retract_source` prend pour **ensemble candidat** l'index
+inverse observation → faits (`epistemics/revision.py`), puis **décide par l'évaluation booléenne** de chaque
 candidat (substitution `x ↦ 0`, P10/P11) — un fait à deux dérivations (`plus`) survit si l'une tient
 encore ; `explain` parcourt les prédécesseurs `premise` (même rendu texte qu'avant) ;
 `provenance_graph()` exporte le graphe en JSON node-link (`nx.node_link_data(…, edges="edges")`,
@@ -144,6 +145,14 @@ rechargeable par `nx.node_link_graph`), inclus par `ProcedureReport.to_json` sou
 `provenance_graph`. Tests : `tests/unit/test_knowledge_graph.py`,
 `tests/property/test_knowledge_graph.py` (Hypothesis), `tests/integration/test_provenance_graph.py`
 (caractérisation).
+
+HYP-031 ajoute `COST`, la lecture tropicale non négative (`min`, `+`, `inf`, `0`),
+et les propriétés générées correspondant aux quatre théorèmes Lean.
+HYP-033 protège le journal : tuple d'événements gelés avec instantanés des
+faits remplacés/invalidés. `replace_observation` retire explicitement l'ancienne
+source et laisse les conclusions invalidées inconnues jusqu'à nouvelle
+dérivation ; aucun libellé de méthode n'est exécuté comme du code. Les
+alternatives survivantes recalculent support et confiance sans sources retirées.
 
 Limites connues : re-dériver une clé à partir d'une conclusion qui dépend d'elle crée un cycle de
 prémisses au niveau des clés ; `explain` le refuse (`ValueError`) au lieu de récurser sans fin, la
