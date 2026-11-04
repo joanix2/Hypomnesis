@@ -31,6 +31,10 @@
     "transcriber": {
       "$ref": "#/$defs/adapter"
     },
+    "examples": {
+      "type": "string",
+      "description": "JSON file, relative to the package, listing {request, program} pairs (optionally with a simulation environment) used to show the language in use to an LLM."
+    },
     "procedure": {
       "$ref": "#/$defs/program"
     }

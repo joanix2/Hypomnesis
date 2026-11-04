@@ -9,6 +9,7 @@
     "contrats/thickness.reading-1.0.0.json"
   ],
   "transcriber": "adaptateurs/transcription.py:transcrire",
+  "examples": "exemples.json",
   "procedure": {
     "kind": "program",
     "entry": "procedure",

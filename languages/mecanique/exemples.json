@@ -1,0 +1,86 @@
+[
+  {
+    "request": "Une plaque de 140 × 60 mm, 0,4 kg maximum.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 140.0;\n  hauteur = 60.0;\n  epaisseur = None;\n  masse_max = 0.4;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Fais-moi une plaque de 25 cm sur 10 cm, pas plus de 1,2 kg.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 250.0;\n  hauteur = 100.0;\n  epaisseur = None;\n  masse_max = 1.2;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Plaque de 0,5 m par 0,3 m, au maximum 4 kg, estimée avec l'abaque.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 500.0;\n  hauteur = 300.0;\n  epaisseur = None;\n  masse_max = 4.0;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_abaque\n"
+  },
+  {
+    "request": "Dimensionne une plaque de 90 × 90 mm, épaisseur 2,5 mm, 250 g max.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 90.0;\n  hauteur = 90.0;\n  epaisseur = Some 2.5;\n  masse_max = 0.25;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "plaque 60x40 ep. 3mm max 0.15kg",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 60.0;\n  hauteur = 40.0;\n  epaisseur = Some 3.0;\n  masse_max = 0.15;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Plaque nommée cale-reglage, 30 mm de large, 45 mm de haut, 100 g maximum.",
+    "program": "let demande = {\n  Plaque.nom = \"cale-reglage\";\n  largeur = 30.0;\n  hauteur = 45.0;\n  epaisseur = None;\n  masse_max = 0.1;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Conçois une plaque de 220 × 140 mm limitée à 1,8 kg, puis contrôle l'épaisseur mesurée.",
+    "environment": { "mesure": "4" },
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 220.0;\n  hauteur = 140.0;\n  epaisseur = None;\n  masse_max = 1.8;\n}\n\nlet procedure = Plaque.concevoir_puis_mesurer demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Plaque de 35 cm × 20 cm, 3 kg max, et vérifie ensuite l'épaisseur au pied à coulisse avec l'abaque.",
+    "environment": { "mesure": "6" },
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 350.0;\n  hauteur = 200.0;\n  epaisseur = None;\n  masse_max = 3.0;\n}\n\nlet procedure = Plaque.concevoir_puis_mesurer demande Plaque.estimateur_abaque\n"
+  },
+  {
+    "request": "Une plaque carrée de 8 cm de côté, 0,2 kg au plus.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 80.0;\n  hauteur = 80.0;\n  epaisseur = None;\n  masse_max = 0.2;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Plaque de 110 mm de large et 70 mm de haut, épaisseur 5 mm, masse limitée à 600 g.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 110.0;\n  hauteur = 70.0;\n  epaisseur = Some 5.0;\n  masse_max = 0.6;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "J'aimerais une plaque 18 cm x 12 cm. Pas de limite de masse.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 180.0;\n  hauteur = 120.0;\n  epaisseur = None;\n  masse_max = 1000.0;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Plaque fond-boitier de 0,45 m sur 0,3 m, 3,5 kg maximum, épaisseur inconnue.",
+    "program": "let demande = {\n  Plaque.nom = \"fond-boitier\";\n  largeur = 450.0;\n  hauteur = 300.0;\n  epaisseur = None;\n  masse_max = 3.5;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Calcule une plaque de 75 × 50 mm de moins de 450 g avec l'estimateur par règle.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 75.0;\n  hauteur = 50.0;\n  epaisseur = None;\n  masse_max = 0.45;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Je veux une plaque de 15 cm de large sur 15 cm de haut, 2 mm d'épaisseur, 0,35 kg maxi.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 150.0;\n  hauteur = 150.0;\n  epaisseur = Some 2.0;\n  masse_max = 0.35;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Plaque de 600 × 400 mm, 6 kg maximum ; mesure ensuite l'épaisseur réelle et révise.",
+    "environment": { "mesure": "8" },
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 600.0;\n  hauteur = 400.0;\n  epaisseur = None;\n  masse_max = 6.0;\n}\n\nlet procedure = Plaque.concevoir_puis_mesurer demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Fais une plaque de 40 mm sur 40 mm.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 40.0;\n  hauteur = 40.0;\n  epaisseur = None;\n  masse_max = 1000.0;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "plaque renfort-haut 120x30 mm, 90 g max, abaque",
+    "program": "let demande = {\n  Plaque.nom = \"renfort-haut\";\n  largeur = 120.0;\n  hauteur = 30.0;\n  epaisseur = None;\n  masse_max = 0.09;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_abaque\n"
+  },
+  {
+    "request": "Crée une plaque de 8 cm par 6 cm, au maximum 80 g, puis contrôle-la au pied à coulisse.",
+    "environment": { "mesure": "1.5" },
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 80.0;\n  hauteur = 60.0;\n  epaisseur = None;\n  masse_max = 0.08;\n}\n\nlet procedure = Plaque.concevoir_puis_mesurer demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Plaque de 1 m sur 0,5 m, pas plus de 12 kg.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 1000.0;\n  hauteur = 500.0;\n  epaisseur = None;\n  masse_max = 12.0;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  },
+  {
+    "request": "Une plaque large de 65 mm, haute de 95 mm, dont je ne sais pas encore l'épaisseur, 0,3 kg max.",
+    "program": "let demande = {\n  Plaque.nom = \"plaque\";\n  largeur = 65.0;\n  hauteur = 95.0;\n  epaisseur = None;\n  masse_max = 0.3;\n}\n\nlet procedure = Plaque.concevoir demande Plaque.estimateur_regle\n"
+  }
+]

@@ -19,7 +19,10 @@ from typing import Protocol
 
 from hypomnesis.engine.language import Language, load_language
 from hypomnesis.language.errors import HypomnesisError
+from hypomnesis.llm.describe import catalogue
 from hypomnesis.llm.ollama import Reply
+from hypomnesis.llm.prompting import BASE, Strategy
+from hypomnesis.llm.retrieval import Retriever, load_examples
 
 SYSTEM = """Tu traduis une demande en français en un programme Hypomnesis.
 Hypomnesis a la syntaxe d'OCaml : `let x = …`, records `{ Module.champ = …; autre = … }`,
@@ -79,17 +82,36 @@ def extract_code(text: str) -> str:
     return (fenced[0] if fenced else text).strip() + "\n"
 
 
-def system_prompt(language: Language, examples: list[str]) -> str:
-    sources = "\n\n".join(
-        (language.root / s).read_text(encoding="utf-8") for s in language.manifest["sources"]
-    )
-    parts = [
-        SYSTEM.replace("{entry}", language.procedure["entry"]),
-        f"=== Langage « {language.name} » ===\n{sources}",
-    ]
-    for i, example in enumerate(examples, 1):
-        parts.append(f"=== Exemple de programme {i} ===\n{example}")
+def system_prompt(language: Language, examples: list[str], strategy: Strategy = BASE) -> str:
+    parts = [SYSTEM.replace("{entry}", language.procedure["entry"])]
+    if strategy.source:
+        sources = "\n\n".join(
+            (language.root / s).read_text(encoding="utf-8") for s in language.manifest["sources"]
+        )
+        parts.append(f"=== Langage « {language.name} » ===\n{sources}")
+    if strategy.catalogue:
+        parts.append(catalogue(language).render())
+    if strategy.programs:
+        for i, example in enumerate(examples, 1):
+            parts.append(f"=== Exemple de programme {i} ===\n{example}")
     return "\n\n".join(parts)
+
+
+def shots(language: Language, request: str, strategy: Strategy) -> list[dict[str, str]]:
+    """Worked examples as alternating user / assistant turns (the closest one last)."""
+    worked = load_examples(language)
+    chosen = (
+        Retriever(worked).top(request, strategy.shots)
+        if strategy.retrieval
+        else worked[: strategy.shots]
+    )
+    turns: list[dict[str, str]] = []
+    for example in chosen:
+        turns += [
+            {"role": "user", "content": example.request},
+            {"role": "assistant", "content": example.program.strip()},
+        ]
+    return turns
 
 
 def check(language_root: Path, program: str) -> tuple[str, str]:
@@ -142,9 +164,11 @@ def translate(
     examples: list[str],
     max_repairs: int = 2,
     simulate: Callable[[str], str] | None = None,
+    strategy: Strategy = BASE,
 ) -> Translation:
     messages = [
-        {"role": "system", "content": system_prompt(language, examples)},
+        {"role": "system", "content": system_prompt(language, examples, strategy)},
+        *shots(language, request, strategy),
         {"role": "user", "content": request},
     ]
     result = Translation(request)

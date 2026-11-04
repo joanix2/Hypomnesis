@@ -8,6 +8,7 @@
     "contrats/fan.set-1.0.0.json",
     "contrats/fan.set.result-1.0.0.json"
   ],
+  "examples": "exemples.json",
   "procedure": {
     "kind": "program",
     "entry": "procedure",

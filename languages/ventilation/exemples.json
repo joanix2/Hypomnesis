@@ -1,0 +1,26 @@
+[
+  {
+    "request": "Mets en route la régulation thermique : sonde thermo-1, ventilateur fan-3, six essais maximum.",
+    "program": "let installation = {\n  Ventilation.capteur = \"thermo-1\";\n  ventilateur = \"fan-3\";\n  budget = 6;\n}\n\nlet procedure = Ventilation.reguler installation\n"
+  },
+  {
+    "request": "Surveille le capteur thermo-1 et pilote fan-8, pas plus de 2 actions.",
+    "program": "let installation = {\n  Ventilation.capteur = \"thermo-1\";\n  ventilateur = \"fan-8\";\n  budget = 2;\n}\n\nlet procedure = Ventilation.reguler installation\n"
+  },
+  {
+    "request": "Maintiens la température de la salle avec thermo-1 et le ventilateur fan-4, 10 itérations maximum.",
+    "program": "let installation = {\n  Ventilation.capteur = \"thermo-1\";\n  ventilateur = \"fan-4\";\n  budget = 10;\n}\n\nlet procedure = Ventilation.reguler installation\n"
+  },
+  {
+    "request": "Une seule action autorisée : régule avec thermo-1 et fan-5.",
+    "program": "let installation = {\n  Ventilation.capteur = \"thermo-1\";\n  ventilateur = \"fan-5\";\n  budget = 1;\n}\n\nlet procedure = Ventilation.reguler installation\n"
+  },
+  {
+    "request": "regule thermo-1 fan-2 budget 8",
+    "program": "let installation = {\n  Ventilation.capteur = \"thermo-1\";\n  ventilateur = \"fan-2\";\n  budget = 8;\n}\n\nlet procedure = Ventilation.reguler installation\n"
+  },
+  {
+    "request": "Pilote le ventilateur fan-6 d'après le capteur thermo-1, avec trois tentatives au plus.",
+    "program": "let installation = {\n  Ventilation.capteur = \"thermo-1\";\n  ventilateur = \"fan-6\";\n  budget = 3;\n}\n\nlet procedure = Ventilation.reguler installation\n"
+  }
+]

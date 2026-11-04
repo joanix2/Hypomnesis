@@ -74,12 +74,22 @@ def test_benchmark_end_to_end_with_a_fake_model(tmp_path, monkeypatch):
     assert "| faux | 1 |" in summary(results)
 
 
-def test_missing_binding_is_a_semantic_error_not_a_crash():
+def test_inline_record_counts_as_the_expected_binding():
     inline = (
-        'let procedure = Plaque.concevoir { Plaque.nom = "p"; largeur = 1.0; hauteur = 1.0; '
-        "epaisseur = None; masse_max = 1.0 } Plaque.estimateur_regle\n"
+        "let procedure = Plaque.concevoir\n"
+        '  { Plaque.nom = "p"; largeur = 160.0; hauteur = 90.0; epaisseur = None;'
+        " masse_max = 0.6 }\n"
+        "  Plaque.estimateur_regle\n"
     )
-    errors = semantic_errors(MECANIQUE, inline, {"bindings": {"demande": {"largeur": 1.0}}})
+    expect = {"bindings": {"demande": {"largeur": 160.0, "epaisseur": None}}}
+    assert semantic_errors(MECANIQUE, inline, expect) == []
+    wrong = {"bindings": {"demande": {"largeur": 999.0}}}
+    assert semantic_errors(MECANIQUE, inline, wrong) == ["demande.largeur = 160.0, attendu 999.0"]
+
+
+def test_missing_binding_is_a_semantic_error_not_a_crash():
+    no_record = "let procedure = Effect.return 0\n"
+    errors = semantic_errors(MECANIQUE, no_record, {"bindings": {"demande": {"largeur": 1.0}}})
     assert errors == ["le programme ne définit pas `demande`"]
 
 

@@ -87,9 +87,17 @@ def _benchmark(args: argparse.Namespace) -> int:
 
     from hypomnesis.llm.benchmark import run_benchmark, summary
     from hypomnesis.llm.ollama import OllamaClient
+    from hypomnesis.llm.prompting import Strategy
 
     models = [m.strip() for m in args.modeles.split(",") if m.strip()]
-    results = run_benchmark(OllamaClient(), models, args.langages, repairs=args.reparations)
+    results = run_benchmark(
+        OllamaClient(),
+        models,
+        args.langages,
+        repairs=args.reparations,
+        strategy=Strategy.parse(args.strategie),
+        splits=[j.strip() for j in args.jeux.split(",")] if args.jeux else None,
+    )
     table = summary(results)
     args.sortie.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -176,6 +184,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     bench.add_argument("--modeles", required=True, help="modèles Ollama, séparés par des virgules")
     bench.add_argument("--reparations", type=int, default=2, help="réparations par les diagnostics")
+    bench.add_argument(
+        "--strategie",
+        default="base",
+        help="prompt : éléments joints par « + » parmi source, catalogue, programmes, tirsN, "
+        "ragN (ex. catalogue+rag3) ; « base » = source+programmes",
+    )
+    bench.add_argument(
+        "--jeux",
+        default="",
+        help="jeux de cas (dev, test), séparés par des virgules ; défaut : tous",
+    )
     bench.add_argument("--sortie", type=Path, default=Path("sortie/benchmark-llm"))
     args = parser.parse_args(argv)
 

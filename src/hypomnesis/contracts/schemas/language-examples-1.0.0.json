@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/language-examples/1.0.0",
+  "title": "LanguageExamples",
+  "description": "Worked examples shipped by an M2 language: pairs of a natural-language request and the M1 program that translates it. They are shown to an LLM (the most similar ones to a new request) and replayed in simulation by the test-suite, so they stay valid. `environment` holds the options of the simulated environment needed to run the program (for instance a sensor reading).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "request": {
+        "type": "string",
+        "minLength": 1
+      },
+      "program": {
+        "type": "string",
+        "minLength": 1
+      },
+      "environment": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "request",
+      "program"
+    ],
+    "additionalProperties": false
+  }
+}

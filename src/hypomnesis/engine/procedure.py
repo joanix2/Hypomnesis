@@ -166,7 +166,10 @@ def run_procedure(
                 sensor, k = arg
                 spec = proc.get("sensors", {}).get(sensor)
                 if spec is None or env is None:
-                    raise LanguageError(f"capteur non déclaré par le langage : {sensor}")
+                    raise LanguageError(
+                        f"capteur non déclaré par le langage : {sensor}. "
+                        f"Capteurs déclarés : {', '.join(proc.get('sensors', {})) or 'aucun'}."
+                    )
                 with tracer.span("observer.read", capteur=sensor):
                     payload = language.schemas.validate_message(getattr(env, spec["read"])(sensor))
                 readings[sensor] = readings.get(sensor, 0) + 1

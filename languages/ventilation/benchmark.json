@@ -20,6 +20,46 @@
       "request": "Lance une régulation (capteur thermo-1, ventilateur fan-1) limitée à une seule action.",
       "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-1", "budget": 1 } } },
       "environment": { "temperature": "33" }
+    },
+    {
+      "id": "t01-quatre-actions", "split": "test",
+      "request": "Pilote fan-3 grâce au capteur thermo-1 ; quatre actions maximum.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-3", "budget": 4 } }, "calls": ["Ventilation.reguler"] }
+    },
+    {
+      "id": "t02-budget-sept", "split": "test",
+      "request": "Régulation thermique : capteur thermo-1, ventilateur fan-9, budget de 7 tentatives.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-9", "budget": 7 } } }
+    },
+    {
+      "id": "t03-deux-actions", "split": "test",
+      "request": "Je veux surveiller la température (thermo-1) et agir avec fan-2 sans dépasser deux actions.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-2", "budget": 2 } } }
+    },
+    {
+      "id": "t04-cinq-iterations", "split": "test",
+      "request": "Lance la régulation avec le ventilateur fan-1 et le capteur thermo-1, cinq itérations.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-1", "budget": 5 } } }
+    },
+    {
+      "id": "h01-condition-arret", "split": "hard",
+      "request": "Régule avec thermo-1 et fan-4 ; si ça ne suffit pas après trois actions, arrête.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-4", "budget": 3 } } }
+    },
+    {
+      "id": "h02-budget-en-lettres", "split": "hard",
+      "request": "Ventilateur fan-2, capteur thermo-1, tu peux agir dix fois.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-2", "budget": 10 } } }
+    },
+    {
+      "id": "h03-ordre-libre", "split": "hard",
+      "request": "Mets fan-7 en route d'après thermo-1 : une tentative.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-7", "budget": 1 } } }
+    },
+    {
+      "id": "h04-tournure-longue", "split": "hard",
+      "request": "Je veux que fan-3 soit piloté par le capteur thermo-1 avec un budget de douze itérations.",
+      "expect": { "bindings": { "installation": { "capteur": "thermo-1", "ventilateur": "fan-3", "budget": 12 } } }
     }
   ]
 }
