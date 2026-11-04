@@ -16,13 +16,13 @@ Risque : `descendants` d'une source sur-invalide un fait qui aurait deux dériva
 
 Fichiers : `src/hypomnesis/epistemics/knowledge.py`, `src/hypomnesis/engine/procedure.py` (uniquement l'export du graphe dans le rapport), `tests/property/`, `tests/unit/`. **Ne pas** toucher `pyproject.toml` (Lot 0 de HYP-007) ni `observability/trace.py` (HYP-015 laisse `procedure.py` intact grâce à une façade `Tracer`).
 
-- [ ] Test de caractérisation avant tout changement : pour le scénario de révision par mesure et la réfutation d'hypothèse, enregistrer l'ensemble exact des clés invalidées, l'ordre du `journal` et la sortie de `explain` ; ces tests doivent rester verts après
-- [ ] `KnowledgeBase.graph()` : `nx.DiGraph` dont les nœuds sont les faits et les sources (attributs : valeur, support, confiance, méthode), arêtes source → fait et prémisse → conclusion ; construit à la demande à partir de `facts` et `sources`
-- [ ] `retract_source` : ensemble candidat = `nx.descendants` du nœud source ; invalidation confirmée par l'évaluation booléenne de la provenance (comportement actuel conservé) ; journal identique
-- [ ] `explain` : parcours du graphe (arbre des prémisses) en gardant exactement le rendu texte actuel
-- [ ] Export du graphe en JSON node-link (`nx.node_link_data`) ; l'ajouter au rapport M0 dans `ProcedureReport.to_json` (clé `provenance_graph`)
-- [ ] Test Hypothesis (`tests/property/`) : sur des bases aléatoires de faits dérivés, `descendants(source)` ∩ faits = ensemble invalidé par l'évaluation booléenne ; vérifie P10/P11 côté Python
-- [ ] Test : le rapport M0 d'un run de la plaque contient `provenance_graph` avec les nœuds attendus ; l'export se recharge (`node_link_graph`)
-- [ ] Pyright en mode basic : annoter `nx.DiGraph[str]` si nécessaire ; pas de `type: ignore`
-- [ ] `TECHNICAL.md` : section Épistémique (graphe NetworkX, source de vérité = provenance)
+- [x] Test de caractérisation avant tout changement : pour le scénario de révision par mesure et la réfutation d'hypothèse, enregistrer l'ensemble exact des clés invalidées, l'ordre du `journal` et la sortie de `explain` ; ces tests doivent rester verts après
+- [x] `KnowledgeBase.graph()` : `nx.DiGraph` dont les nœuds sont les faits et les sources (attributs : valeur, support, confiance, méthode), arêtes source → fait et prémisse → conclusion ; construit à la demande à partir de `facts` et `sources`
+- [x] `retract_source` : ensemble candidat = `nx.descendants` du nœud source ; invalidation confirmée par l'évaluation booléenne de la provenance (comportement actuel conservé) ; journal identique
+- [x] `explain` : parcours du graphe (arbre des prémisses) en gardant exactement le rendu texte actuel
+- [x] Export du graphe en JSON node-link (`nx.node_link_data`) ; l'ajouter au rapport M0 dans `ProcedureReport.to_json` (clé `provenance_graph`)
+- [x] Test Hypothesis (`tests/property/`) : sur des bases aléatoires de faits dérivés, `descendants(source)` ∩ faits = ensemble invalidé par l'évaluation booléenne ; vérifie P10/P11 côté Python
+- [x] Test : le rapport M0 d'un run de la plaque contient `provenance_graph` avec les nœuds attendus ; l'export se recharge (`node_link_graph`)
+- [x] Pyright en mode basic : annoter `nx.DiGraph[str]` si nécessaire ; pas de `type: ignore`
+- [x] `TECHNICAL.md` : section Épistémique (graphe NetworkX, source de vérité = provenance)
 - [ ] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`

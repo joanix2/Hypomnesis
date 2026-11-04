@@ -1,8 +1,8 @@
 ---
 title: "HYP-008 · Graphe de provenance des faits avec NetworkX"
-lane: todo
+lane: doing
 created: 2026-11-03T21:36:21+01:00
-updated: 2026-11-03T21:36:21+01:00
+updated: 2026-11-04T14:15:00+01:00
 description: "P1 · M · Fondations et gouvernance · dépend de HYP-002 · migration vers bibliothèque"
 ---
 
