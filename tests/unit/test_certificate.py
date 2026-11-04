@@ -132,3 +132,58 @@ def test_cli_emits_a_valid_certificate(tmp_path, registry, capsys):
     )
     assert registry.issues(CERTIFICATE_SCHEMA_ID, json.loads(out.read_text())) == []
     assert "definitions" in capsys.readouterr().err
+
+
+# ------------------------------------------------- structure (JSON Schema)
+
+
+def _break_missing_field(certificate: dict) -> None:
+    del certificate["definitions"][-1]["value"]["forall"]
+
+
+def _break_extra_field(certificate: dict) -> None:
+    certificate["definitions"][-1]["value"]["bogus"] = 1
+
+
+def _break_wrong_type(certificate: dict) -> None:
+    body = certificate["definitions"][-1]["value"]["expr"]["lam"]["body"]
+    body["local"]["index"] = "0"
+
+
+def _break_two_keys(certificate: dict) -> None:
+    certificate["definitions"][-1]["value"]["expr"]["global"] = {"name": "x", "type_args": []}
+
+
+def _break_version(certificate: dict) -> None:
+    certificate["certificate_version"] = "9.9.9"
+
+
+INVALID_STRUCTURES = {
+    "missing field": (_break_missing_field, "'forall' is a required property"),
+    "extra field": (_break_extra_field, "Additional properties are not allowed"),
+    "wrong type": (_break_wrong_type, "is not of type 'integer'"),
+    "two keys": (_break_two_keys, "too many properties"),
+    "unknown version": (_break_version, "'1.0.0' was expected"),
+}
+INVALID_PATHS = {
+    "missing field": ".value",
+    "extra field": ".value",
+    "wrong type": ".value.expr.lam.body.local.index",
+    "two keys": ".value.expr",
+    "unknown version": "$.certificate_version",
+}
+
+
+@pytest.mark.parametrize("case", INVALID_STRUCTURES)
+def test_loader_rejects_invalid_structure_with_its_json_path(case):
+    certificate = certificate_of("let id x = x")
+    last = len(certificate["definitions"]) - 1
+    breaker, message = INVALID_STRUCTURES[case]
+    breaker(certificate)
+    with pytest.raises(CertificateError) as raised:
+        load_definitions(certificate)
+    text = str(raised.value)
+    assert message in text
+    path = INVALID_PATHS[case]
+    expected = path if path.startswith("$") else f"$.definitions[{last}]{path}"
+    assert expected in text

@@ -1095,7 +1095,7 @@ Le système doit pouvoir reformuler :
 |---|---|
 | Compilateur prototype | Python |
 | Parsing | Lark |
-| Types et contrats | Dataclasses, Pydantic |
+| Types et contrats | Dataclasses, JSON Schema (`jsonschema`) |
 | JSON Schema | jsonschema |
 | Règles et graphes | Implémentation dédiée, NetworkX |
 | Solveur initial | Z3 |

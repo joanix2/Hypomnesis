@@ -51,8 +51,13 @@ format `certificate/1.0.0` validé par `contracts/schemas/certificate-1.0.0.json
 - les variables de type sont nommées par définition et liées par des listes `forall` ;
 - les littéraux portent leur sorte.
 
-`load.py` fait l'opération inverse ; les tests vérifient `export(load(c)) = c` et que le programme
-réimporté calcule les mêmes valeurs. CLI : `hypomnesis check FICHIERS --emit-certificate cert.json`.
+`load.py` fait l'opération inverse : il valide d'abord le certificat entier, une seule fois, par
+`SchemaRegistry` et `CERTIFICATE_SCHEMA_ID` (le JSON Schema est l'unique description de la
+structure ; les problèmes deviennent une `CertificateError` qui garde le chemin JSON), puis ne
+fait plus que déconstruire. Il garde en code les contrôles qu'un schéma n'exprime pas : indice de
+de Bruijn hors portée, variable de type non liée, emplacement cible non lié, numérotation des
+emplacements de motif, liaison récursive qui n'est pas une fonction. Les tests vérifient
+`export(load(c)) = c` et que le programme réimporté calcule les mêmes valeurs. CLI : `hypomnesis check FICHIERS --emit-certificate cert.json`.
 Le vérificateur Lean `hypomnesis-check` (`formal/Main.lean`, `formal/Hypomnesis/Certificate.lean`)
 les relit : `cd formal && lake build hypomnesis-check`, puis
 `lake exe hypomnesis-check check cert.json` (codes : 0 accepté, 1 rejeté par `typeOf`, 2 hors du
