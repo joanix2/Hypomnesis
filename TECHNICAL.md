@@ -735,6 +735,12 @@ explicite. `max_repairs` entier naturel strict (pas bool), diagnostics
 conservés pour toutes les tentatives. Fixture MVP et refus de Python
 testés sans réseau.
 
+HYP-082 : `Codegen.hypotheses.capture_input` valide d'abord la donnée fermée,
+puis produit des faits Hypothesis et des MetaVar pour les options absentes,
+avec un rapport des chemins/types. `run_procedure(generated=True)` dégrade
+conservativement tous les Record, sans modifier Observe. CLI --demande,
+--generated et banc Codegen propagent cette origine ; aucun import inverse.
+
 ## Certification CLI (HYP-027)
 
 HYP-027 : `check --certify` appelle le checker Lean avec découverte explicite

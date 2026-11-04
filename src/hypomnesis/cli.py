@@ -197,6 +197,7 @@ def _lancer(
     sortie: Path,
     env: list[str],
     sans_permission: bool,
+    generated: bool = False,
 ) -> int:
     from hypomnesis.engine.language import LanguageError, load_language
     from hypomnesis.engine.procedure import render, run_procedure
@@ -217,6 +218,7 @@ def _lancer(
             out_dir=sortie,
             environment=_pairs(env),
             permissions=frozenset() if sans_permission else None,
+            generated=generated or (programme is None and demande is not None),
         )
         print(render(report))
         return 0
@@ -428,9 +430,14 @@ def lancer_command(
     sans_permission: Annotated[
         bool, typer.Option("--sans-permission", help="n'accorder aucune permission")
     ] = False,
+    generated: Annotated[
+        bool, typer.Option("--generated", help="fichier généré : Record reste Hypothesis")
+    ] = False,
 ) -> None:
     """Exécuter un programme M1 écrit dans un langage M2 (entrée langage.hyp)."""
-    _exit_with(_lancer(langage, programme, demande, mode, sortie, env or [], sans_permission))
+    _exit_with(
+        _lancer(langage, programme, demande, mode, sortie, env or [], sans_permission, generated)
+    )
 
 
 @app.command("layers")

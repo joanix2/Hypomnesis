@@ -6,12 +6,12 @@ are performed:
 
 * ``Observe`` reads a sensor declared by the language, validates the message
   (envelope, then contract) and records an **observed** fact — the only way a
-  fact gets that support;
+  generated procedure gets that support;
 * ``Act`` goes through the dispatcher: contract, permission, business
   constraints, mode (simulate, dry-run, production);
 * ``Solve`` calls the solver and re-checks its solution;
-* ``Record`` stores knowledge given by the program, estimated, assumed or
-  derived from existing facts (premises must exist);
+* ``Record`` stores trusted host-program claims, or conservatively hypotheses
+  in generated mode (premises must still exist);
 * ``Retract`` withdraws the source of a fact and invalidates what depended on it;
 * ``Note`` adds a line to the report.
 
@@ -78,12 +78,14 @@ class ProcedureReport:
     result: Json = None
     steps: int = 0
     stopped: str = ""
+    generated: bool = False
 
     def to_json(self) -> dict[str, Any]:
         kb = self.kb
         return {
             "language": self.language,
             "program": self.program,
+            "generated": self.generated,
             "notes": self.notes,
             "result": self.result,
             "stopped": self.stopped,
@@ -124,12 +126,15 @@ def run_procedure(
     max_steps: int = 1000,
     policy: PermissionPolicy | None = None,
     approve: Callable[[Command], bool] | None = None,
+    generated: bool = False,
 ) -> ProcedureReport:
+    if type(generated) is not bool:
+        raise ValueError("generated must be a boolean host decision")
     proc = language.procedure
     if proc["kind"] != "program":
         raise LanguageError(f"{language.name} n'utilise pas la procédure program")
     kb, tracer = KnowledgeBase(), Tracer()
-    report = ProcedureReport(language.name, program, kb, tracer)
+    report = ProcedureReport(language.name, program, kb, tracer, generated=generated)
     with tracer.span("language.typecheck"):
         language.load_program(program)
     entry = proc["entry"]
@@ -214,7 +219,7 @@ def run_procedure(
                 value = apply(k, [answer])
             elif op == "Record":
                 key, payload, method, support, k = arg
-                _record(kb, key, json_to_python(payload), method, support)
+                _record(kb, key, json_to_python(payload), method, support, generated=generated)
                 value = apply(k, [UNIT])
             elif op == "Retract":
                 key, why, k = arg
@@ -245,7 +250,28 @@ def _known(kb: KnowledgeBase) -> str:
     return f"Faits connus à ce point : {', '.join(kb.facts) or 'aucun'}."
 
 
-def _record(kb: KnowledgeBase, key: str, value: Json, method: str, support: Variant) -> None:
+def _record(
+    kb: KnowledgeBase,
+    key: str,
+    value: Json,
+    method: str,
+    support: Variant,
+    *,
+    generated: bool = False,
+) -> None:
+    premises = list(iter_list(support.arg)) if support.tag == "Derived" else []
+    missing = [p for p in premises if p not in kb.facts]
+    if missing:
+        raise EvaluationError(
+            f"prémisses inconnues pour {key} : {', '.join(missing)}. Ces faits n'ont pas "
+            "été enregistrés avant cette étape : elle suppose qu'une étape précédente "
+            f"(estimation, mesure, résolution) les a produits. {_known(kb)}"
+        )
+    if generated:
+        if support.tag not in ("Given", "Estimated", "Assumed", "Derived"):
+            raise EvaluationError(f"support inconnu : {support.tag}")
+        kb.hypothesis(key, value, f"programme généré : {method}", 0.0)
+        return
     if support.tag == "Given":
         kb.observe(key, value, f"programme M1 : {method}")
     elif support.tag == "Estimated":
@@ -253,14 +279,6 @@ def _record(kb: KnowledgeBase, key: str, value: Json, method: str, support: Vari
     elif support.tag == "Assumed":
         kb.hypothesis(key, value, method, support.arg)
     elif support.tag == "Derived":
-        premises = list(iter_list(support.arg))
-        missing = [p for p in premises if p not in kb.facts]
-        if missing:
-            raise EvaluationError(
-                f"prémisses inconnues pour {key} : {', '.join(missing)}. Ces faits n'ont pas "
-                "été enregistrés avant cette étape : elle suppose qu'une étape précédente "
-                f"(estimation, mesure, résolution) les a produits. {_known(kb)}"
-            )
         kb.derive(key, value, method, premises)
     else:
         raise EvaluationError(f"support inconnu : {support.tag}")

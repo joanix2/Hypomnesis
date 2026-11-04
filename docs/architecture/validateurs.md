@@ -48,9 +48,7 @@ Python n'est pas sandboxé.
 L'hôte utilise :
 
 ```python
-validator = LanguageValidator(
-    language.session, "Plaque.verifier_proposition", "Plaque.proposition"
-)
+validator = LanguageValidator(language.session, "Plaque.verifier_proposition", "Plaque.proposition")
 result = validator.validate(proposition)
 ```
 

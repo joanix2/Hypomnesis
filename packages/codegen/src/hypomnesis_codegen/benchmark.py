@@ -206,6 +206,7 @@ def _dry_run(root: Path, program: str, environment: dict) -> str:
             out_dir=Path("demo/sortie") / "benchmark-llm" / "runs",
             environment=environment,
             max_steps=200,
+            generated=True,
         )
     except HypomnesisError as exc:
         return exc.render(program, "<programme>")

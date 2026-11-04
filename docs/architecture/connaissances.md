@@ -23,6 +23,20 @@ et les prémisses, pas un grade supplémentaire. Le type ou l'origine d'une
 proposition ne prouve pas sa cohérence ; la détection des conflits reste HYP-035.
 Une inconnue sans proposition n'a ni valeur ni provenance concrète inventée.
 
+### Entrées générées (HYP-082)
+
+Le paquet optionnel Codegen fournit l'ingestion typée `capture_input` :
+valeurs concrètes au support Hypothesis, options absentes en MetaVar sans
+proposition, rapport explicite des manques. Le noyau n'importe pas Codegen.
+
+Le moteur expose `run_procedure(..., generated=True)` : toute assertion
+Record reste une hypothèse (y compris les grades revendiqués Given,
+Estimated et Derived), tandis qu'Observe conserve sa frontière validée.
+L'hôte fournit l'origine ; CLI --demande et banc Codegen activent ce mode,
+les fichiers enregistrés nécessitent --generated. Le mode historique
+des programmes de confiance reste inchangé. Voir le
+[guide Codegen](../../packages/codegen/README.md#hypothèses-et-informations-manquantes).
+
 ## Immuabilité
 
 `Fact`, `Source`, `Unknown` et `Observation` sont gelés. Un fait capture

@@ -57,6 +57,33 @@ Une simulation supplémentaire n'a lieu qu'avec le callback `simulate`
 explicitement fourni par l'hôte. Les tests emploient des réponses figées
 (`model="fixture"`), pas un service ou modèle prétendument réel.
 
+## Hypothèses et informations manquantes
+
+Après vérification, l'hôte peut matérialiser les données pures du candidat,
+puis appeler `hypotheses.capture_input(checker, type_fermé, valeur, base,
+key="demande")`. Le type vient de M2 et de l'hôte, pas du texte généré.
+Les feuilles concrètes sont des faits Hypothesis (confiance non étayée 0),
+les options `None` deviennent des `MetaVar` typées sans proposition.
+Records, alias, variants, listes et tuples sont parcourus.
+`GeneratedInput.report()` liste les faits et les manques avec type et état.
+Ni cette API ni la validation de types ne résolvent un trou implicitement.
+Un estimateur choisi par l'hôte fournit une proposition puis l'hôte la résout.
+
+Lors d'une exécution de candidat, utiliser impérativement
+`run_procedure(..., generated=True)`. Le banc Codegen le fait. La CLI
+`hypomnesis lancer --demande ...` le fait également ; un fichier de provenance
+générée doit porter `--generated`. Un fichier ne révèle pas son auteur :
+la provenance reste une décision de l'hôte. Le mode historique par défaut
+est conservé pour les programmes déclarés de confiance.
+
+En mode généré, **tous** les `Record` restent Hypothesis, même une revendication
+Given, Estimated ou Derived ; seules les lectures réellement validées par
+Observe peuvent être Observed. Cette politique conservatrice couvre aussi
+les Record d'un M2 appelé par le candidat. Une estimation indépendante doit
+être enregistrée par le chemin d'estimateur de l'hôte, pas auto-certifiée par
+une constante M1. Les permissions et la validité métier restent des contrôles
+distincts ; Hypothesis ne signifie pas automatiquement autorisé ou interdit.
+
 Les résultats vont par défaut dans `demo/sortie/benchmark-llm/`, ignoré dans Git.
 `benchmark.json`, les sources M2 et les exemples M1 restent des données des langages,
 pas du code du moteur ni du paquet Codegen.
