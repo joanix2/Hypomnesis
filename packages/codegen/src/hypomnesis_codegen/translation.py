@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
 from hypomnesis.engine.language import Language, load_language
 from hypomnesis.language.errors import HypomnesisError
+from hypomnesis.observability.trace import Tracer
 from hypomnesis_codegen.describe import catalogue
 from hypomnesis_codegen.ollama import Reply
 from hypomnesis_codegen.prompting import DEFAULT, Strategy
@@ -173,6 +175,7 @@ def translate(
     simulate: Callable[[str], str] | None = None,
     strategy: Strategy = DEFAULT,
     temperature: float = 0.0,
+    tracer: Tracer | None = None,
 ) -> Translation:
     if type(max_repairs) is not int or max_repairs < 0:
         raise ValueError("max_repairs must be a non-negative integer")
@@ -183,9 +186,11 @@ def translate(
     ]
     result = Translation(request)
     for _ in range(max_repairs + 1):
-        reply = client.chat(model, messages, temperature=temperature)
+        with tracer.span("llm.transcribe", model=model) if tracer is not None else nullcontext():
+            reply = client.chat(model, messages, temperature=temperature)
         program = extract_code(reply.text)
-        stage, error = check(language.root, program)
+        with tracer.span("language.typecheck") if tracer is not None else nullcontext():
+            stage, error = check(language.root, program)
         if not error and simulate is not None:
             error = simulate(program)  # dry-run failure, "" if the program runs
             stage = "runtime error" if error else ""

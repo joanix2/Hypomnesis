@@ -721,6 +721,16 @@ langage et journalisées par `Tracer`. Le groupe enfant est arrêté et le proce
 direct récolté. Aucune relance implicite ; pas de bac à sable de sécurité.
 Voir [le guide](docs/architecture/backend-python.md).
 
+## Scénario mécanique (HYP-090)
+
+HYP-090 : `python -m examples.mechanics.mvp` assemble le pipeline mécanique
+à dix étapes avec fixture Codegen, ingestion Hypothesis/MetaVar, sklearn
+versionné, modèle Z3 typé revérifié, LanguageValidator et export réel via
+dispatcher/FileTransport. Session M2 de confiance séparée du candidat ;
+normalisation et règles dans M2. Rapport JSON, journal, graphe et spans
+persistés, y compris les refus. Guide :
+[scenario-mecanique.md](docs/architecture/scenario-mecanique.md).
+
 ## Publication DSL (HYP-080)
 
 HYP-080 : le catalogue Codegen publie également les contrats et modules

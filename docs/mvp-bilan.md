@@ -1,5 +1,12 @@
 # Bilan MVP — état au 2026-11-03
 
+> Tableau historique ci-dessous. Complément HYP-090 : le scénario mécanique
+> reproductible possède maintenant dix étapes effectives, une réponse figée
+> de test, sklearn versionné, Z3 typé, validateur rejouable et export JSONL/fichier.
+> Voir le [guide](architecture/scenario-mecanique.md) et
+> `tests/optional/test_mvp_mechanics.py`. Ce test ne revendique ni appel LLM
+> réel ni mesure de H2 ; OTLP/Grafana et la couverture Lean totale restent ouverts.
+
 Confrontation de l'état réel aux critères d'acceptation du §16.4 du
 [cahier des charges](specification/cahier-des-charges-v0.2.md). Chaque ligne renvoie à ce qui
 l'établit : une commande à lancer, un test ou un théorème.

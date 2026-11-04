@@ -59,7 +59,9 @@ def _some(v: Value) -> Variant:
 NONE = Variant("None", None, 0)
 
 
-def _trace_execution(action: Actuator, tracer: Tracer) -> Actuator:
+def trace_actuator(action: Actuator, tracer: Tracer) -> Actuator:
+    """Trace actual execution, not simulation, permission checks or pure continuations."""
+
     def execute(payload: Payload) -> dict[str, Any]:
         with tracer.span("actuator.execute", actionneur=action.id):
             return action.execute(payload)
@@ -156,7 +158,7 @@ def run_procedure(
         action = adapters.get("actuator", identifier)(env if env is not None else out_dir)
         if not isinstance(action, Actuator) or action.id != identifier:
             raise LanguageError(f"fabrique d'actionneur incompatible : {identifier}")
-        dispatcher.register(_trace_execution(action, tracer))
+        dispatcher.register(trace_actuator(action, tracer))
     readings: dict[str, int] = {}
 
     def apply(callback: Value, arguments: list[Value]) -> Value:

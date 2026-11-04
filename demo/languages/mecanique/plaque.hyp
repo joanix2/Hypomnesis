@@ -45,6 +45,17 @@ module Plaque = struct
     masse_max : float;
   }
 
+  (** Normalise des longueurs avec une unité source explicitement fournie par l'hôte.
+      None signale une unité non prise en charge.
+      @interne *)
+  let normaliser (d : demande) unite =
+    let facteur = match unite with
+      | "mm" -> Some 1.0 | "cm" -> Some 10.0 | "m" -> Some 1000.0 | _ -> None in
+    Option.map (fun f -> {
+      d with largeur = d.largeur *. f; hauteur = d.hauteur *. f;
+      epaisseur = Option.map (fun e -> e *. f) d.epaisseur;
+    }) facteur
+
   (* Paramètres des règles : une seule source de vérité. *)
   (** Masse volumique de l'acier, en kg/mm³.
       @interne *)
@@ -97,6 +108,13 @@ module Plaque = struct
         relation = Problem.Le; bound = d.masse_max };
     ];
     target = Some ("epaisseur", estimation);
+  }
+
+  (** Problème natif réel avec carte de types exhaustive pour le pont typé.
+      @interne *)
+  let probleme_type (d : demande) estimation = {
+    Problem.numeric = probleme d estimation;
+    sorts = [("epaisseur", Problem.Real)];
   }
 
   (* Règles de validation : la liste des violations (vide = valide). *)
