@@ -1,6 +1,6 @@
 ---
 title: "HYP-009 · TODO"
-lane: doing
+lane: qa
 created: 2026-11-04T15:00:00+01:00
 updated: 2026-11-04T15:00:00+01:00
 description: "Checklist de HYP-009"
@@ -25,4 +25,4 @@ Risque : le front-matter écrit par l'extension Agent Kanban n'est pas toujours 
 - [x] `validate.sh` : exécuter `kanban.py` avec `"$PY"` (déjà le cas, vérifier) ; `.pre-commit-config.yaml` : entrée du hook au même modèle que Ruff/Pyright (`PY=.venv/bin/python; …`) au lieu de `python3`
 - [x] Comparer `check`/`status`/`graph` avant et après : identiques (hors chemin critique)
 - [x] `python3 scripts/kanban.py check` reste vert sur tout le tableau (les tâches en cours d'écriture par les autres lots incluses)
-- [ ] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`
+- [x] `./scripts/validate.sh rapide`, puis `complet` ; commit en français, mettre la tâche en `qa`
