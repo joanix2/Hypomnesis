@@ -845,6 +845,19 @@ retournent `Problem.solution` nominal, statuts distincts et rationnels exacts.
 Ni optimalité ni unsat ne disposent d'un certificat Lean. Pas de nouveau
 natif/Core IR ; exemple M1 `demo/programs/solveur/domaines.hyp`.
 
+HYP-053 : `formal/Hypomnesis/Problem/Check.lean` formalise les domaines
+real/int/bool, bornes, choix discrets et sommes linéaires en rationnels
+exacts. Relation inductive et évaluateur sont corrects/complets l'un par
+rapport à l'autre ; le vérificateur est correct/complet pour la satisfaction
+des domaines et contraintes (P27–P28, quatre théorèmes audités).
+Les tests comparent 413 cas Python/Lean, dont 24 vrais modèles Z3 et leurs
+altérations, avec gate obligatoire en CI des preuves et validate.sh lean/complet.
+Les deux opérations Solve refusent un modèle faux avant reprise d'une
+continuation qui enregistrerait un fait Derived. Aucune promotion automatique.
+Le runtime conserve check_assignment ; traduction des tests et fidélité
+Python sont testées, pas prouvées. Objectif et planification ne participent
+pas à ce vérificateur de faisabilité.
+
 ## Ordonnanceur local de worktrees (HYP-148)
 
 `scripts/parallel.py` réutilise `scripts/kanban.py` et fournit `plan`, `prepare`,

@@ -5,7 +5,7 @@
 #   scripts/validate.sh complet    # tout : pre-commit (linters, Pyright, schémas,
 #                                  #   workflows, Lean), tests, audit des axiomes
 #   scripts/validate.sh lean       # preuves : lake build, aucun sorry, audit des axiomes,
-#                                  #   certificats et pont CLI sur tous les exemples
+#                                  #   certificats, modèles d'effets/solveur et pont CLI
 #   scripts/validate.sh graphe     # reconstruit le graphe Graphify et y réinjecte le Kanban
 #
 # Chaque étape s'exécute même si une précédente échoue ; un résumé final liste les
@@ -55,6 +55,7 @@ certificate_check() {
     HYPOMNESIS_REQUIRE_LEAN=1 "$PY" -m pytest -q \
         tests/integration/test_lean_checker.py tests/differential \
         tests/integration/test_effects_model.py tests/integration/test_effect_handlers_model.py \
+        tests/integration/test_problem_model.py tests/integration/test_solver_effect.py \
         --hypothesis-show-statistics
 }
 

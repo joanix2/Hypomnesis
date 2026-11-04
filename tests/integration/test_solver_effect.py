@@ -5,6 +5,7 @@ import pytest
 from hypomnesis.backends import z3_solver
 from hypomnesis.engine.language import load_language
 from hypomnesis.engine.procedure import run_procedure
+from hypomnesis.epistemics.knowledge import KnowledgeBase
 from hypomnesis.ir.problem import Solution
 from hypomnesis.language.errors import EvaluationError
 
@@ -47,4 +48,33 @@ def test_kernel_rejects_plugin_model_even_when_plugin_claims_no_violations(tmp_p
     )
     with pytest.raises(EvaluationError, match="solution refusée"):
         run_procedure(load_language(LANGUAGE), PROGRAM, out_dir=tmp_path)
+    assert not (tmp_path / "rapport.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("operation", "boolean"), [("Effect.solve numeric", 1), ("Effect.solve_typed problem", True)]
+)
+def test_false_model_never_resumes_a_deriving_continuation(
+    tmp_path, monkeypatch, operation, boolean
+):
+    kb = KnowledgeBase()
+    monkeypatch.setattr("hypomnesis.engine.procedure.KnowledgeBase", lambda: kb)
+    monkeypatch.setattr(
+        z3_solver,
+        "solve",
+        lambda p: Solution("sat", {"entier": 2, "reel": 0, "booleen": boolean}),
+    )
+    source = (
+        PROGRAM.rsplit("let procedure =", 1)[0]
+        + f"""
+let procedure =
+  Effect.record "input" "bound" "trusted input" Effect.Given >>= fun () ->
+  {operation} >>= fun _ ->
+  Effect.record "claim" "solution" "feasible model" (Effect.Derived ["input"]) >>= fun () ->
+  Effect.return "complete"
+"""
+    )
+    with pytest.raises(EvaluationError, match="solution refusée"):
+        run_procedure(load_language(LANGUAGE), source, out_dir=tmp_path)
+    assert set(kb.facts) == {"input"}
     assert not (tmp_path / "rapport.json").exists()

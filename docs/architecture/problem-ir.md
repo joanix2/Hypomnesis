@@ -54,6 +54,41 @@ Une réponse unsat est le verdict du backend, pas une preuve d'insatisfiabilité
 rejouée par Lean. Le contrôle garantit la faisabilité du modèle, pas
 l'optimalité annoncée par le solveur.
 
+## Vérificateur indépendant et preuve (HYP-053)
+
+Le backend propose une affectation ; `check_assignment` en revérifie les
+variables exactes, sortes, bornes et choix, puis toutes les contraintes
+linéaires, sans interroger Z3. `solution_value` répète cette vérification
+avant de reprendre la continuation de `Effect.solve` ou `solve_typed`, même
+si le fournisseur annonce zéro violation. Un faux modèle est refusé avant
+tout enregistrement demandé par cette continuation. Un résultat faisable
+n'est pas enregistré automatiquement et n'acquiert pas un support Derived.
+
+Le [modèle Lean](../../formal/Hypomnesis/Problem/Check.lean) décrit cette
+projection d'une Problem IR normalisée. L'évaluateur calcule des sommes de
+rationnels ; une relation inductive distincte en définit le sens.
+`evalLinear_sound` et `evalLinear_complete` relient les deux.
+`check_sound` établit qu'une affectation acceptée ne contient pas de nom
+inconnu et satisfait tous les domaines et toutes les contraintes ;
+`check_complete` établit la réciproque dans ce modèle.
+
+Les booléens ne sont pas des nombres dans les domaines. Ils valent 0/1
+uniquement dans les sommes linéaires. Les entiers ont un dénominateur 1.
+Les floats Python finis sont projetés suivant leur écriture décimale, comme
+la normalisation existante ; NaN, infinis et valeurs non numériques sont
+refusés. Les rationnels et grands entiers restent exacts.
+
+La correspondance avec Python est **testée, pas prouvée** : corpus généré
+déterministe, frontières exactes, sommes vides, coefficients négatifs,
+sortes altérées, variables absentes/supplémentaires et vrais modèles Z3.
+Le rendu des données en termes Lean est lui aussi une frontière testée.
+Ces tests sont obligatoires en CI des preuves et dans `validate.sh lean|complet`.
+Le runtime conserve son vérificateur Python ; il n'appelle pas Lean par modèle.
+La preuve ne porte ni sur les diagnostics textuels, ni sur la normalisation
+JSON, l'optimalité, unsat, la faisabilité physique ou l'exécution des plans.
+
+## Restitution typée et compatibilité
+
 `Problem.typed_problem = { numeric; sorts }` enrichit le record historique :
 la liste des sortes couvre exactement les variables, sans doublons. Les
 champs numériques d'entrée restent ceux de `Problem.problem` ; un domaine

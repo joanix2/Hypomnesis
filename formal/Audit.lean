@@ -51,3 +51,7 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms Hypomnesis.Effects.Handlers.ordinary_answers_shared
 #print axioms Hypomnesis.Effects.Handlers.handlers_interpret_same_term
 #print axioms Hypomnesis.Effects.Handlers.equal_answers_equal_results
+#print axioms Hypomnesis.Problem.evalLinear_sound
+#print axioms Hypomnesis.Problem.evalLinear_complete
+#print axioms Hypomnesis.Problem.check_sound
+#print axioms Hypomnesis.Problem.check_complete

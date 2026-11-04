@@ -11,8 +11,8 @@ def require_lake() -> str:
     lake = shutil.which("lake") or str(Path.home() / ".elan/bin/lake")
     if not Path(lake).is_file():
         if os.environ.get("HYPOMNESIS_REQUIRE_LEAN") == "1":
-            pytest.fail("lake missing; Lean effect model checks are mandatory")
-        pytest.skip("lake not installed; effect models are mandatory in proofs CI")
+            pytest.fail("lake missing; Lean model checks are mandatory")
+        pytest.skip("lake not installed; executable models are mandatory in proofs CI")
     return lake
 
 

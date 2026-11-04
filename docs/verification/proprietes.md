@@ -47,6 +47,8 @@ la manière dont on peut en établir la validité.
 | P24 | `Core.evalOp_ty` | toute primitive binaire du catalogue fermé, appliquée à des valeurs de son domaine, produit une valeur du type annoncé ou une erreur explicite ; P1–P7 couvrent aussi les flottants, chaînes et erreurs | §4.1 ; HYP-150, pas de raffinement Python complet |
 | P25 | `Effects.Handlers.dry_run_no_dispatch`, `simulation_no_dispatch`, `dry_action_unchanged` | pour tout arbre d'effets typé, état hôte et budget, dry-run et simulation ne passent aucune commande au callback de production ; une action autorisée en dry-run rend DryRun/None sans modifier l'état hôte | §10.3 ; modèle de handlers HYP-067, callbacks et raffinement Python non prouvés |
 | P26 | `Effects.Handlers.handlers_interpret_same_term`, `ordinary_answers_shared`, `equal_answers_equal_results` | les trois modes s'effacent vers le même fold du terme original ; les opérations hors Act partagent les mêmes réponses ; à réponses/transitions hôte identiques, les résultats effacés sont égaux, même avec des continuations qui branchent sur la réponse | §10.3 ; HYP-067, pas d'égalité inconditionnelle entre résultats simulés et réels |
+| P27 | `Problem.evalLinear_sound`, `evalLinear_complete` | l'évaluateur linéaire exact et la relation inductive de somme rationnelle décrivent les mêmes valeurs, booléens 0/1 compris | §6 ; projection normalisée de Problem IR, HYP-053 |
+| P28 | `Problem.check_sound`, `check_complete` | une affectation est acceptée si et seulement si ses noms sont connus et si elle satisfait tous les domaines typés, bornes, choix et contraintes linéaires | §6 ; modèle HYP-053, correspondance Python testée ; ni optimalité ni unsat |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -115,7 +117,7 @@ dédiées restent HYP-043.
 | Exigence | Propriété | Statut |
 |---|---|---|
 | deux plugins substituables (§16.4, H6) | deux **modèles** d'une même théorie satisfont les mêmes lois ; un programme écrit contre la théorie a le même résultat observable modulo ces lois | 🎯 F7 · 🧪 lois testées par Hypothesis sur chaque modèle |
-| solveur externe | le **vérificateur de certificat** est correct : un modèle Z3 accepté satisfait réellement les contraintes | 🎯 F5 (on prouve le vérificateur, pas Z3) |
+| solveur externe | le **vérificateur de certificat** est correct : un modèle accepté satisfait les domaines et contraintes | ✅ P27–P28 pour le modèle rationnel ; 🧪 correspondance Python, pas une preuve de Z3, d'optimalité ou d'unsat |
 | validateur | un rejet est accompagné d'un contre-exemple vérifiable | 🎯 F5 |
 
 ### §7 — Modèle épistémique

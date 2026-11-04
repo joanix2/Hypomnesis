@@ -8,6 +8,7 @@ import Hypomnesis.Epistemics.Provenance
 import Hypomnesis.Effects.Dispatch
 import Hypomnesis.Effects.Commands
 import Hypomnesis.Effects.Handlers
+import Hypomnesis.Problem.Check
 import Hypomnesis.Core.Examples
 import Hypomnesis.Core.Records
 import Hypomnesis.Core.RecordExamples
