@@ -108,6 +108,7 @@ class ProcedureReport:
                 }
                 for key, f in kb.facts.items()
             },
+            "provenance_graph": kb.provenance_graph(),
             "commands": [
                 {"id": o.command.id, "states": o.states, "result": o.result} for o in self.commands
             ],

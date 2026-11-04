@@ -10,6 +10,13 @@ Statuses follow the three axes of note M3 §4.3:
 
 Every change is an event appended to the journal; nothing is ever mutated in
 place, so revisions keep the history (cahier des charges §7.3).
+
+The provenance terms stay the source of truth for support, confidence and "does
+it still hold". :meth:`KnowledgeBase.graph` derives from them a NetworkX
+dependency graph (source → fact, premise → conclusion) that supplies the
+*candidate* set for revision (descendants), the premise tree of explanations and
+a node-link export; the final verdict on a candidate remains the Boolean
+evaluation of its provenance, which is exact when a fact has several derivations.
 """
 
 from __future__ import annotations
@@ -18,6 +25,8 @@ import itertools
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+import networkx as nx
 
 from hypomnesis.epistemics.provenance import (
     BOOLEAN,
@@ -28,6 +37,9 @@ from hypomnesis.epistemics.provenance import (
     evaluate,
     obs,
 )
+
+FACT = "fact:"  # node-id prefixes: a fact key may look like a source id
+SOURCE = "source:"
 
 
 @dataclass(frozen=True)
@@ -147,8 +159,18 @@ class KnowledgeBase:
         """
         self.retracted.add(source_id)
         self._log("retracted", source_id, reason)
+        graph = self.graph(detailed=False)
+        # Candidates: everything downstream of a source that no longer holds (the
+        # retracted ones, and undeclared ones such as the axiom of a premise-less fact).
+        candidates: set[str] = set()
+        for node, data in graph.nodes(data=True):
+            if data["kind"] == "source" and not self._holds(node.removeprefix(SOURCE)):
+                candidates |= nx.descendants(graph, node)
         invalidated = []
         for key, fact in list(self.facts.items()):
+            if FACT + key not in candidates:
+                continue
+            # The graph only over-approximates: a fact with another derivation survives.
             if not evaluate(fact.provenance, BOOLEAN, self._holds):
                 del self.facts[key]
                 self.unknowns[key] = Unknown(key, f"invalidée : {reason}")
@@ -176,15 +198,70 @@ class KnowledgeBase:
         ids = dict.fromkeys(self.facts[key].provenance.observations())
         return [self.sources[i] for i in ids]
 
+    def graph(self, *, detailed: bool = True) -> nx.DiGraph[str]:
+        """The dependency graph, built on demand from ``sources``, ``facts`` and provenance.
+
+        Nodes are ``fact:<key>`` and ``source:<id>`` (a provenance may mention an
+        undeclared source such as ``axiome``). Edges go from a source to every fact
+        whose provenance mentions it, and from a premise to its conclusion
+        (``kind`` is ``"provenance"`` or ``"premise"``). With ``detailed`` the nodes
+        carry value, method, support and confidence, ready for export.
+        """
+        g: nx.DiGraph[str] = nx.DiGraph()
+        for source in self.sources.values():
+            g.add_node(SOURCE + source.id, kind="source")
+            if detailed:
+                g.nodes[SOURCE + source.id].update(
+                    origin=source.origin,
+                    source_kind=source.kind,
+                    support=source.support.label,
+                    confidence=source.confidence,
+                    retracted=source.id in self.retracted,
+                )
+        for key, fact in self.facts.items():
+            g.add_node(FACT + key, kind="fact")
+            if detailed:
+                g.nodes[FACT + key].update(
+                    value=fact.value,
+                    method=fact.method,
+                    support=self.support(key).label,
+                    confidence=round(self.confidence(key), 3),
+                )
+            for source_id in dict.fromkeys(fact.provenance.observations()):
+                if SOURCE + source_id not in g:
+                    g.add_node(SOURCE + source_id, kind="source")
+                    if detailed:
+                        g.nodes[SOURCE + source_id].update(declared=False)
+                g.add_edge(SOURCE + source_id, FACT + key, kind="provenance")
+            for premise in fact.premises:
+                if premise in self.facts:
+                    g.add_edge(FACT + premise, FACT + key, kind="premise")
+        return g
+
+    def provenance_graph(self) -> dict[str, Any]:
+        """The graph as node-link JSON data (reload with ``nx.node_link_graph``)."""
+        return nx.node_link_data(self.graph(), edges="edges")
+
     def explain(self, key: str, depth: int = 0) -> list[str]:
         """Why a fact holds, from its provenance: one line per fact, premises indented."""
+        graph = self.graph(detailed=False)
+        if FACT + key not in graph:
+            raise KeyError(key)
+        return self._explain(graph, key, depth, ())
+
+    def _explain(
+        self, graph: nx.DiGraph[str], key: str, depth: int, path: tuple[str, ...]
+    ) -> list[str]:
+        if key in path:
+            raise ValueError(f"cycle de prémisses : {' ← '.join((*path, key))}")
         fact = self.facts[key]
         lines = [
             f"{'  ' * depth}- {key} = {fact.value!r} : {fact.method} "
             f"[support {self.support(key).label}, confiance {self.confidence(key):.2f}]"
         ]
-        for premise in fact.premises:
-            lines.extend(self.explain(premise, depth + 1))
+        for node in graph.predecessors(FACT + key):
+            if graph.edges[node, FACT + key]["kind"] == "premise":
+                lines.extend(self._explain(graph, node.removeprefix(FACT), depth + 1, (*path, key)))
         return lines
 
     def by_support(self, predicate: Callable[[Support], bool]) -> list[str]:
