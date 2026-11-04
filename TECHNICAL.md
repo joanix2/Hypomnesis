@@ -461,6 +461,11 @@ contrôles dans `Outcome.checks` et `commands[].checks` des rapports.
 `PermissionPolicy` permet les autorisations exactes et refus prioritaires ;
 `Actuator.safety`, `requires_human` et `observe_effects` complètent le pipeline.
 L'hôte fournit `policy` et `approve` au dispatcher ou à `run_procedure`.
+HYP-064 : les handlers `_dry_run`, `_simulate`, `_production` partagent la
+même signature et les contrôles en amont. Le mode, dry-run par défaut, ne
+peut être choisi que par CLI/hôte. Le span `command.dispatch` inclut les
+contrôles ; `actuator.execute` ne trace que l'appel effectif et ses relances,
+jamais un dry-run ou une simulation.
 Guide de l'ordre des étapes, modes et limites :
 [validation-effets.md](docs/architecture/validation-effets.md).
 

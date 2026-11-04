@@ -242,33 +242,44 @@ class Dispatcher:
             if not gate("approval", approval):
                 return outcome
         move(State.AUTHORIZED, actuator.permission)
-        if self.mode == "dry-run":
-            move(State.DRY_RUN, "validée et autorisée, non exécutée")
-            return outcome
-        if self.mode == "simulate":
-            try:
-                outcome.result = actuator.simulate(deepcopy(dict(command.payload)))
-            except Exception as exc:
-                detail = f"{type(exc).__name__}: {exc}"
-                outcome.checks.append(PipelineCheck("response", False, detail))
-                move(State.REJECTED, "simulation : " + detail)
-                return outcome
-            issues = self._response_issues(actuator, outcome.result)
-            outcome.checks.append(PipelineCheck("response", not issues, "; ".join(issues)))
-            if issues:
-                outcome.result = None
-                move(
-                    State.REJECTED,
-                    "réponse simulée non conforme : " + "; ".join(map(str, issues)),
-                )
-                return outcome
-            move(State.SIMULATED, "réponse fictive")
-            return outcome
+        handler = {
+            "dry-run": self._dry_run,
+            "simulate": self._simulate,
+            "production": self._production,
+        }[self.mode]
+        handler(actuator, outcome, move)
+        return outcome
+
+    def _dry_run(
+        self, actuator: Actuator, outcome: Outcome, move: Callable[[State, str], None]
+    ) -> None:
+        move(State.DRY_RUN, "validée et autorisée, non exécutée")
+
+    def _simulate(
+        self, actuator: Actuator, outcome: Outcome, move: Callable[[State, str], None]
+    ) -> None:
+        try:
+            outcome.result = actuator.simulate(deepcopy(dict(outcome.command.payload)))
+        except Exception as exc:
+            detail = f"{type(exc).__name__}: {exc}"
+            outcome.checks.append(PipelineCheck("response", False, detail))
+            move(State.REJECTED, "simulation : " + detail)
+            return
+        issues = self._response_issues(actuator, outcome.result)
+        outcome.checks.append(PipelineCheck("response", not issues, "; ".join(issues)))
+        if issues:
+            outcome.result = None
+            move(State.REJECTED, "réponse simulée non conforme : " + "; ".join(issues))
+            return
+        move(State.SIMULATED, "réponse fictive")
+
+    def _production(
+        self, actuator: Actuator, outcome: Outcome, move: Callable[[State, str], None]
+    ) -> None:
         if outcome.record.expired(self._clock()):
             move(State.TIMED_OUT, "échéance dépassée avant l'envoi")
-            return outcome
+            return
         self._execute(actuator, outcome, move)
-        return outcome
 
     def _response_issues(self, actuator: Actuator, result: Any) -> list[str]:
         if not isinstance(result, dict):

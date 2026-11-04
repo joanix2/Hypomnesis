@@ -23,12 +23,12 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
 from hypomnesis.backends import z3_solver
-from hypomnesis.effects.dispatcher import Actuator, Command, Dispatcher, Outcome
+from hypomnesis.effects.dispatcher import Actuator, Command, Dispatcher, Outcome, Payload
 from hypomnesis.effects.permissions import PermissionPolicy
 from hypomnesis.engine.bridge import to_problem
 from hypomnesis.engine.language import Language, LanguageError
@@ -57,6 +57,14 @@ def _some(v: Value) -> Variant:
 
 
 NONE = Variant("None", None, 0)
+
+
+def _trace_execution(action: Actuator, tracer: Tracer) -> Actuator:
+    def execute(payload: Payload) -> dict[str, Any]:
+        with tracer.span("actuator.execute", actionneur=action.id):
+            return action.execute(payload)
+
+    return replace(action, execute=execute)
 
 
 @dataclass
@@ -143,7 +151,7 @@ def run_procedure(
         action = adapters.get("actuator", identifier)(env if env is not None else out_dir)
         if not isinstance(action, Actuator) or action.id != identifier:
             raise LanguageError(f"fabrique d'actionneur incompatible : {identifier}")
-        dispatcher.register(action)
+        dispatcher.register(_trace_execution(action, tracer))
     readings: dict[str, int] = {}
     apply = language.session.interpreter.apply
 
@@ -173,7 +181,7 @@ def run_procedure(
                 value = apply(k, [(key, python_to_json(payload))])
             elif op == "Act":
                 actuator, command, k = arg
-                with tracer.span("actuator.execute", actionneur=actuator):
+                with tracer.span("command.dispatch", actionneur=actuator, mode=mode):
                     outcome = dispatcher.dispatch(
                         dispatcher.command(actuator, json_to_python(command))
                     )

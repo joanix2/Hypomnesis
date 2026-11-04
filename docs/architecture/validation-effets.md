@@ -63,6 +63,14 @@ le résultat reçu et sans relancer l'action.
 
 ## Modes et limites
 
+Après les contrôles communs, `Dispatcher` sélectionne `_dry_run`, `_simulate`
+ou `_production`. Ces trois handlers ont la même signature
+`(actuator, outcome, move) -> None` et interprètent la même commande :
+aucune branche de logique métier n'est ajoutée au programme M1.
+L'hôte choisit le mode dans `run_procedure(mode=...)` ou par
+`hypomnesis lancer ... --mode dry-run|simulate|production`. Le défaut est
+`dry-run` ; il n'existe pas d'effet M1 permettant de modifier ce choix.
+
 - `dry-run` parcourt les préconditions puis s'arrête sans adaptateur.
 - `simulate` parcourt les préconditions et valide la réponse fictive ;
   une réponse fictive non conforme est refusée. Aucun observateur physique
@@ -72,6 +80,11 @@ le résultat reçu et sans relancer l'action.
 
 Les étapes `checks` complètent les états existants, sans les remplacer.
 Le détail de chaque envoi et relance est dans `Outcome.record.history`.
+Dans les rapports de procédures, le span `command.dispatch` couvre
+validation et sélection du handler. Le span `actuator.execute` couvre
+uniquement un appel réel au callback `execute`, y compris chaque relance :
+il n'apparaît ni en dry-run ni en simulation. C'est une correction de
+l'ancien nom ambigu qui couvrait aussi la validation sans exécution.
 La déduplication est locale à une instance en mémoire et ne fournit pas
 de garantie d'exécution physique unique après redémarrage ou contre un
 périphérique qui exécute deux fois un message. La preuve HYP-066 doit

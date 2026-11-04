@@ -170,6 +170,56 @@ def test_host_policy_and_validation_audit_reach_the_procedure_report(tmp_path):
     assert not list(tmp_path.glob("*.svg"))
 
 
+@pytest.mark.parametrize(
+    "mode,state",
+    [
+        ("dry-run", "DryRun"),
+        ("simulate", "Simulated"),
+        ("production", "Completed"),
+    ],
+)
+def test_same_source_in_three_modes_has_faithful_execution_trace(tmp_path, mode, state):
+    report = plaque(tmp_path, mode=mode)
+    assert report.program == PLAQUE
+    assert report.commands and all(o.state == state for o in report.commands)
+    saved = report.to_json()
+    names = [span["name"] for span in saved["trace"]["spans"]]
+    assert names.count("command.dispatch") == len(report.commands)
+    assert names.count("actuator.execute") == (len(report.commands) if mode == "production" else 0)
+    assert all(o.attempts == (1 if mode == "production" else 0) for o in report.commands)
+    assert (tmp_path / "plaque-support.svg").exists() is (mode == "production")
+
+
+@pytest.mark.parametrize(
+    "mode,state",
+    [
+        ("dry-run", "DryRun"),
+        ("simulate", "Simulated"),
+        ("production", "Completed"),
+    ],
+)
+def test_cli_selects_mode_without_changing_the_program(tmp_path, capsys, mode, state):
+    source = ROOT / "demo/programs/mecanique/plaque_120x80.hyp"
+    assert (
+        main(
+            [
+                "lancer",
+                str(MECANIQUE),
+                str(source),
+                "--mode",
+                mode,
+                "--sortie",
+                str(tmp_path),
+            ]
+        )
+        == 0
+    )
+    saved = json.loads((tmp_path / "rapport.json").read_text())
+    assert saved["program"] == PLAQUE
+    assert saved["commands"] and all(c["states"][-1][0] == state for c in saved["commands"])
+    assert capsys.readouterr().out
+
+
 def test_ill_typed_program_is_refused_before_any_effect(tmp_path):
     with pytest.raises(TypeCheckError):
         plaque(tmp_path, PLAQUE.replace("largeur = 120.0", 'largeur = "120"'))

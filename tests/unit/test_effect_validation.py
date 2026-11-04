@@ -239,3 +239,43 @@ def test_simulation_error_is_rejected_and_cached_without_retry():
     assert outcome.state == "Rejected"
     assert "no fake device" in outcome.checks[-1].detail
     assert d.dispatch(command) is outcome and not calls
+
+
+@pytest.mark.parametrize("mode", ["simulate", "dry-run", "production"])
+def test_handlers_share_checks_but_only_use_the_selected_execution(mode):
+    d, calls = setup(mode=mode)
+    simulated = []
+    d.register(
+        replace(
+            d.actuators["motor"],
+            simulate=lambda p: simulated.append(dict(p)) or {"status": "ok"},
+        )
+    )
+    outcome = d.dispatch(d.command("motor", {"value": 2}))
+    assert [c.stage for c in outcome.checks[:5]] == [
+        "structure",
+        "contract",
+        "permission",
+        "business",
+        "safety",
+    ]
+    assert len(calls) == (1 if mode == "production" else 0)
+    assert len(simulated) == (1 if mode == "simulate" else 0)
+    assert outcome.attempts == (1 if mode == "production" else 0)
+
+
+@pytest.mark.parametrize("mode", ["simulate", "dry-run", "production"])
+def test_every_handler_remains_gated_by_common_safety(mode):
+    d, calls = setup(mode=mode)
+    simulated = []
+    d.register(
+        replace(
+            d.actuators["motor"],
+            safety=lambda _: ["unsafe"],
+            simulate=lambda p: simulated.append(dict(p)) or {"status": "ok"},
+        )
+    )
+    outcome = d.dispatch(d.command("motor", {"value": 2}))
+    assert outcome.state == "Rejected"
+    assert not calls and not simulated
+    assert not outcome.dispatched
