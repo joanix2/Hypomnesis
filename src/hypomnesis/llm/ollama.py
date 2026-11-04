@@ -1,13 +1,16 @@
-"""Minimal Ollama client (local HTTP API, standard library only)."""
+"""Ollama client: thin layer over the official `ollama` package (extra `llm`).
+
+The package is imported lazily so that `hypomnesis.llm` stays importable without the extra.
+"""
 
 from __future__ import annotations
 
-import json
 import time
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import httpx
 
 DEFAULT_URL = "http://localhost:11434"
 
@@ -22,53 +25,82 @@ class Reply:
     seconds: float
     output_tokens: int
     tokens_per_second: float
+    load_seconds: float = 0.0  # model load time reported by the server (part of `seconds`)
 
 
 class OllamaClient:
-    def __init__(self, url: str = DEFAULT_URL, timeout: float = 600.0) -> None:
+    def __init__(
+        self,
+        url: str = DEFAULT_URL,
+        timeout: float = 600.0,
+        *,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        import ollama
+
         self.url = url.rstrip("/")
         self.timeout = timeout
+        # `transport` is forwarded to httpx: tests inject a simulated server through it.
+        self._client = ollama.Client(host=self.url, timeout=timeout, transport=transport)
 
-    def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
-        request = urllib.request.Request(
-            self.url + path,
-            data=json.dumps(body).encode(),
-            headers={"Content-Type": "application/json"},
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                return json.loads(response.read())
-        except (urllib.error.URLError, TimeoutError) as exc:
-            raise LLMError(f"Ollama injoignable ({self.url}) : {exc}") from exc
+    def _unreachable(self, exc: Exception) -> LLMError:
+        return LLMError(f"Ollama injoignable ({self.url}) : {exc}")
 
-    def chat(self, model: str, messages: list[dict[str, str]], *, num_ctx: int = 16384) -> Reply:
+    def chat(
+        self,
+        model: str,
+        messages: list[dict[str, str]],
+        *,
+        num_ctx: int = 16384,
+        num_predict: int | None = None,
+        format: dict[str, Any] | None = None,
+    ) -> Reply:
+        """One non-streaming chat turn; `format` is an optional JSON Schema (structured output)."""
+        import httpx
+        import ollama
+
         if model.startswith("qwen3") and messages and messages[-1]["role"] == "user":
             # Les Qwen3 ignorent parfois `think: false` ; `/no_think` est leur interrupteur.
             messages = [
                 *messages[:-1],
                 {**messages[-1], "content": messages[-1]["content"] + " /no_think"},
             ]
+        options: dict[str, Any] = {"temperature": 0, "num_ctx": num_ctx}
+        if num_predict is not None:
+            options["num_predict"] = num_predict
         start = time.perf_counter()
-        data = self._post(
-            "/api/chat",
-            {
-                "model": model,
-                "messages": messages,
-                "stream": False,
-                "think": False,  # traduction directe : pas de raisonnement visible
-                "options": {"temperature": 0, "num_ctx": num_ctx},
-            },
-        )
-        if "error" in data:
-            raise LLMError(str(data["error"]))
+        try:
+            response = self._client.chat(
+                model=model,
+                messages=messages,
+                stream=False,
+                think=False,  # traduction directe : pas de raisonnement visible
+                format=format,
+                options=options,
+            )
+        except ollama.ResponseError as exc:
+            raise LLMError(str(exc.error)) from exc
+        except (ConnectionError, httpx.HTTPError) as exc:
+            raise self._unreachable(exc) from exc
         seconds = time.perf_counter() - start
-        tokens = int(data.get("eval_count", 0))
-        eval_s = data.get("eval_duration", 0) / 1e9
+        tokens = response.eval_count or 0
+        eval_s = (response.eval_duration or 0) / 1e9
         return Reply(
-            data["message"]["content"], seconds, tokens, tokens / eval_s if eval_s else 0.0
+            response.message.content or "",
+            seconds,
+            tokens,
+            tokens / eval_s if eval_s else 0.0,
+            (response.load_duration or 0) / 1e9,
         )
 
     def models(self) -> list[str]:
-        request = urllib.request.Request(self.url + "/api/tags")
-        with urllib.request.urlopen(request, timeout=10) as response:
-            return [m["name"] for m in json.loads(response.read()).get("models", [])]
+        import httpx
+        import ollama
+
+        try:
+            listing = self._client.list()
+        except ollama.ResponseError as exc:
+            raise LLMError(str(exc.error)) from exc
+        except (ConnectionError, httpx.HTTPError) as exc:
+            raise self._unreachable(exc) from exc
+        return [m.model for m in listing.models if m.model]
