@@ -191,6 +191,15 @@ Le jeu synthétique versionné reste en M2 et ne certifie pas une pièce.
 Suite optionnelle `tests/optional`, exécutée par la validation complète,
 exclue du job core-only. Guide : [estimateurs.md](docs/architecture/estimateurs.md).
 
+HYP-055 : `engine/validators.py` implémente Validator par une fonction pure
+Hypomnesis `type_nominal -> string list`, avec TypeCodec fermé. Acceptation :
+certificat rejouable ; rejet logique : proposition complète et violations,
+rejouées par une fonction choisie par l'hôte. Erreur de type ou panne du
+vérificateur n'est jamais présentée comme une réfutation. La géométrie reste
+en M2 (`Plaque.verifier_proposition`), avec dimensions positives et épaisseur
+zéro refusée sans division. Aucun fait/promouvoir Observed, aucune preuve
+Lean revendiquée. Guide : [validateurs.md](docs/architecture/validateurs.md).
+
 HYP-068 : le scénario ventilation utilise deux capteurs simulés distincts,
 avec API M2 `reguler_avec_confirmation` et wrapper `reguler` compatible.
 Seul Completed mène à la confirmation : simulation/rejet/échec/issue inconnue

@@ -103,10 +103,21 @@ module Plaque = struct
   (** Violations de l'épaisseur `e` (mm) pour la demande `d` : liste vide si la plaque est valide.
       @interne *)
   let verifier (d : demande) e =
+    let r0 = if d.largeur <= 0.0 || d.hauteur <= 0.0 || d.masse_max <= 0.0
+      then ["dimensions et masse maximale doivent être positives"] else [] in
     let r1 = if e < epaisseur_min then ["épaisseur inférieure au minimum"] else [] in
-    let r2 = if petit_cote d /. e > elancement_max then ["plaque trop élancée"] else [] in
+    let r2 = if e > 0.0 && petit_cote d /. e > elancement_max
+      then ["plaque trop élancée"] else [] in
     let r3 = if masse d e > d.masse_max then ["masse supérieure à la masse maximale"] else [] in
-    r1 @ r2 @ r3
+    r0 @ r1 @ r2 @ r3
+
+  (** Proposition géométrique pour l'interface Validator.
+      @interne *)
+  type proposition = { demande : demande; epaisseur_proposee : float }
+
+  (** Vérifie une proposition complète sans effet et produit ses violations.
+      @interne *)
+  let verifier_proposition (p : proposition) = verifier p.demande p.epaisseur_proposee
 
   (* Commande d'export : contenu typé, validé ensuite par le contrat geometry.export. *)
   (** Géométrie d'une plaque, telle que l'attend le contrat `geometry.export`.
