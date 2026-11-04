@@ -1,0 +1,20 @@
+{
+  "id": "mechanics.thickness.regression",
+  "version": "1.0.0",
+  "role": "Estimator",
+  "description": "Régression linéaire locale sur les données synthétiques versionnées.",
+  "signature": { "input": "Plaque.demande", "output": "float" },
+  "input_schema": "https://schemas.example.org/mechanics/thickness-demand/1.0.0",
+  "output_schema": "https://schemas.example.org/mechanics/thickness-estimate/1.0.0",
+  "permissions": [],
+  "backend": {
+    "kind": "python",
+    "entry_point": "demo.languages.mecanique.adaptateurs.estimateurs:regression"
+  },
+  "error_policy": { "idempotent": true, "timeout_seconds": 30, "max_attempts": 1 },
+  "limitations": [
+    "Extra sklearn requis.",
+    "Données synthétiques ; pas de garantie physique ni de confiance calibrée.",
+    "Extrapolation refusée hors du domaine du modèle."
+  ]
+}

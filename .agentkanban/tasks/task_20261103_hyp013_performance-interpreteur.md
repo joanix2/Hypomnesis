@@ -38,3 +38,20 @@ Une boucle d'un million d'itérations prend quelques secondes. Les variables loc
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Baseline CPU avant toute modification du runtime, lot Mac approuvé :
+révision f35b5e0, macOS ARM64, Python 3.12.15, une chauffe puis cinq mesures
+(médianes, aucune inférence LLM).
+
+- Boucle terminale 1 000 000 : 1,311431 s.
+- Tri de 500 entiers décroissants par List.sort compare : 0,033138 s.
+- Arbre récursif profondeur 11 : 0,004514 s.
+- Prélude map carrés puis fold sur 500 éléments : 0,002872 s.
+
+Cette capture ne satisfait pas HYP-013 : ni optimisation ni gain 2× mesuré.
+Harnais et échantillons conservés dans le workspace de session ; ils seront
+repris dans le banc versionné au moment de ce ticket, avant l'optimisation.
+
+### user

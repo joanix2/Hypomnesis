@@ -1,0 +1,19 @@
+(* Programme identique avec les deux manifestes : l'hôte choisit le fournisseur. *)
+external estimer_epaisseur : Plaque.demande -> float = "thickness.estimate"
+external nom_estimateur : unit -> string = "thickness.provider"
+
+let demande = {
+  Plaque.nom = "plaque-plugins";
+  largeur = 120.0;
+  hauteur = 80.0;
+  epaisseur = None;
+  masse_max = 0.5;
+}
+
+let estimateur = {
+  Plaque.id = nom_estimateur ();
+  confiance = 0.6;
+  estimer = estimer_epaisseur;
+}
+
+let procedure = Plaque.concevoir demande estimateur

@@ -57,16 +57,41 @@ l'interpréteur doit, **dans le même changement** :
    n'est pas prouvé et n'a pas à l'être : il ne fait que construire des termes que `typeOf`
    vérifie, il peut faire rejeter un bon programme mais jamais en faire accepter un mauvais. Il
    monomorphise les définitions polymorphes atteignables et signale ce qui sort du fragment
-   (code 2) : flottants, chaînes, records, motifs alternatifs, polymorphisme local, récursion
-   mutuelle. Le même exécutable expose `eval` (sémantique de référence).
+   (code 2), notamment le polymorphisme local, les alias de motifs et la récursion
+   mutuelle. Les scalaires binary64/Unicode, records et alternatives racines sont
+   pris en charge ; voir [certification.md](certification.md) pour les limites exactes.
+   Le même exécutable expose `eval` (sémantique de référence).
 4. **Intégrer.** `hypomnesis check --certify` appelle le vérificateur, et la CI certifie tous
    les exemples.
-5. **Tests différentiels.** Le même exécutable expose `eval`, et un test Hypothesis compare
-   ses résultats à l'interpréteur Python.
+5. **Tests différentiels (HYP-028).** `tests/differential/` génère par types des
+   expressions fermées : entiers arbitraires, booléens, chaînes Unicode, tuples,
+   listes, options et records ; conditions, portées locales, applications et
+   récursion bornée. Les flottants sont observés par leurs comparaisons, pas par
+   un arrondi de leur affichage décimal. Les autres cas binary64 sont couverts
+   par les régressions de certification.
+
+   Chaque source est élaborée une fois. Le certificat conserve toutes ses
+   dépendances mais observe uniquement la dernière définition monomorphe
+   `answer` (`program_start`) ; le même IR est exécuté par Python. Comparaison
+   exacte des données structurées et des erreurs, dont `Match_failure` et
+   `Division_by_zero`, jamais une recherche de sous-chaîne dans la sortie.
+
+   Les pas Lean et Python ne sont pas assimilés : la génération est bornée,
+   les deux évaluations doivent terminer, et un timeout Lean est un échec du
+   test, pas une égalité. Une régression vérifie un budget insuffisant puis
+   l'accord avec budget suffisant. Une autre mute une compilation de littéral
+   Python et exige que le même comparateur détecte la divergence.
+
+   Hypothesis exécute 500 exemples générés (plus les exemples explicites),
+   avec statistiques visibles en CI. Le job des preuves et le validateur
+   `lean`/`complet` construisent le checker puis exigent sa présence via
+   `HYPOMNESIS_REQUIRE_LEAN=1`. Les jobs Python sans Lean peuvent ignorer
+   ces tests, sans remplacer le job des preuves obligatoire.
 
 ## Ce qui reste de confiance
 
-- le noyau de Lean et les axiomes `propext` et `Quot.sound` (audités en CI : ni `sorryAx`, ni
+- le noyau de Lean et les axiomes `propext`, `Quot.sound` et `Classical.choice`
+  (modèle Float standard, audités en CI : ni `sorryAx`, ni
   axiome ajouté) ;
 - la fidélité de l'interpréteur Python, couverte par les tests et non par une preuve, jusqu'à
   un éventuel runtime extrait de Lean ou le backend V1.0 ;
@@ -79,4 +104,10 @@ l'interpréteur doit, **dans le même changement** :
 cd formal
 lake build                                   # vérifie toutes les preuves
 lake env lean Audit.lean                     # axiomes de chaque théorème principal
+```
+
+Depuis la racine, après construction du checker :
+
+```bash
+HYPOMNESIS_REQUIRE_LEAN=1 .venv/bin/python -m pytest tests/differential --hypothesis-show-statistics
 ```

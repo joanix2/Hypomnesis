@@ -64,3 +64,46 @@ Le premier exemple fournit une entrée déjà calculée par le domaine et
 propose une épaisseur typée float avec support Estimated, modèle/version
 et RMSE dans la provenance, sans résoudre le trou. La validation géométrique
 et les contraintes du scénario restent indépendantes de cette proposition.
+
+## Substitution contractuelle sans modifier le M1 (HYP-045)
+
+Le programme [plaque_plugins.hyp](../../demo/programs/mecanique/plaque_plugins.hyp)
+appelle toujours `thickness.estimate : Plaque.demande -> float`. L'hôte
+[substitution.py](../../examples/mechanics/substitution.py) choisit seulement
+le manifeste : règle ou régression, même signature et mêmes schémas issus
+du TypeCodec. Les deux utilisent le PythonBackend HYP-044, avec validation
+avant/après appel, sous-processus récolté et délai effectif de 30 secondes.
+La règle appelle `Plaque.estimer_regle` en M2 ; les caractéristiques de la
+régression viennent de `Plaque.petit_cote`, sans formule métier recopiée en Python.
+
+Depuis la racine :
+
+```bash
+python -m examples.mechanics.substitution demo/languages/mecanique/plugins/epaisseur-regle-1.0.0.json
+python -m examples.mechanics.substitution demo/languages/mecanique/plugins/epaisseur-regression-1.0.0.json
+```
+
+Le second exige l'extra `sklearn`. La préparation et le typage n'importent
+aucun fournisseur ; il n'est chargé qu'au premier appel réel. Les commandes
+d'export restent en dry-run par défaut (`--mode simulate` les simule,
+`--mode production --out CHEMIN` autorise les écritures locales de la démo).
+Le JSON stdout inclut programme inchangé, manifeste sélectionné, provenance
+et trace réelle du backend. Aucun modèle distant ni Codegen n'est nécessaire.
+
+Pour le cas 120 × 80 mm, la règle propose 3,2 mm, la régression une valeur
+proche mais distincte ; le même solveur Z3 retient 3 mm dans les deux
+exécutions et le même validateur M2 accepte la pièce.
+Une extrapolation du modèle est une erreur
+explicite, jamais un retour silencieux à la règle.
+
+Cette interface scalaire conserve le fournisseur/version dans la provenance.
+Elle n'exporte pas le certificat descriptif complet du modèle : celui-ci reste
+disponible via `RegressionEstimator` décrit plus haut et ses données versionnées.
+Le support est Estimated, non Observed ; la confiance 0,6 est un choix
+illustratif explicite du programme, pas une probabilité tirée de la RMSE.
+Les données restent synthétiques, sans garantie physique.
+
+Tests d'intégration règle/statique sans extra :
+`pytest tests/integration/test_estimator_substitution.py`.
+Les deux fournisseurs réels et le refus d'extrapolation :
+`pytest tests/optional/test_estimator_substitution.py`.

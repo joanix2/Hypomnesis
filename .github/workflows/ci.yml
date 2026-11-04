@@ -89,6 +89,10 @@ jobs:
           hypomnesis check ../demo/examples/basics/certifiable.hyp --emit-certificate cert.json --certify --checker .lake/build/bin/hypomnesis-check
       - name: Certify every example through checker and CLI (no exemptions)
         run: pytest ../tests/integration/test_lean_checker.py
+      - name: Compare at least 500 typed programs with the real Lean evaluator
+        env:
+          HYPOMNESIS_REQUIRE_LEAN: "1"
+        run: pytest ../tests/differential --hypothesis-show-statistics
       - name: Reject sorry
         run: "! grep -rnwE 'sorry|admit' Hypomnesis"
       - name: Audit axioms

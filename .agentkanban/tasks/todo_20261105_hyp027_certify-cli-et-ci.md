@@ -29,3 +29,29 @@ tags: [certification, ci, compilateur, outillage, python]
 - [x] Tester gardes sans réessai, permutations et mutations incompatibles.
 - [x] Exiger six acceptations Lean et CLI réelles en CI/validateur.
 - [x] Actualiser couverture et limites ; validations complète/rapide/graphe.
+
+## Conversation
+
+### user
+
+il sont ou les commentaires que je t'ai gliser créer des tickets
+
+### agent
+
+Vérification : aucun commentaire de session remonté par l'outil, même en
+incluant les commentaires résolus ; aucune annotation inline [comment:]
+dans les tickets actuels. Je ne peux donc pas retrouver leur contenu ni
+confirmer qu'ils ont été transformés en tickets. Demande de retransmission
+des commentaires ou de leur emplacement pour créer les tickets sans
+inventer les besoins.
+
+### user
+
+### agent
+
+Premier signalement retransmis : différence de syntaxe et absence de
+coloration de la déclaration language arithmetique. Enregistré dans
+[HYP-151](task_20261104_hyp151_syntaxe-language-et-coloration.md), en todo.
+Ne pas considérer les autres commentaires non retrouvés comme traités.
+
+### user

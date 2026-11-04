@@ -324,6 +324,16 @@ les relit : `cd formal && lake build hypomnesis-check`, puis
 fragment, 3 illisible) ou `eval cert.json` (sémantique de référence). Exemple entièrement dans
 le fragment : `demo/examples/basics/certifiable.hyp`.
 
+HYP-028 : `tests/differential/` génère 500 termes fermés bien typés par
+exécution Hypothesis, puis compare exactement la dernière définition du
+certificat avec le même IR exécuté en Python. Valeurs structurées et erreurs
+sont comparées, jamais les timeouts (pas de notion de pas commune aux deux
+runtimes). Une mutation volontaire du runtime doit être détectée.
+Le job CI des preuves et `validate.sh lean|complet` construisent le binaire
+puis imposent `HYPOMNESIS_REQUIRE_LEAN=1` ; les jobs Python sans Lean
+peuvent ignorer le différentiel. Voir
+[la stratégie](docs/verification/strategie.md) pour le fragment généré.
+
 ## Capacités (HYP-040)
 
 `src/hypomnesis/capabilities/` (M3, strict Pyright par `# pyright: strict`) définit les neuf
@@ -344,6 +354,14 @@ type-théorique de chacune (§4.4 de `docs/architecture/m3-metalangage.md`) est 
   (`capability.raised`) ; règle : **jamais d'exception brute vers le noyau**.
 
 Un plugin ne décide rien : il rend valeur et certificat, le noyau gradue et vérifie.
+
+HYP-045 : l'hôte `examples/mechanics/substitution.py` sélectionne un manifeste
+M2 de règle ou régression et lie le même symbole `thickness.estimate`, via
+PythonBackend, sans changer `demo/programs/mecanique/plaque_plugins.hyp`.
+Les contrats sont dérivés des types M2 ; règle et caractéristiques restent
+en Hypomnesis, scikit-learn optionnel. Préparation statique sans import du
+fournisseur, erreurs explicites, provenance Estimated avec fournisseur/version.
+Voir [les commandes et limites](docs/architecture/estimateurs.md#substitution-contractuelle-sans-modifier-le-m1-hyp-045).
 
 ### Registre statique des extensions (HYP-041)
 
