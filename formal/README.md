@@ -17,6 +17,7 @@ Stratégie (certificats, tests différentiels) : [docs/verification/strategie.md
 | `Hypomnesis/Core/Records.lean` | records nominaux dérivés, construction/projection/mise à jour typées et sûres |
 | `Hypomnesis/Core/RecordExamples.lean` | deposit : solde 150, propriétaire inchangé ; propriétaire encodé en points de code, pas de support natif string |
 | `Hypomnesis/Epistemics/Provenance.lean` | provenance en semi-anneau, révision, monotonie du support |
+| `Hypomnesis/Effects/Handlers.lean` | effets à continuations typées, trois handlers du même terme, dry-run/simulation sans handoff production, état hôte et budgets |
 | `Hypomnesis/Certificate.lean` | décodage des certificats JSON vers le fragment (non prouvé, hors base de confiance) |
 | `Main.lean` | exécutable `hypomnesis-check` (`check`, `eval`) |
 

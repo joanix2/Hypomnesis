@@ -45,6 +45,8 @@ la manière dont on peut en établir la validité.
 | P22 | `Records.get_never_stuck`, `update_never_stuck` | appliqués à un record clos bien typé et à une nouvelle valeur du type du champ, accès et mise à jour ne se bloquent jamais, quel que soit le budget | §4.1 ; HYP-021 |
 | P23 | `Records.Examples.program_typed`, `program_never_stuck`, `deposit_balance`, `deposit_owner` | deposit calcule 150 et conserve le propriétaire (encodé en points de code, pas en string natif) | exemple tour ; HYP-021 |
 | P24 | `Core.evalOp_ty` | toute primitive binaire du catalogue fermé, appliquée à des valeurs de son domaine, produit une valeur du type annoncé ou une erreur explicite ; P1–P7 couvrent aussi les flottants, chaînes et erreurs | §4.1 ; HYP-150, pas de raffinement Python complet |
+| P25 | `Effects.Handlers.dry_run_no_dispatch`, `simulation_no_dispatch`, `dry_action_unchanged` | pour tout arbre d'effets typé, état hôte et budget, dry-run et simulation ne passent aucune commande au callback de production ; une action autorisée en dry-run rend DryRun/None sans modifier l'état hôte | §10.3 ; modèle de handlers HYP-067, callbacks et raffinement Python non prouvés |
+| P26 | `Effects.Handlers.handlers_interpret_same_term`, `ordinary_answers_shared`, `equal_answers_equal_results` | les trois modes s'effacent vers le même fold du terme original ; les opérations hors Act partagent les mêmes réponses ; à réponses/transitions hôte identiques, les résultats effacés sont égaux, même avec des continuations qui branchent sur la réponse | §10.3 ; HYP-067, pas d'égalité inconditionnelle entre résultats simulés et réels |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -145,7 +147,7 @@ C'est la partie où la preuve a le plus de valeur, car les erreurs y sont physiq
 | action non autorisée (§16.4) | aucune trace ne contient `dispatch(c)` sans permission accordée pour `c` | ✅ P18 dans le modèle de traces ; correspondance Python documentée/testée |
 | états des commandes (§9.7) | l'automate n'autorise que les transitions spécifiées ; les états terminaux sont absorbants | ✅ P20 ; transitions Lean/Python comparées exhaustivement |
 | doubles commandes (§9.7, §19) | **au plus un handoff local** non idempotent, relances, pertes de réponse et doublons d'entrée compris, avec journal conservé | ✅ P19 dans le modèle HYP-066 ; tests des gardes et Hypothesis côté Python ; pas de garantie physique après duplication aval ou redémarrage |
-| simulation, dry-run, production (§10.3) | les trois modes exécutent **le même terme** ; le dry-run n'émet aucun `dispatch` | 🎯 F5 |
+| simulation, dry-run, production (§10.3) | les trois modes exécutent **le même terme** ; le dry-run n'émet aucun `dispatch` | ✅ P25–P26 dans le modèle à continuations typées ; correspondance Python testée |
 | contrats JSON (§9.4, §13.4) | **aller-retour** : `decode (encode v) = v` ; et `encode v` est conforme à `schemaOf t` dès que `v : t` | 🎯 F5 |
 | sécurité physique d'une commande | — | ⛔ explicitement hors du champ du JSON Schema (§9.4) ; relève de contraintes métier et de capteurs |
 

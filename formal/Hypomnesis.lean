@@ -7,6 +7,7 @@ import Hypomnesis.Core.Fuel
 import Hypomnesis.Epistemics.Provenance
 import Hypomnesis.Effects.Dispatch
 import Hypomnesis.Effects.Commands
+import Hypomnesis.Effects.Handlers
 import Hypomnesis.Core.Examples
 import Hypomnesis.Core.Records
 import Hypomnesis.Core.RecordExamples

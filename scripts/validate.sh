@@ -53,7 +53,9 @@ lean_audit() {
 certificate_check() {
     (cd formal && lake build hypomnesis-check) || return 1
     HYPOMNESIS_REQUIRE_LEAN=1 "$PY" -m pytest -q \
-        tests/integration/test_lean_checker.py tests/differential --hypothesis-show-statistics
+        tests/integration/test_lean_checker.py tests/differential \
+        tests/integration/test_effects_model.py tests/integration/test_effect_handlers_model.py \
+        --hypothesis-show-statistics
 }
 
 graph_refresh() {

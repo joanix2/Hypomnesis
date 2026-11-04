@@ -1,7 +1,6 @@
 """Exhaustive executable parity of the Lean and Python command automata."""
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -20,8 +19,8 @@ FORMAL = Path(__file__).resolve().parents[2] / "formal"
 
 
 @pytest.fixture(scope="module")
-def tables():
-    lake = shutil.which("lake") or str(Path.home() / ".elan/bin/lake")
+def tables(lean_lake):
+    lake = lean_lake
     build = subprocess.run(
         [lake, "build", "Hypomnesis.Effects.Commands"],
         cwd=FORMAL,

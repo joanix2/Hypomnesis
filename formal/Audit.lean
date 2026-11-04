@@ -45,3 +45,9 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms Hypomnesis.Effects.non_idempotent_at_most_once
 #print axioms Hypomnesis.Effects.attempts_bounded
 #print axioms Hypomnesis.Effects.terminal_absorbing
+#print axioms Hypomnesis.Effects.Handlers.dry_run_no_dispatch
+#print axioms Hypomnesis.Effects.Handlers.simulation_no_dispatch
+#print axioms Hypomnesis.Effects.Handlers.dry_action_unchanged
+#print axioms Hypomnesis.Effects.Handlers.ordinary_answers_shared
+#print axioms Hypomnesis.Effects.Handlers.handlers_interpret_same_term
+#print axioms Hypomnesis.Effects.Handlers.equal_answers_equal_results

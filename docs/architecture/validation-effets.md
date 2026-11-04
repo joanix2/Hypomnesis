@@ -89,3 +89,44 @@ La déduplication est locale à une instance en mémoire et ne fournit pas
 de garantie d'exécution physique unique après redémarrage ou contre un
 périphérique qui exécute deux fois un message. La preuve HYP-066 doit
 expliciter ces hypothèses, pas les dissimuler.
+
+### Modèle Lean des handlers (HYP-067)
+
+`formal/Hypomnesis/Effects/Handlers.lean` représente Done et les opérations
+Observe, Act, Solve/SolveTyped, Record, Retract et Note par un arbre à
+continuations typées. Le terme ne porte aucun mode. Un état hôte explicite
+est transmis entre les opérations ; la réponse Act porte état et résultat
+optionnel comme l'enveloppe JSON du runtime. Un budget borne le nombre
+d'opérations, y compris les préfixes avant la fin d'un programme.
+
+- `dry_run_no_dispatch` et `simulation_no_dispatch` : aucun handoff vers
+  le callback de production, pour tout terme, état hôte et budget.
+- `dry_action_unchanged` : après autorisation, dry-run rend DryRun/None
+  sans appeler les callbacks simulate/production ni modifier l'état hôte.
+- `handlers_interpret_same_term` : effacer les marqueurs de handoff donne
+  le même fold du terme original, paramétré seulement par les réponses et
+  transitions d'état choisies par le handler.
+- `ordinary_answers_shared` : hors Act, changer de mode ne modifie pas
+  la réponse d'un même hôte à une même opération.
+- `equal_answers_equal_results` : à réponses **et transitions d'état**
+  égales, même résultat effacé. Des réponses différentes peuvent légitimement
+  changer une branche ou les commandes suivantes ; aucune égalité
+  inconditionnelle simulation/production n'est affirmée.
+
+Les contrôles communs sont résumés par une décision hôte d'autorisation,
+et l'échéance par un prédicat pur. Les marqueurs comptent les handoffs au
+callback de production, pas ses retries/acquittements internes. Les journaux
+et bornes de tentatives détaillés restent les modèles HYP-065/066.
+Ce n'est pas une preuve que du Python arbitraire ou un périphérique physique
+respecte le modèle : la terminaison, la fidélité des callbacks et la
+traduction des valeurs restent des hypothèses/frontières testées.
+
+`tests/integration/test_effect_handlers_model.py` confronte une table Lean
+exécutée au vrai Dispatcher : 24 combinaisons mode/permission/échéance/
+validité de réponse. Il vérifie aussi les préfixes bornés et le même
+programme M1 dans les trois modes, avec une branche dépendant de l'état
+réel retourné, fichier écrit et span d'exécution uniquement en production.
+L'export de son IR annotée doit aussi être identique aux trois exécutions.
+Les modèles exécutables sont obligatoires en CI des preuves et dans
+`validate.sh lean|complet` (`HYPOMNESIS_REQUIRE_LEAN=1`) ; seuls les jobs
+Python sans installation Lean peuvent les ignorer explicitement.

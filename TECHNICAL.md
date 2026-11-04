@@ -539,6 +539,14 @@ même signature et les contrôles en amont. Le mode, dry-run par défaut, ne
 peut être choisi que par CLI/hôte. Le span `command.dispatch` inclut les
 contrôles ; `actuator.execute` ne trace que l'appel effectif et ses relances,
 jamais un dry-run ou une simulation.
+HYP-067 : `formal/Hypomnesis/Effects/Handlers.lean` modélise les opérations
+à continuations typées et état hôte, avec budget. Dry-run/simulation sans
+handoff production, effacement des trois handlers vers un même fold et
+congruence sous réponses/transitions égales sont audités. Les tests comparent
+24 décisions avec le vrai dispatcher et exigent une IR identique dans les
+trois modes, y compris les branches dépendant des réponses. Le job des
+preuves et `validate.sh lean|complet` imposent les modèles exécutables ;
+les jobs Python sans Lean peuvent les ignorer explicitement.
 Guide de l'ordre des étapes, modes et limites :
 [validation-effets.md](docs/architecture/validation-effets.md).
 
