@@ -251,8 +251,24 @@ retourné : les tests l'appellent directement, le point d'entrée `hypomnesis` f
 document `diagnostics/1.0.0` (`contracts/schemas/diagnostics-1.0.0.json`, constantes
 `DIAGNOSTICS_SCHEMA_ID`/`DIAGNOSTICS_VERSION` dans `language/errors.py`) et rien d'autre ; la sortie
 texte (défaut `--format text`) et les codes de sortie (0/1) sont inchangés. Le compilateur s'arrête à
-la première erreur : le tableau `diagnostics` contient donc 0 ou 1 entrée (le schéma admet plus, pour
-les avertissements de HYP-010, gravité `warning`).
+la première erreur fatale ; le tableau peut aussi conserver plusieurs avertissements
+de filtrage précédents (HYP-010, gravité `warning`).
+
+HYP-010 : `typesystem/exhaustiveness.py` analyse l'utilité des matrices de
+motifs Core IR après unification, par spécialisation et matrice par défaut.
+Constructeurs, produits/records, littéraux, alternatives et alias sont couverts ;
+les gardes ne contribuent jamais à la couverture. Les sites incluent matches,
+fonctions, paramètres et liaisons. Un témoin `_` décrit une sous-valeur quelconque.
+L'inhabitabilité des types récursifs sans base et la vérité des gardes ne sont
+pas décidées ; l'analyse est conservatrice. Preuve Lean séparée en HYP-022.
+
+`CheckResult.warnings` et `LoadResult.warnings` portent les nouveaux diagnostics ;
+`Session.warnings` en conserve l'historique du typage, avec fichiers des couches M2.
+CLI texte/JSON, REPL et LSP remontent ces avertissements sans changer le runtime
+ni la Core IR. `check --strict` les promeut en erreurs et refuse avant export/
+certification, y compris dans les dépendances M2 ; le LSP reste non strict.
+Prélude et six exemples sans avertissement ; domaines booléens produits contrôlés
+aussi par comparaison exhaustive des valeurs d'exécution dans des tests générés.
 
 `HypomnesisError.to_diagnostic(filename)` produit une entrée : `stage` (identifiant stable
 `stage_id` : `syntax`, `name`, `type`, `runtime`, ou `error` pour toute sous-classe qui ne le

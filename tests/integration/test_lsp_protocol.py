@@ -155,6 +155,19 @@ def test_fast_edits_publish_only_the_latest_version(client, tmp_path):
     assert message["params"]["diagnostics"] == []
 
 
+def test_pattern_warnings_and_correction_over_stdio(client, tmp_path):
+    uri = (tmp_path / "patterns.hyp").as_uri()
+    client.open(uri, "let f = function Some x -> x")
+    [issue] = client.diagnostics(uri, 1)
+    assert issue["code"] == "pattern" and issue["severity"] == 2
+    assert "None" in issue["message"]
+    client.change(uri, "let f = function Some x -> x | None -> 0", 2)
+    assert client.diagnostics(uri, 2) == []
+    client.change(uri, "let f = function Some x -> x | None -> 0 | Some 0 -> 1", 3)
+    [issue] = client.diagnostics(uri, 3)
+    assert issue["severity"] == 2 and "unreachable" in issue["message"]
+
+
 def test_incremental_utf16_edit_clears_a_diagnostic(client, tmp_path):
     uri = (tmp_path / "unicode.hyp").as_uri()
     text = 'let x = ("😀", true + 1)'

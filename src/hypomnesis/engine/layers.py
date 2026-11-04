@@ -233,7 +233,7 @@ def check_layers(
                     for name, value in getattr(session.checker.root, kind).items()
                 }
                 try:
-                    session.check_program(source.program)
+                    session.check_program(source.program, filename=str(source.path))
                     if strict:
                         missing = missing_descriptions(source.text)
                         if missing:

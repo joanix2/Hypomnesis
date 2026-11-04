@@ -10,14 +10,14 @@ from __future__ import annotations
 import sys
 import threading
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cache
 from importlib.resources import files
 from typing import TypeVar
 
 from hypomnesis.ir import core as ir
 from hypomnesis.language import ast as A
-from hypomnesis.language.errors import EvaluationError
+from hypomnesis.language.errors import CompilerWarning, EvaluationError
 from hypomnesis.language.parser import parse_expression, parse_program
 from hypomnesis.language.typesystem.infer import Checker, CheckResult, TypeInfo, ValueInfo
 from hypomnesis.language.typesystem.types import TypePrinter
@@ -53,6 +53,7 @@ class Binding:
 class LoadResult:
     bindings: list[Binding]
     types: list[TypeInfo]
+    warnings: list[CompilerWarning] = field(default_factory=list)
 
 
 @cache
@@ -68,6 +69,7 @@ class Session:
         # Every elaborated definition, in order (the prelude included): the
         # content of a certificate (see hypomnesis.certify).
         self.definitions: list[ir.Definition] = []
+        self.warnings: list[CompilerWarning] = []
         if prelude:
             self.load(prelude_source())
         self.prelude_definitions = len(self.definitions)
@@ -76,27 +78,35 @@ class Session:
         """Type-check ``source`` and extend the type environment, without running it."""
         return self.check_program(parse_program(source))
 
-    def check_program(self, program: A.Program) -> LoadResult:
+    def check_program(self, program: A.Program, *, filename: str | None = None) -> LoadResult:
         """Check an already parsed program, retaining its original source positions."""
         result = self.checker.check_program(program)
+        self._warnings(result, filename)
         self.definitions.extend(result.definitions)
-        return LoadResult([self._binding(info, None) for info in result.values], result.types)
+        return LoadResult(
+            [self._binding(info, None) for info in result.values], result.types, result.warnings
+        )
 
     def load(self, source: str) -> LoadResult:
         """Type-check and run ``source``, extending the session."""
         return self.load_program(parse_program(source))
 
-    def load_program(self, program: A.Program) -> LoadResult:
+    def load_program(self, program: A.Program, *, filename: str | None = None) -> LoadResult:
         """Check and evaluate an already parsed program."""
-        return self._run(self.checker.check_program(program))
+        return self._run(self.checker.check_program(program), filename)
 
-    def _run(self, result: CheckResult) -> LoadResult:
+    def _warnings(self, result: CheckResult, filename: str | None) -> None:
+        result.warnings = [CompilerWarning(w.message, w.span, filename) for w in result.warnings]
+        self.warnings.extend(result.warnings)
+
+    def _run(self, result: CheckResult, filename: str | None = None) -> LoadResult:
+        self._warnings(result, filename)
         self.definitions.extend(result.definitions)
         run_deep(lambda: self.interpreter.execute(result.definitions))
         bindings = [
             self._binding(info, self.interpreter.globals[info.qname]) for info in result.values
         ]
-        return LoadResult(bindings, result.types)
+        return LoadResult(bindings, result.types, result.warnings)
 
     def eval(self, source: str) -> Binding:
         """Evaluate an expression and return it as the binding ``it``."""

@@ -68,7 +68,7 @@ def load_language(root: Path, *, strict: bool = True, execute: bool = True) -> L
         session = Session()
         for source in plan.source_files():
             try:
-                session.load_program(source.program)
+                session.load_program(source.program, filename=str(source.path))
             except HypomnesisError as exc:
                 raise SourceError(exc, source.path, source.text) from exc
     else:

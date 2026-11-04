@@ -49,14 +49,20 @@ def _position(source: str, line: int, column: int, encoding: str) -> types.Posit
 
 
 def diagnostic(
-    message: str, stage: str, span: Span | None, source: str, encoding: str = "utf-16"
+    message: str,
+    stage: str,
+    span: Span | None,
+    source: str,
+    encoding: str = "utf-16",
+    *,
+    severity: types.DiagnosticSeverity = types.DiagnosticSeverity.Error,
 ) -> types.Diagnostic:
     start = _position(source, span.line, span.column, encoding) if span else types.Position(0, 0)
     end = _position(source, span.end_line, span.end_column, encoding) if span else start
     return types.Diagnostic(
         range=types.Range(start=start, end=end),
         message=message,
-        severity=types.DiagnosticSeverity.Error,
+        severity=severity,
         source="hypomnesis",
         code=stage,
     )
@@ -90,8 +96,8 @@ def analyze(
             )
             session = check_layers(plan, strict=False, stop_at=path, entry=owner)
             if owner is not None:
-                return []
-        session.check(source)
+                return _warnings(session, path, source, encoding)
+        session.check_program(program, filename=str(path))
     except SourceError as exc:
         if exc.path == path:
             return [diagnostic(exc.message, exc.stage_id, exc.span, source, encoding)]
@@ -100,4 +106,19 @@ def analyze(
         return [diagnostic(exc.message, exc.stage_id, exc.span, source, encoding)]
     except (OSError, UnicodeError, LanguageError) as exc:
         return [diagnostic(str(exc), "configuration", None, source)]
-    return []
+    return _warnings(session, path, source, encoding)
+
+
+def _warnings(session: Session, path: Path, source: str, encoding: str) -> list[types.Diagnostic]:
+    return [
+        diagnostic(
+            warning.message,
+            warning.stage_id,
+            warning.span,
+            source,
+            encoding,
+            severity=types.DiagnosticSeverity.Warning,
+        )
+        for warning in session.warnings
+        if warning.filename == str(path)
+    ]

@@ -29,6 +29,7 @@ class HypomnesisError(Exception):
     # Stable machine identifier of the stage (``stage`` is the human label of the text output).
     # Subclasses that do not override it report as the generic ``error``.
     stage_id = "error"
+    severity = "error"
 
     def __init__(self, message: str, span: Span | None = None) -> None:
         super().__init__(message)
@@ -62,7 +63,7 @@ class HypomnesisError(Exception):
         span = self.span
         return {
             "stage": self.stage_id,
-            "severity": "error",
+            "severity": self.severity,
             "message": self.message,
             "file": filename,
             "line": span.line if span else None,
@@ -70,6 +71,22 @@ class HypomnesisError(Exception):
             "end_line": span.end_line if span else None,
             "end_column": span.end_column if span else None,
         }
+
+
+class CompilerWarning(HypomnesisError):
+    stage = "pattern warning"
+    stage_id = "pattern"
+    severity = "warning"
+
+    def __init__(self, message: str, span: Span | None = None, filename: str | None = None) -> None:
+        super().__init__(message, span)
+        self.filename = filename
+
+    def render(self, source: str | None = None, filename: str | None = None) -> str:
+        return super().render(source, filename or self.filename or "<input>")
+
+    def to_diagnostic(self, filename: str | None = None) -> dict[str, object]:
+        return super().to_diagnostic(filename or self.filename or "<input>")
 
 
 def diagnostics_document(diagnostics: list[dict[str, object]]) -> dict[str, object]:

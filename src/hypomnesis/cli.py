@@ -26,24 +26,39 @@ def _load_files(
     execute: bool,
     as_json: bool = False,
     report_success: bool = True,
+    strict: bool = False,
 ) -> tuple[int, Session]:
     """Load files in order and return the actual session, including language entries."""
     for path in paths:
         try:
+            previous_warnings = len(session.warnings)
             source = path.read_text(encoding="utf-8")
             program = parse_program(source)
             if any(isinstance(item, A.LanguageItem) for item in program.items):
                 from hypomnesis.engine.language import load_language
 
                 language = load_language(path, execute=execute)
+                language.session.warnings[:0] = session.warnings
                 session = language.session
                 if not as_json:
                     print(f"langage : {language.name}")
-                continue
-            result = session.load_program(program) if execute else session.check_program(program)
+                result = None
+            else:
+                result = (
+                    session.load_program(program, filename=str(path))
+                    if execute
+                    else session.check_program(program, filename=str(path))
+                )
         except HypomnesisError as exc:
             if as_json:
-                print(json.dumps(diagnostics_document([exc.to_diagnostic(str(path))])))
+                print(
+                    json.dumps(
+                        diagnostics_document(
+                            [w.to_diagnostic() for w in session.warnings]
+                            + [exc.to_diagnostic(str(path))]
+                        )
+                    )
+                )
             else:
                 print(exc.render(source, str(path)), file=sys.stderr)
             return 1, session
@@ -51,17 +66,38 @@ def _load_files(
             if as_json:
                 print(
                     json.dumps(
-                        diagnostics_document([HypomnesisError(str(exc)).to_diagnostic(str(path))])
+                        diagnostics_document(
+                            [w.to_diagnostic() for w in session.warnings]
+                            + [HypomnesisError(str(exc)).to_diagnostic(str(path))]
+                        )
                     )
                 )
             else:
                 print(f"refusé : {exc}", file=sys.stderr)
             return 1, session
+        warnings = session.warnings[previous_warnings:]
         if not as_json:
-            for binding in result.bindings:
+            for warning in warnings:
+                print(
+                    warning.render(source if warning.filename == str(path) else None),
+                    file=sys.stderr,
+                )
+            for binding in result.bindings if result is not None else ():
                 print(binding.render() if execute else binding.render_signature())
+        if strict and warnings:
+            if as_json:
+                print(
+                    json.dumps(
+                        diagnostics_document(
+                            [{**w.to_diagnostic(), "severity": "error"} for w in session.warnings]
+                        )
+                    )
+                )
+            else:
+                print("mode strict : avertissements de filtrage refusés", file=sys.stderr)
+            return 1, session
     if as_json and report_success:
-        print(json.dumps(diagnostics_document([])))
+        print(json.dumps(diagnostics_document([w.to_diagnostic() for w in session.warnings])))
     return 0, session
 
 
@@ -73,6 +109,7 @@ def _check(
     certify: bool = False,
     checker: Path | None = None,
     checker_timeout: float = 30.0,
+    strict: bool = False,
 ) -> int:
     """Type-check files, alone or in the context of a M2 language."""
     session = Session()
@@ -90,8 +127,23 @@ def _check(
                 print(f"refusé : {message}", file=sys.stderr)
             return 1
     as_json = output_format is CheckFormat.JSON
+    if not as_json:
+        for warning in session.warnings:
+            print(warning.render(), file=sys.stderr)
+    if strict and session.warnings:
+        if as_json:
+            print(
+                json.dumps(
+                    diagnostics_document(
+                        [{**w.to_diagnostic(), "severity": "error"} for w in session.warnings]
+                    )
+                )
+            )
+        else:
+            print("mode strict : avertissements de filtrage refusés", file=sys.stderr)
+        return 1
     status, session = _load_files(
-        session, files, execute=False, as_json=as_json, report_success=False
+        session, files, execute=False, as_json=as_json, report_success=False, strict=strict
     )
     if status:
         return status
@@ -116,12 +168,18 @@ def _check(
     except (CertificationError, OSError) as exc:
         if as_json:
             diagnostic = HypomnesisError(str(exc)).to_diagnostic(str(files[-1]))
-            print(json.dumps(diagnostics_document([diagnostic])))
+            print(
+                json.dumps(
+                    diagnostics_document(
+                        [w.to_diagnostic() for w in session.warnings] + [diagnostic]
+                    )
+                )
+            )
         else:
             print(f"certification refusée : {exc}", file=sys.stderr)
         return 1
     if as_json:
-        print(json.dumps(diagnostics_document([])))
+        print(json.dumps(diagnostics_document([w.to_diagnostic() for w in session.warnings])))
     return 0
 
 
@@ -249,6 +307,7 @@ def _repl(session: Session) -> int:
         if not source:
             continue
         try:
+            previous_warnings = len(session.warnings)
             try:
                 result = session.load(source)
                 bindings = result.bindings
@@ -260,6 +319,8 @@ def _repl(session: Session) -> int:
                 bindings = [session.eval(source)]
             for binding in bindings:
                 print(binding.render())
+            for warning in session.warnings[previous_warnings:]:
+                print(warning.render(source, "<repl>"), file=sys.stderr)
         except HypomnesisError as exc:
             print(exc.render(source, "<repl>"), file=sys.stderr)
 
@@ -368,10 +429,22 @@ def check_command(
         float,
         typer.Option("--checker-timeout", help="délai maximal du vérificateur en secondes"),
     ] = 30.0,
+    strict: Annotated[
+        bool, typer.Option("--strict", help="refuser les avertissements de filtrage")
+    ] = False,
 ) -> None:
     """Typer des fichiers et afficher leurs signatures."""
     _exit_with(
-        _check(files, output_format, langage, emit_certificate, certify, checker, checker_timeout)
+        _check(
+            files,
+            output_format,
+            langage,
+            emit_certificate,
+            certify,
+            checker,
+            checker_timeout,
+            strict,
+        )
     )
 
 

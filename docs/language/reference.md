@@ -66,6 +66,29 @@ parenthèses), listes `[a; b]`, `h :: t`, records `{ width; height = h }` (champ
 autorisés), alternatives `A | B`, alias `p as x`, annotations `(p : t)`.
 
 Une alternative doit lier les mêmes variables avec les mêmes types des deux côtés.
+Un motif de record ne peut pas répéter un champ.
+
+### Avertissements de filtrage
+
+Après inférence, le compilateur analyse les motifs de `match`, `function`,
+paramètres et liaisons. Il signale les bras inaccessibles et les filtrages
+non exhaustifs, avec position et motif témoin (`None`, `Some (false)`, etc.).
+`_` dans un témoin désigne une sous-valeur quelconque, pas une expression
+à évaluer telle quelle. Alternatives, alias, tuples, records partiels,
+listes et variants imbriqués participent à l'analyse.
+
+Une garde ne couvre jamais les bras suivants, même écrite `when true`.
+Les domaines scalaires ouverts demandent un cas par défaut. L'analyse est
+conservatrice : elle ne démontre ni les gardes ni l'impossibilité d'habiter
+un type récursif sans constructeur de base. La preuve Lean est séparée
+(HYP-022).
+
+Par défaut, ces diagnostics sont des avertissements ; l'évaluation reste
+inchangée et un filtrage partiel peut encore produire `Match_failure`.
+`hypomnesis check programme.hyp --strict` les refuse (code 1) avant export
+ou certification. `--format json` les conserve dans diagnostics/1.0.0 avec
+severity `warning`, ou `error` en mode strict. Le LSP les affiche comme
+avertissements ; ses analyses n'exécutent pas les programmes.
 
 ## Types
 

@@ -13,8 +13,9 @@ from dataclasses import dataclass, field, replace
 
 from hypomnesis.ir import core as ir
 from hypomnesis.language import ast as A
-from hypomnesis.language.errors import NameResolutionError, Span, TypeCheckError
+from hypomnesis.language.errors import CompilerWarning, NameResolutionError, Span, TypeCheckError
 from hypomnesis.language.typesystem.annotations import close
+from hypomnesis.language.typesystem.exhaustiveness import Coverage, MatchSite, PatternArm
 from hypomnesis.language.typesystem.types import (
     ARROW,
     BOOL,
@@ -124,6 +125,7 @@ class CheckResult:
     definitions: list[ir.Definition]
     values: list[ValueInfo]
     types: list[TypeInfo]
+    warnings: list[CompilerWarning] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -161,6 +163,7 @@ class Checker:
         self._definitions: list[ir.Definition] = []
         self._new_values: list[ValueInfo] = []
         self._new_types: list[TypeInfo] = []
+        self._match_sites: list[MatchSite] = []
         self.types_by_qname: dict[str, TypeInfo] = {}
         self._install_builtins()
 
@@ -185,15 +188,20 @@ class Checker:
         """
         saved = self._snapshot()
         self._definitions, self._new_values, self._new_types = [], [], []
+        self._match_sites = []
         try:
             for item in program.items:
                 self._annot_vars = {}
                 self._check_item(item)
             close(self._definitions)
+            coverage = Coverage(self.types_by_qname)
+            warnings = [
+                warning for site in self._match_sites for warning in coverage.warnings(site)
+            ]
         except BaseException:
             self._restore(saved)
             raise
-        return CheckResult(self._definitions, self._new_values, self._new_types)
+        return CheckResult(self._definitions, self._new_values, self._new_types, warnings)
 
     def lookup_value(self, path: str) -> ValueInfo:
         return self._lookup("values", path, None, "value")
@@ -316,6 +324,7 @@ class Checker:
                 binds = {}
                 pt, pattern = self._infer_pattern(binding.pattern, 1, binds)
                 expect(pt, t, binding.pattern.span, "This pattern")
+                self._pattern_site(t, pattern, binding.pattern.span)
             targets = []
             for name, bt in binds.items():
                 qname = self._fresh_qname(name)
@@ -564,6 +573,7 @@ class Checker:
                 name = self.gensym()
                 names.append(name)
                 matches.append((name, pattern))
+                self._pattern_site(t, pattern, p.span)
         inner_env = {**env, **{k: mono(v) for k, v in binds.items()}}
 
         def wrap(body: ir.Expr) -> ir.Expr:
@@ -581,7 +591,7 @@ class Checker:
     def _infer_Function(self, e: A.Function, env: Env, level: int):
         name = self.gensym()
         param = TVar(level)
-        result, cases = self._infer_arms(param, e.arms, env, level)
+        result, cases = self._infer_arms(param, e.arms, env, level, e.span)
         match = ir.Match(ir.Local(name), cases, e.span)
         return arrow(param, result), ir.Lambda((name,), match, param_types=(param,))
 
@@ -617,6 +627,7 @@ class Checker:
                 binds: dict[str, Type] = {}
                 pt, pattern = self._infer_pattern(binding.pattern, level + 1, binds)
                 expect(pt, t, binding.pattern.span, "This pattern")
+                self._pattern_site(t, pattern, binding.pattern.span)
                 for name, bt in binds.items():
                     new_env[name] = generalize(bt, level)
                 _, quantified = generalize_vars(t, level)
@@ -670,7 +681,12 @@ class Checker:
         cases = (ir.Case(ir.PLit(True), None, then), ir.Case(ir.PWild(), None, orelse))
         return tt, ir.Match(cond, cases, e.span)
 
-    def _infer_arms(self, scrutinee_t: Type, arms: tuple[A.Arm, ...], env: Env, level: int):
+    def _pattern_site(self, t: Type, pattern: ir.Pattern, span: Span | None) -> None:
+        self._match_sites.append(MatchSite(t, (PatternArm(pattern, False, span),), span))
+
+    def _infer_arms(
+        self, scrutinee_t: Type, arms: tuple[A.Arm, ...], env: Env, level: int, span: Span | None
+    ):
         result = TVar(level)
         cases = []
         for arm in arms:
@@ -685,11 +701,21 @@ class Checker:
             bt, body = self.infer(arm.body, arm_env, level)
             expect(bt, result, arm.body.span)
             cases.append(ir.Case(pattern, guard, body))
+        self._match_sites.append(
+            MatchSite(
+                scrutinee_t,
+                tuple(
+                    PatternArm(case.pattern, case.guard is not None, arm.pattern.span)
+                    for case, arm in zip(cases, arms, strict=True)
+                ),
+                span,
+            )
+        )
         return result, tuple(cases)
 
     def _infer_Match(self, e: A.Match, env: Env, level: int):
         st, scrutinee = self.infer(e.scrutinee, env, level)
-        result, cases = self._infer_arms(st, e.arms, env, level)
+        result, cases = self._infer_arms(st, e.arms, env, level, e.span)
         return result, ir.Match(scrutinee, cases, e.span)
 
     def _infer_Tuple(self, e: A.Tuple, env: Env, level: int):
@@ -846,6 +872,8 @@ class Checker:
             fields = []
             for name, sub in p.fields:
                 short = name.rsplit(".", 1)[-1]
+                if any(existing == short for existing, _ in fields):
+                    raise TypeCheckError(f"field {short} is defined several times", sub.span)
                 fi = owner.field(short)
                 if fi is None:
                     raise TypeCheckError(
