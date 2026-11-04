@@ -398,3 +398,70 @@ descriptions ») et instantanés `tests/unit/snapshots/` (catalogue rendu, octet
 python3 scripts/kanban.py status        # tâches prêtes et bloquées
 .venv/bin/hypomnesis run examples/basics/tour.hyp
 ```
+
+## Bibliothèques et infrastructure conservée (audit HYP-007, 2026-11-04)
+
+Les sept remplacements sont présents dans le code : Typer (`cli.py`), NetworkX
+(`epistemics/knowledge.py`, `scripts/kanban.py`), PyYAML (Kanban), client officiel Ollama
+(`llm/ollama.py`), SDK OpenTelemetry (`observability/trace.py`), matplotlib (`llm/plots.py`)
+et jsonschema via `SchemaRegistry` (`certify/load.py`). Cela ne vaut pas clôture des tickets :
+HYP-014 reste en `doing`, avec comparaison réelle du banc avant/après à vérifier par l'utilisateur.
+La façade locale, les conversions de valeurs et les règles de sûreté ne sont pas des
+réimplémentations des bibliothèques. Le noyau pur et Lean restent inchangés (ADR 0003, 0007).
+
+### Justification des dépendances déclarées
+
+Relecture de `pyproject.toml` : aucune dépendance nouvelle nécessaire pour cet audit.
+`llm` reste optionnel ; `dev` reprend ses dépendances pour tester sans serveur ni GPU.
+Les dépendances transitives (Click, Rich, httpx, NumPy…) ne sont pas ajoutées sans besoin direct.
+
+| Dépendance directe | Groupe | Justification |
+|---|---|---|
+| `hatchling` | construction | Construction du paquet Python et inclusion des ressources. |
+| `lark` | exécution | Grammaire LALR, analyse syntaxique et lexage des descriptions (`language/parser.py`). |
+| `jsonschema[format-nongpl]` | exécution | Validation Draft 2020-12, formats compris, des contrats et certificats (`contracts/registry.py`). |
+| `referencing` | exécution | Résolution contrôlée des références de schémas enregistrés (`contracts/registry.py`). |
+| `z3-solver` | exécution | Résolution et vérification des contraintes du Problem IR (`backends/z3_solver.py`). |
+| `typer` | exécution | Commandes, paramètres annotés et aide de la CLI (`cli.py`, HYP-006). |
+| `networkx` | exécution | Graphes de provenance et de dépendances, parcours et cycles ; ordre des extensions (HYP-008/009/041). |
+| `semantic-version` | exécution | SemVer et contraintes `SimpleSpec`, sans parseur de versions maison (`engine/registry.py`, HYP-041). |
+| `resolvelib` | exécution | Résolution transitive par retour arrière des extensions (`engine/registry.py`, HYP-041). |
+| `opentelemetry-api` | exécution | Contextes, statuts et fournisseur sans effet pour les traces désactivées (`observability/trace.py`). |
+| `opentelemetry-sdk` | exécution | Création et collecte des spans, export en mémoire (`observability/trace.py`, HYP-015). |
+| `jinja2` | `llm`, `dev` | Gabarits du catalogue et du prompt (`llm/describe.py`). |
+| `scikit-learn` | `llm`, `dev` | TF-IDF et similarité cosinus du mini-RAG (`llm/retrieval.py`) ; HYP-054 reste distinct. |
+| `ollama` | `llm`, `dev` | Client officiel, réponses typées et erreurs HTTP (`llm/ollama.py`, HYP-014). |
+| `matplotlib` | `llm`, `dev` | Figures PNG/SVG hors affichage, régénérables depuis le JSON (`llm/plots.py`, HYP-016). |
+| `scipy` | `llm`, `dev` | Intervalles de Wilson par `binomtest().proportion_ci`, dans le banc et les figures (HYP-139). |
+| `pyyaml` | `dev` | Lecture sûre du front-matter des tickets (`scripts/kanban.py`, HYP-009). |
+| `pytest` | `dev` | Tests unitaires, d'intégration et de contrats. |
+| `hypothesis` | `dev` | Propriétés de provenance, certificats, codecs et tests différentiels. |
+| `ruff` | `dev` | Analyse statique et formatage Python. |
+| `pyright` | `dev` | Vérification statique des types Python. |
+| `pre-commit` | `dev` | Orchestration explicite des validateurs du dépôt, sans hook git obligatoire. |
+
+### Inventaire du code maison restant
+
+Chemins relatifs à `src/hypomnesis/`, sauf indication contraire. Les décisions concernent
+le besoin actuel, pas une interdiction de réexaminer une bibliothèque si ce besoin grandit.
+
+| Emplacement et source | Décision et bibliothèque examinée |
+|---|---|
+| `language/docs.py::_doc_index`, `parser.py::lex` | **Déjà migré** par HYP-137 : jetons Lark (`dont_ignore=True`), plus de regex globale `_DOC`. Garder `parse_doc` et `_TAG`, format de balises du projet. |
+| `llm/benchmark.py::wilson`, `plots.py::wilson_interval` | **Déjà migré** par HYP-139 vers SciPy, déclaré explicitement dans `llm` et `dev`. Garder `summary`, tableau Markdown spécifique au banc. |
+| `effects/commands.py::TRANSITIONS`, `may_retry`, `RetryPolicy` ; `dispatcher.py::_execute` | **Garder** : automate explicite et règle de non-relance des commandes non idempotentes, miroir de HYP-066. `transitions`/`python-statemachine`/`tenacity` n'enlèveraient pas ces règles ; délai exponentiel actuellement élémentaire. HYP-061 porte ce besoin. |
+| `scripts/kanban.py::graph_lock`, `_lock_busy`, `_section_paths`, `_meta` | **Garder** : protocole `flock` de Graphify et extraction du format Markdown borné ; `filelock` ou un analyseur Markdown complet ne sont pas un remplacement transparent. Aucun changement de verrou dans cet audit. |
+| `observability/trace.py::Tracer.tree`, `export` | **Garder** : rendu des rapports M0 au-dessus des spans SDK ; réexaminer avec l'export OTLP de HYP-070, sans nouveau traceur. |
+| `cli.py::_repl` ; `engine/procedure.py::ProcedureReport.render` | **Garder** : tampon `;;` et rendus spécifiques. `prompt_toolkit` serait disproportionné sans besoin d'édition enrichie ; Rich est déjà fourni par Typer, mise en forme non requise. |
+| `llm/translation.py::extract_code`, `translate` | **Garder** : extraction des blocs et réparation guidée par les diagnostics, protocole propre au projet. |
+| `languages/mecanique/adaptateurs/transcription.py::transcrire` | **Garder** : adaptateur M2 déterministe, non infrastructure M3 ; HYP-081 porte la transcription LLM. Aucune migration métier ici. |
+| `llm/retrieval.py::Retriever`, `_normalise` ; `llm/describe.py::_environment` | **Déjà délégué** à scikit-learn et Jinja2 ; garder la normalisation numérique et le catalogue propres au banc. |
+| `contracts/registry.py::SchemaRegistry` | **Garder** : adaptateur de jsonschema et referencing, non validateur structurel maison. |
+| `engine/bridge.py::to_json`, `runtime/natives.py::to_json_value`, `certify/export.py::export_certificate` | **Garder** : codecs des valeurs Hypomnesis et certificat lu par Lean. Les ponts JSON passent désormais par `runtime/json.py` (HYP-042), pas par des conversions dupliquées. |
+| `session.py::run_deep` | **Garder** : pile CPython dédiée à la récursion non terminale ; une bibliothèque générique ne la supprime pas. Réexamen avec les évolutions d'évaluation de HYP-013. |
+| `language/parser.py::_parser`, `_ToAst` | **Déjà délégué** à Lark et `ast.literal_eval` ; garder la construction de l'AST Hypomnesis. |
+| `language/typesystem/`, `runtime/interpreter.py`, `epistemics/provenance.py`, `ir/core.py` | **Garder** : inférence, sémantique et semi-anneau propres au projet (ADR 0002/0007) ; NetworkX ne remplace pas l'évaluation de la provenance. |
+
+Aucune nouvelle migration d'infrastructure retenue dans ce périmètre : aucun nouveau ticket
+nécessaire. HYP-054 (estimateur appris) et HYP-070 (instrumentation/OTLP) restent des travaux
+distincts, pas des conditions supplémentaires de clôture des sept remplacements.
