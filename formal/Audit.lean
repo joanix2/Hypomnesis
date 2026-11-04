@@ -27,3 +27,7 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms Hypomnesis.Effects.dispatch_ordered
 #print axioms Hypomnesis.Effects.dispatch_permitted
 #print axioms Hypomnesis.Effects.no_dispatch_without_permission
+#print axioms Hypomnesis.Effects.Execution.toRun
+#print axioms Hypomnesis.Effects.non_idempotent_at_most_once
+#print axioms Hypomnesis.Effects.attempts_bounded
+#print axioms Hypomnesis.Effects.terminal_absorbing

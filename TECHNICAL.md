@@ -554,6 +554,14 @@ les 144 paires à Python. Il requiert Lean/Lake sans skip. Correspondance
 ligne à ligne et frontières : [dispatch.md](docs/verification/dispatch.md).
 Ce n'est pas une preuve de raffinement du Python ni de sécurité physique.
 
+HYP-066 : `Effects/Commands.lean` raffine ce modèle par la garde de relance,
+les pertes de réponse et les doublons d'entrée conservant le cache.
+`non_idempotent_at_most_once`, `attempts_bounded`, `terminal_absorbing` et
+`Execution.toRun` sont audités. Le test compare aussi 384 gardes et les états
+terminaux. La garantie est locale au dispatcher séquentiel et à son journal
+conservé, pas une exécution physique unique après duplication aval ou
+redémarrage. Détails : [commandes.md](docs/verification/commandes.md).
+
 ## Descriptions obligatoires (HYP-137)
 
 `language/docs.py` extrait les `(** … *)` en lexant la source (`parser.lex`, pas de regex) et les

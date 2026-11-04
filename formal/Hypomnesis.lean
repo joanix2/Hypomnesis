@@ -6,5 +6,6 @@ import Hypomnesis.Core.Check
 import Hypomnesis.Core.Fuel
 import Hypomnesis.Epistemics.Provenance
 import Hypomnesis.Effects.Dispatch
+import Hypomnesis.Effects.Commands
 import Hypomnesis.Core.Examples
 import Hypomnesis.Certificate

@@ -39,6 +39,8 @@ la manière dont on peut en établir la validité.
 | P16 | `Examples.program_typed` | un programme réel (longueur de liste) est typé **par calcul**, au moyen du vérificateur prouvé | démonstration du mécanisme de certificat |
 | P17 | `Effects.dispatch_ordered` | chaque occurrence de dispatch, relances comprises, possède une validation puis une autorisation antérieures dans le journal de la même commande | §9.8, §16.4 ; modèle de traces HYP-065 |
 | P18 | `Effects.dispatch_permitted`, `no_dispatch_without_permission` | aucun dispatch dans le modèle sans permission hôte accordée à la commande | §16.4 ; modèle HYP-065 |
+| P19 | `Effects.non_idempotent_at_most_once`, `attempts_bounded` | au plus un handoff local non idempotent ; toutes les tentatives sont bornées par la politique positive, pertes et doublons d'entrée compris | §9.7, §19 ; modèle HYP-066 à journal conservé |
+| P20 | `Effects.terminal_absorbing` | les états terminaux n'ont pas de transition sortante | §9.7 ; automate HYP-066 |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -125,8 +127,8 @@ C'est la partie où la preuve a le plus de valeur, car les erreurs y sont physiq
 | noyau pur (§9.1, H5) | **aucun terme du niveau objet n'exécute d'effet** ; il ne peut que le décrire | ✅ par construction pour le fragment (aucun constructeur d'effet) · 🎯 F5 avec la modalité `U` |
 | validation avant appel (§9.8, §16.4) | chaque `dispatch(c)` est précédé de `validated(c)` puis `authorized(c)` pour le même `command_id` | ✅ P17 dans le modèle de traces ; correspondance Python documentée/testée, pas de raffinement prouvé |
 | action non autorisée (§16.4) | aucune trace ne contient `dispatch(c)` sans permission accordée pour `c` | ✅ P18 dans le modèle de traces ; correspondance Python documentée/testée |
-| états des commandes (§9.7) | l'automate n'autorise que les transitions spécifiées ; les états terminaux sont absorbants | 🎯 F5 · miroir Python : `TRANSITIONS` dans `effects/commands.py` (test exhaustif des paires, HYP-061) |
-| doubles commandes (§9.7, §19) | **au plus une exécution** d'une commande non idempotente, quelles que soient les relances et pannes de transport (modèle à journal et déduplication par `command_id`) | 🎯 F5 (HYP-066, à prouver) · miroir Python : `may_retry` et la déduplication du `Dispatcher`, propriété Hypothesis sur pannes simulées (HYP-061) |
+| états des commandes (§9.7) | l'automate n'autorise que les transitions spécifiées ; les états terminaux sont absorbants | ✅ P20 ; transitions Lean/Python comparées exhaustivement |
+| doubles commandes (§9.7, §19) | **au plus un handoff local** non idempotent, relances, pertes de réponse et doublons d'entrée compris, avec journal conservé | ✅ P19 dans le modèle HYP-066 ; tests des gardes et Hypothesis côté Python ; pas de garantie physique après duplication aval ou redémarrage |
 | simulation, dry-run, production (§10.3) | les trois modes exécutent **le même terme** ; le dry-run n'émet aucun `dispatch` | 🎯 F5 |
 | contrats JSON (§9.4, §13.4) | **aller-retour** : `decode (encode v) = v` ; et `encode v` est conforme à `schemaOf t` dès que `v : t` | 🎯 F5 |
 | sécurité physique d'une commande | — | ⛔ explicitement hors du champ du JSON Schema (§9.4) ; relève de contraintes métier et de capteurs |
@@ -136,6 +138,12 @@ ligne à ligne dans [dispatch.md](dispatch.md). L'automate Lean et Python est
 comparé de manière exécutable sur les 144 paires d'états. Le modèle fixe un
 journal par commande et la permission accordée lors de son contrôle ;
 il ne certifie ni les callbacks Python, ni le matériel, ni la concurrence.
+
+**HYP-066** : [commandes.md](commandes.md) précise les événements modélisés,
+la déduplication d'entrée et la distinction entre handoff local et effet
+physique. Prouver « une seule action physique malgré un réseau qui duplique
+les requêtes après l'adaptateur » exigerait un contrat récepteur supplémentaire ;
+P19 ne revendique pas cette garantie.
 
 ### §11 — Boucle épistémologique
 
