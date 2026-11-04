@@ -155,3 +155,91 @@ def test_all_examples_are_examined_without_claiming_unsupported_forms_are_certif
     assert result.returncode == status, result.stderr
     if status == 2:
         assert "hors du fragment" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        """
+        type account = { owner : int; balance : int }
+        let deposit amount acc = { acc with balance = acc.balance + amount }
+        let alice = { balance = 100; owner = 77 }
+        let updated = deposit 50 alice
+        let answer =
+          match updated with
+          | { balance = b; owner = o } ->
+            if b = 150 && o = 77 && alice.balance = 100 then 99991 else 99992
+        """,
+        """
+        type account = { owner : int; balance : int }
+        let value = Some { owner = 77; balance = 150 }
+        let answer = match value with
+          | Some { balance = b; owner = o } -> if b = 150 && o = 77 then 99991 else 99992
+          | None -> 99992
+        """,
+        """
+        type 'a box = { payload : 'a; label : int }
+        let get b = b.payload
+        let a = get { label = 2; payload = 41 }
+        let b = get { label = 3; payload = true }
+        let answer = if a = 41 && b then 99991 else 99992
+        """,
+        """
+        type node = { value : int; next : node option }
+        let n = { next = None; value = 17 }
+        let answer = match n with
+          | { value = v } -> if v = 17 then 99991 else 99992
+        """,
+        """
+        type item = { first : int; second : int; third : int }
+        let f x =
+          let n = 4 in
+          let a = { third = n + 2; first = x; second = n + 1 } in
+          let b = { a with third = a.second + n; first = a.third + x } in
+          match (b, a) with
+          | ({ third = t; first = f }, { second = s }) ->
+            if t = 9 && f = 13 && s = 5 then 99991 else 99992
+        let answer = f 7
+        """,
+        """
+        type account = { owner : int; balance : int }
+        let account = { balance = 150; owner = 77 }
+        let answer = match account with
+          | { balance = b; owner = o } when b < 0 -> 99992
+          | { balance = b; owner = o } when o = 77 -> if b = 150 then 99991 else 99992
+          | _ -> 99992
+        """,
+    ],
+)
+def test_nominal_records_updates_and_patterns_have_matching_lean_semantics(tmp_path, source):
+    session = Session()
+    session.load(source)
+    assert session.value("answer") == 99991
+    result = run("eval", session_certificate(session), tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "99991" in result.stdout and "99992" not in result.stdout
+
+
+@pytest.mark.parametrize("mutation", ["unknown", "duplicate", "missing", "value_type", "nominal"])
+def test_record_certificate_mutations_are_rejected(tmp_path, mutation):
+    session = Session()
+    session.load(
+        "module A = struct type t = { x : int; y : bool } end\n"
+        "module B = struct type t = { x : int; y : bool } end\n"
+        "let value = { A.x = 3; y = true }\n"
+    )
+    document = session_certificate(session)
+    record = document["definitions"][-1]["value"]["expr"]["record"]
+    fields = record["fields"]
+    if mutation == "unknown":
+        fields[0]["name"] = "unknown"
+    elif mutation == "duplicate":
+        fields.append(fields[0])
+    elif mutation == "missing":
+        fields.pop()
+    elif mutation == "value_type":
+        fields[0]["value"] = {"lit": {"kind": "bool", "value": False}}
+    else:
+        record["type"] = "B.t"
+    result = run("check", document, tmp_path)
+    assert result.returncode in (1, 3), result.stderr

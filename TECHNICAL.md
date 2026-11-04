@@ -761,6 +761,19 @@ explicite des six exemples : un accepté, cinq hors fragment. Le pont est
 opérationnel, mais HYP-027 reste ouvert pour la couverture totale, dépendant
 des extensions formelles. Guide : [certification.md](docs/verification/certification.md).
 
+HYP-021 : les records sont des données nominales à constructeur unique,
+portant un produit terminé par unit (`Core/Records.lean`). Construction,
+projection et mise à jour héritent des preuves du noyau ; les théorèmes
+de sûreté portent sur les opérations appliquées, pas seulement leurs lambdas.
+Le décodeur préserve l'ordre d'évaluation source (base évaluée une fois),
+les champs non modifiés et les emplacements des variables des motifs partiels,
+même permutés ou sous une garde. Champs inconnus, doublons, manques, mauvais
+types et confusion nominale sont refusés ; chaque définition émise est comparée
+à son annotation, même si elle n'est jamais utilisée. L'exemple deposit prouve
+150 et le propriétaire inchangé, encodé en points de code : les strings
+natives restent hors fragment. Audit : seulement propext et Quot.sound,
+comme avant. Aucune preuve complète de raffinement du décodeur/Python revendiquée.
+
 ## Problem IR déclarative (HYP-051)
 
 `ir/problem.py` conserve les variables bornées/discrètes, contraintes linéaires et

@@ -41,6 +41,9 @@ la manière dont on peut en établir la validité.
 | P18 | `Effects.dispatch_permitted`, `no_dispatch_without_permission` | aucun dispatch dans le modèle sans permission hôte accordée à la commande | §16.4 ; modèle HYP-065 |
 | P19 | `Effects.non_idempotent_at_most_once`, `attempts_bounded` | au plus un handoff local non idempotent ; toutes les tentatives sont bornées par la politique positive, pertes et doublons d'entrée compris | §9.7, §19 ; modèle HYP-066 à journal conservé |
 | P20 | `Effects.terminal_absorbing` | les états terminaux n'ont pas de transition sortante | §9.7 ; automate HYP-066 |
+| P21 | `Records.make_typed`, `get_typed`, `update_typed`, `update_checked` | construction, accès et mise à jour de records nominaux sont des formes dérivées typées, acceptées par le vérificateur prouvé | §4.1 ; HYP-021 |
+| P22 | `Records.get_never_stuck`, `update_never_stuck` | appliqués à un record clos bien typé et à une nouvelle valeur du type du champ, accès et mise à jour ne se bloquent jamais, quel que soit le budget | §4.1 ; HYP-021 |
+| P23 | `Records.Examples.program_typed`, `program_never_stuck`, `deposit_balance`, `deposit_owner` | deposit calcule 150 et conserve le propriétaire (encodé en points de code, pas en string natif) | exemple tour ; HYP-021 |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -62,9 +65,11 @@ sur cette couverture totale. Voir [certification.md](certification.md).
 - constructeurs et **filtrage** (`case` en chaîne binaire, `fail`), motifs joker, variable,
   littéral, paire, constructeur ;
 - primitives entières.
+- records nominaux comme données à constructeur unique : construction, accès,
+  mise à jour et motifs partiels ; mêmes P1–P7, sans changer le noyau.
 
 Ne sont **pas encore** couverts : réels/flottants, chaînes et leurs primitives,
-records (F1b), motifs alternatifs et alias, exhaustivité
+motifs alternatifs et alias, exhaustivité
 (F1c) et polymorphisme (F2).
 
 **Frontière JSON (HYP-042, ADR 0010).** La primitive Python `core.to_json`, les conversions
@@ -83,7 +88,7 @@ dédiées restent HYP-043.
 | Exigence | Propriété | Statut |
 |---|---|---|
 | fonctions pures, immutabilité | déterminisme ; l'évaluation ne dépend que de l'environnement | ✅ P8 |
-| typage avant exécution | sûreté du typage | ✅ P1 (fragment) · 🎯 F1–F2 (variants, records, `match`, polymorphisme) |
+| typage avant exécution | sûreté du typage | ✅ P1, P21–P23 (variants, records, `match`) · 🎯 F2 (polymorphisme explicite) |
 | types algébriques, filtrage | sûreté étendue aux variants et au filtrage | ✅ P1, P14, P15 |
 | | **exhaustivité** : un `match` exhaustif bien typé ne lève jamais `Match_failure` | 🎯 F1c |
 | inférence Hindley-Milner | *correction* de l'inférence : obtenue **sans prouver l'inférence Python**, par vérification de son résultat (certificat) | 🎯 F3 |

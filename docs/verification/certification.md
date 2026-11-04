@@ -37,18 +37,19 @@ tous les fichiers de `demo/examples`. Le tableau ci-dessous est une mesure,
 |---|---|---|
 | basics/certifiable.hyp | 0 | accepté |
 | basics/tour.hyp | 2 | type string |
-| knowledge/plaque.hyp | 2 | record Knowledge.t |
+| knowledge/plaque.hyp | 2 | type string |
 | knowledge/regles.hyp | 2 | type float |
 | mechanics/units.hyp | 2 | type float |
 | mechanics/plate.hyp, après units.hyp | 2 | type float |
 
 Une assertion vérifie que chaque nouveau fichier d'exemple possède un cas
 de couverture explicite. Les obstacles ci-dessus sont les premiers rencontrés,
-pas nécessairement les seuls (records, motifs alternatifs, primitives et
+pas nécessairement les seuls (motifs alternatifs, primitives et
 polymorphisme peuvent ensuite nécessiter des extensions).
 
 La certification de **tous** les exemples n'est donc pas terminée.
-HYP-021 traite les records ; HYP-150 traite les littéraux réels/chaînes
+HYP-021 couvre désormais les records nominaux, accès, mises à jour et motifs
+partiels (y compris les gardes et les champs permutés). HYP-150 traite les littéraux réels/chaînes
 et leurs primitives. Le pont HYP-027 est utilisable, mais son périmètre
 global reste ouvert tant que ces formes ne sont pas couvertes sans affaiblir
 le checker ni ses théorèmes.

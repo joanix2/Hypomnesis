@@ -1,6 +1,7 @@
 import Lean.Data.Json
 import Hypomnesis.Core.Check
 import Hypomnesis.Core.Eval
+import Hypomnesis.Core.Records
 
 /-!
 # Décodage des certificats (HYP-026)
@@ -61,6 +62,7 @@ structure Decl where
   kind : String
   /-- Gabarit de l'argument de chaque constructeur (paramètres nommés `$i`). -/
   ctors : Array (Option CTy)
+  fields : Array (String × CTy) := #[]
 
 structure Def where
   kind : String
@@ -80,6 +82,7 @@ structure St where
   defs : Array Def := #[]
   sig : Array (List Ty) := #[]
   instKeys : Array String := #[]
+  records : List (Nat × List (String × Ty)) := []
   collecting : Bool := true
   requests : Array Inst := #[]
   /-- Globales émises, dans l'ordre : clé d'instance et type. -/
@@ -157,10 +160,16 @@ mutual
     let st ← get
     if let some i := st.instKeys.findIdx? (· == key) then return i
     let some decl := st.decls.lookup name | malformed s!"type inconnu {name}"
-    if decl.kind == "record" then unsupported s!"record {name}"
     let i := st.sig.size
     set { st with sig := st.sig.push [], instKeys := st.instKeys.push key }
     let σ := (List.range args.length).zip args |>.map fun (k, a) => (s!"${k}", a)
+    if decl.kind == "record" then
+      let fields ← decl.fields.toList.mapM fun (name, t) => do
+        return (name, ← toTy (t.subst σ))
+      modify fun st => { st with
+        sig := st.sig.set! i [Records.payloadTy (fields.map (·.2))]
+        records := (i, fields) :: st.records }
+      return i
     let ctorTys ← decl.ctors.toList.mapM fun
       | none => pure Ty.unit
       | some t => toTy (t.subst σ)
@@ -230,8 +239,18 @@ def tupleOf {α} (pair : α → α → α) (unit : α) : List α → α
   | [x] => x
   | x :: rest => pair x (tupleOf pair unit rest)
 
+def recordFields (d : Nat) : M (List (String × Ty)) := do
+  let some fields := (← get).records.lookup d | malformed "type record attendu"
+  return fields
+
+def namedFields (items : List Json) : M (List (String × Json)) := do
+  let result ← items.mapM fun item => do return (← str (← field item "name"), item)
+  let names := result.map (·.1)
+  unless names.length == names.eraseDups.length do malformed "champs dupliqués"
+  return result
+
 /-- Motif ; rend aussi les emplacements dans l'ordre d'occurrence. -/
-partial def decPat (j : Json) : M (Pat × List Nat) := do
+partial def decPat (j : Json) (expected : Ty := .unit) : M (Pat × List Nat) := do
   if (opt j "wild").isSome then return (.wild, [])
   if let some k := opt j "bind" then return (.var, [← nat k])
   if let some l := opt j "lit" then
@@ -244,15 +263,41 @@ partial def decPat (j : Json) : M (Pat × List Nat) := do
     let index ← nat (← field c "index")
     let arg ← field c "arg"
     if isNull arg then return (.ctor index .wild, [])
-    let (p, slots) ← decPat arg
+    let signature := (← get).sig
+    let childTy := match expected with
+      | .data d => ((signature[d]?).bind (·[index]?)).getD .unit
+      | _ => .unit
+    let (p, slots) ← decPat arg childTy
     return (.ctor index p, slots)
   if let some items := opt j "tuple" then
-    let parts ← (← arr items).mapM decPat
+    let mut restTy := expected
+    let entries ← arr items
+    let mut parts := []
+    for (item, i) in entries.zipIdx do
+      let (childTy, tailTy) := if i + 1 == entries.length then (restTy, Ty.unit) else
+        match restTy with | .prod a b => (a, b) | _ => (Ty.unit, Ty.unit)
+      parts := parts ++ [← decPat item childTy]
+      restTy := tailTy
     let pat := tupleOf Pat.pair .wild (parts.map (·.1))
     return (pat, (parts.map (·.2)).flatten)
   if (opt j "or").isSome then unsupported "motif alternatif (p | q)"
   if (opt j "alias").isSome then unsupported "motif alias (p as x)"
-  if (opt j "record").isSome then unsupported "motif record"
+  if let some items := opt j "record" then
+    let supplied ← namedFields (← arr items)
+    if (← get).collecting then
+      let parts ← supplied.mapM fun (_, item) => do decPat (← field item "pattern")
+      return (.ctor 0 (parts.foldr (fun p rest => .pair p.1 rest) .wild),
+        (parts.map (·.2)).flatten)
+    let .data d := expected | malformed "motif record sur un type non record"
+    let fields ← recordFields d
+    unless supplied.all (fun (n, _) => fields.any (fun f => f.1 == n)) do
+      malformed "champ inconnu dans un motif record"
+    let parts ← fields.mapM fun (name, t) => do
+      match supplied.lookup name with
+      | none => pure (Pat.wild, [])
+      | some item => do decPat (← field item "pattern") t
+    return (.ctor 0 (parts.foldr (fun p rest => .pair p.1 rest) .wild),
+      (parts.map (·.2)).flatten)
   malformed "motif invalide"
 
 /-- Paramètres d'une fonction : types et corps. -/
@@ -304,9 +349,58 @@ mutual
       let arg ← field c "arg"
       let argE ← if isNull arg then pure Expr.unit else dec sc arg
       return .construct d (← nat (← field c "index")) argE
-    if (opt j "record").isSome || (opt j "update").isSome || (opt j "field").isSome then
-      unsupported "records"
+    if let some record := opt j "record" then
+      let d ← dataIndex (← str (← field record "type")) (← parseArgs sc (← field record "type_args"))
+      return ← decRecord sc d none (← arr (← field record "fields"))
+    if let some update := opt j "update" then
+      let base ← dec sc (← field update "base")
+      let fields ← arr (← field update "fields")
+      if (← get).collecting then
+        for item in fields do discard <| dec sc (← field item "value")
+        return .unit
+      let .data d ← checkType sc base "base d'une mise à jour" | malformed "record attendu"
+      return ← decRecord sc d (some base) fields
+    if let some access := opt j "field" then
+      let base ← dec sc (← field access "expr")
+      if (← get).collecting then return .unit
+      let .data d ← checkType sc base "accès à un champ" | malformed "record attendu"
+      let fields ← recordFields d
+      let name ← str (← field access "name")
+      let some i := fields.findIdx? (fun f => f.1 == name) | malformed s!"champ inconnu {name}"
+      return .app (Records.get d i fields[i]!.2) base
     malformed "expression invalide"
+
+  partial def decRecord (sc : Scope) (d : Nat) (base : Option Expr)
+      (items : List Json) : M Expr := do
+    let fields ← recordFields d
+    let supplied ← namedFields items
+    unless supplied.all (fun (n, _) => fields.any (fun f => f.1 == n)) do
+      malformed "champ record inconnu"
+    if base.isNone && supplied.length != fields.length then malformed "champs record manquants"
+    let mut inner := sc
+    let mut chain : Array Expr := #[]
+    let baseLevel := sc.depth
+    if let some e := base then
+      chain := chain.push e
+      inner := inner.push (.data d) (visible := false)
+    let mut levels : List (String × Nat) := []
+    for (name, item) in supplied do
+      let some t := fields.lookup name | malformed s!"champ inconnu {name}"
+      chain := chain.push (← dec inner (← field item "value"))
+      levels := (name, inner.depth) :: levels
+      inner := inner.push t (visible := false)
+    if base.isSome then
+      inner := inner.push (Records.payloadTy (fields.map (·.2))) (visible := false)
+    let values := fields.zipIdx |>.map fun ((name, _), i) =>
+      match levels.lookup name with
+      | some level => inner.var level
+      | none => Records.project i (.var 0)
+    let rebuilt := Expr.construct d 0 (Records.payload values)
+    let body := if base.isSome then
+      Expr.case (({inner with depth := inner.depth - 1} : Scope).var baseLevel)
+        (.ctor 0 .var) rebuilt (.fail (.data d))
+      else rebuilt
+    return chain.foldr Expr.letE body
 
   partial def decLams (sc : Scope) (tys : List Ty) (body : Json) : M Expr := do
     match tys with
@@ -333,28 +427,32 @@ mutual
     let some first := cases.head? | malformed "match sans cas"
     -- Type du résultat : celui du corps du premier cas (pour le `fail` final).
     let resultT ← do
-      let (pat, slots) ← decPat (← field first "pattern")
+      let (pat, slots) ← decPat (← field first "pattern") tx
       let bodyScope ← caseScope inner tx pat slots
       checkType bodyScope (← dec bodyScope (← field first "body")) "corps d'un cas"
     return .letE scrut (← decCases inner (sc.depth) tx resultT cases)
 
   /-- Portée d'un cas : les variables du motif, emplacement 0 le plus ancien. -/
   partial def caseScope (sc : Scope) (tx : Ty) (pat : Pat) (slots : List Nat) : M Scope := do
-    unless slots == List.range slots.length do
-      unsupported "variables de motif dans un ordre non canonique"
+    unless slots.mergeSort (· ≤ ·) == List.range slots.length do
+      malformed "emplacements de variables de motif invalides"
     let bs ← if (← get).collecting then pure (slots.map fun _ => Ty.unit) else
       match patTypeOf (← get).sig.toList pat tx with
       | some bs => pure bs
       | none => throw (.illTyped "motif incompatible avec le filtré")
-    -- bs : la plus récente d'abord ; on empile de la plus ancienne à la plus récente.
-    return bs.reverse.foldl (fun s t => s.push t) sc
+    let pushed := bs.reverse.foldl (fun s t => s.push t (visible := false)) sc
+    let mut levels := []
+    for slot in List.range slots.length do
+      let some position := slots.findIdx? (· == slot) | malformed "emplacement de motif absent"
+      levels := (sc.depth + position) :: levels
+    return {pushed with levels := levels ++ sc.levels}
 
   partial def decCases (sc : Scope) (scrutLevel : Nat) (tx resultT : Ty)
       (cases : List Json) : M Expr := do
     match cases with
     | [] => return .fail resultT
     | c :: rest =>
-      let (pat, slots) ← decPat (← field c "pattern")
+      let (pat, slots) ← decPat (← field c "pattern") tx
       let bodyScope ← caseScope sc tx pat slots
       let body ← dec bodyScope (← field c "body")
       let onFail ← decCases sc scrutLevel tx resultT rest
@@ -363,7 +461,7 @@ mutual
         let g ← dec bodyScope guard
         -- La suite, dupliquée sous les variables du motif (invisibles pour le certificat).
         let hidden : Scope := { bodyScope with levels := sc.levels }
-        return .ite g body (← decCases hidden scrutLevel tx resultT rest)
+        pure (.ite g body (← decCases hidden scrutLevel tx resultT rest))
       return .case (sc.var scrutLevel) pat onMatch onFail
 end
 
@@ -454,7 +552,10 @@ def check (cert : Json) : Except Err Report := do
         let template ← if isNull a then pure none else some <$> parseTy a
         return (← nat (← field c "index"), template)
       let ordered := (ctors.toArray.qsort (·.1 < ·.1)).map (·.2)
-      let decl : Decl := ⟨← str (← field t "kind"), ordered⟩
+      let fields ← namedFields (← arr (← field t "fields"))
+      let recordTypes ← fields.mapM fun (name, item) => do
+        return (name, ← parseTy (← field item "type"))
+      let decl : Decl := ⟨← str (← field t "kind"), ordered, recordTypes.toArray⟩
       let name ← str (← field t "name")
       modify fun st => { st with decls := (name, decl) :: st.decls }
     let defs ← (← arr (← field cert "definitions")).mapM parseDef
@@ -485,6 +586,8 @@ def check (cert : Json) : Except Err Report := do
     let mut chain : Array Expr := #[]
     for inst in insts do
       let (e, t) ← decodeDef ((← get).defs[inst.defIdx]!) inst.args
+      unless (← checkType {} e "définition mal typée") == t do
+        throw (.illTyped "annotation de définition incompatible avec son expression")
       chain := chain.push e
       modify fun st => { st with emitted := st.emitted.push (inst.key, t) }
     let st ← get

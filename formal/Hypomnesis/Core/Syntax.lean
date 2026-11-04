@@ -26,6 +26,13 @@ Un constructeur nullaire prend `unit`. Exemple, `int list` à l'indice `d` :
 paramétrés est faite par le décodeur des certificats, en dehors du noyau
 prouvé.
 
+Records nominaux (HYP-021). Une instance est une donnée à constructeur unique,
+dont l'argument est le produit des champs terminé par unit. `Records.lean`
+définit construction, accès et mise à jour comme formes dérivées typées :
+elles héritent de la sûreté et de la correction/complétude du vérificateur.
+Le décodeur traduit les motifs records en motifs de constructeur et de produit,
+en préservant les variables de l'ordre source.
+
 Annotations (HYP-024). Les types portés ici par la syntaxe viennent des
 annotations que le vérificateur Python ajoute à sa Core IR : `lam dom` ↔
 `Lambda.param_types`, `fix dom cod` ↔ `LetRec.types` / `DefRec.types`. Les
