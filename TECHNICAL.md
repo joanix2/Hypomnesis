@@ -729,6 +729,12 @@ métadonnées d'extensions fournies par l'hôte, signatures et permissions
 requises, sans importer leurs backends. Tests d'exhaustivité des valeurs
 publiques de Mechanics et budget mesuré <= 16 Kio UTF-8.
 
+HYP-081 : `translation.check` utilise `load_language(execute=False)` et
+`Session.check`, sans évaluer M2/M1 ; simulation uniquement sur callback
+explicite. `max_repairs` entier naturel strict (pas bool), diagnostics
+conservés pour toutes les tentatives. Fixture MVP et refus de Python
+testés sans réseau.
+
 ## Certification CLI (HYP-027)
 
 HYP-027 : `check --certify` appelle le checker Lean avec découverte explicite

@@ -160,3 +160,55 @@ def test_simulation_failure_is_fed_back_to_the_model():
     assert result.attempts[0].stage == "runtime error" and result.compiled
     assert "échoue à l'exécution" in llm.calls[1][-1]["content"]
     assert "boom" in llm.calls[1][-1]["content"]
+
+
+def test_recorded_mvp_response_is_checked_without_running_it(monkeypatch):
+    from hypomnesis.language.parser import parse_program
+    from hypomnesis.session import Session, prelude_source
+
+    program = (ROOT / "demo/programs/mecanique/plaque_120x80.hyp").read_text()
+    language = load_language(MECANIQUE, execute=False)
+
+    original = Session.load_program
+    trusted_prelude = parse_program(prelude_source())
+
+    def forbidden(self, candidate):
+        assert candidate == trusted_prelude, "M2 or candidate evaluated during compilation"
+        return original(self, candidate)
+
+    monkeypatch.setattr(Session, "load_program", forbidden)
+    result = translate(
+        FakeLLM(program),
+        "fixture",
+        language,
+        "Crée une plaque de 120 × 80 mm, estime son épaisseur, vérifie sa validité "
+        "et exporte sa géométrie.",
+        examples=[],
+        max_repairs=0,
+    )
+    assert result.compiled and result.accepted
+    assert "epaisseur = None" in result.program
+
+
+def test_runtime_failure_is_not_executed_by_the_compiler():
+    from hypomnesis_codegen.translation import check
+
+    assert check(MECANIQUE, "let _ = 1 / 0\nlet procedure = Effect.return 0") == ("", "")
+
+
+def test_python_is_not_an_accepted_program(tmp_path):
+    target = tmp_path / "must_not_exist"
+    code = f"import pathlib\npathlib.Path({str(target)!r}).touch()\n"
+    result = translate(
+        FakeLLM(code), "fixture", load_language(MECANIQUE), "plaque", examples=[], max_repairs=0
+    )
+    assert not result.accepted and result.attempts[0].stage == "syntax error"
+    assert not target.exists()
+
+
+@pytest.mark.parametrize("budget", [-1, True, 1.5, "2"])
+def test_invalid_repair_budget_is_rejected_before_a_model_call(budget):
+    client = FakeLLM(GOOD)
+    with pytest.raises(ValueError, match="max_repairs"):
+        translate(client, "m", load_language(MECANIQUE), "x", examples=[], max_repairs=budget)
+    assert not client.calls

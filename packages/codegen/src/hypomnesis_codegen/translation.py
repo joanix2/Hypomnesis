@@ -122,11 +122,11 @@ def shots(language: Language, request: str, strategy: Strategy) -> list[dict[str
 
 
 def check(language_root: Path, program: str) -> tuple[str, str]:
-    """Charge le programme dans une session neuve du langage : ("", "") s'il est accepté."""
-    language = load_language(language_root)
+    """Vérifie statiquement dans une session neuve : aucun candidat n'est évalué."""
+    language = load_language(language_root, execute=False)
     entry = language.procedure["entry"]
     try:
-        language.load_program(program)
+        language.session.check(program)
         if not language.session.type_of(entry).endswith("Effect.t"):
             return "type error", f"`{entry}` doit être une procédure (type … Effect.t)"
     except HypomnesisError as exc:
@@ -174,6 +174,8 @@ def translate(
     strategy: Strategy = DEFAULT,
     temperature: float = 0.0,
 ) -> Translation:
+    if type(max_repairs) is not int or max_repairs < 0:
+        raise ValueError("max_repairs must be a non-negative integer")
     messages = [
         {"role": "system", "content": system_prompt(language, examples, strategy)},
         *shots(language, request, strategy),

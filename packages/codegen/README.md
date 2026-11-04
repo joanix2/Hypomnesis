@@ -44,6 +44,19 @@ accordées par cette publication. Le catalogue mécanique est testé sous
 16 Kio UTF-8 ; ce budget explicite est une mesure de texte, pas une promesse
 sur le tokenizer d'un modèle donné.
 
+`translation.translate(client, model, language, request, examples=[],
+max_repairs=2)` effectue au plus trois appels. Le client injecté implémente
+`ChatClient` ; le client réseau optionnel existant est Ollama. Les erreurs
+du compilateur alimentent les réparations. Un budget négatif, booléen ou
+non entier est refusé avant tout appel. Un échec final conserve chaque
+tentative et son diagnostic, sans renvoyer un programme accepté par défaut.
+
+La vérification charge M2/M1 **statiquement**, sans évaluer le candidat :
+être bien typé ne signifie ni terminer, ni être valide, ni être autorisé.
+Une simulation supplémentaire n'a lieu qu'avec le callback `simulate`
+explicitement fourni par l'hôte. Les tests emploient des réponses figées
+(`model="fixture"`), pas un service ou modèle prétendument réel.
+
 Les résultats vont par défaut dans `demo/sortie/benchmark-llm/`, ignoré dans Git.
 `benchmark.json`, les sources M2 et les exemples M1 restent des données des langages,
 pas du code du moteur ni du paquet Codegen.
