@@ -2,7 +2,7 @@
 title: "TODO HYP-041 · Registre de capacités et manifestes"
 lane: todo
 created: 2026-11-04T15:40:00+01:00
-updated: 2026-11-04T15:40:00+01:00
+updated: 2026-11-04T15:50:39+01:00
 description: "Checklist HYP-041 : registre statique, dépendances et CLI"
 ---
 
@@ -18,6 +18,6 @@ description: "Checklist HYP-041 : registre statique, dépendances et CLI"
 - [x] Tester les manifestes invalides, versions multiples, contraintes, résolution transitive,
       conflits, cycles et inspection sans exécution de Python.
 - [x] Documenter l'API et les commandes dans `TECHNICAL.md` et la documentation pertinente.
-- [ ] Lancer les validations ciblées, puis `rapide` et `complet` ; actualiser le graphe si disponible.
-- [ ] Consigner le bilan, les limites et les résultats dans la tâche ; laisser la décision
+- [x] Lancer les validations ciblées, puis `rapide` et `complet` ; actualiser le graphe si disponible.
+- [x] Consigner le bilan, les limites et les résultats dans la tâche ; laisser la décision
       de passage en `done` à l'utilisateur.

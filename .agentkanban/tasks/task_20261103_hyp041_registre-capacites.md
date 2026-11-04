@@ -1,8 +1,8 @@
 ---
 title: "HYP-041 · Registre de capacités et manifestes"
-lane: doing
+lane: qa
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-04T15:50:00+01:00
+updated: 2026-11-04T15:50:39+01:00
 description: "P0 · M · Phase 3 — Extensions et contrats · dépend de HYP-040"
 ---
 
@@ -90,5 +90,79 @@ supplémentaire de solution acyclique. Le garde-fou de résolution est de 10 000
 
 Contrairement au constat initial, `graphify update .` est disponible et a reconstruit le graphe
 local avec succès. Aucun paquet Graphify n'a été installé.
+
+### user
+
+### agent
+
+2026-11-04 — **HYP-041 implémentée et vérifiée ; contrôle utilisateur attendu en `qa`.**
+
+Livraison :
+
+- `src/hypomnesis/engine/registry.py` : `ExtensionRegistry`, API `add`, `add_many`, `load`,
+  `load_paths`, `ids`, `versions`, `list`, `show`, `resolve`. Validation par
+  `SchemaRegistry`/`MANIFEST_ID`, index par id/rôle/version, lots atomiques, doublons
+  contradictoires refusés, copies profondes à l'entrée et à la sortie.
+- Résolution transitive SemVer : une version cohérente par id, backtracking et ordre
+  dépendances avant dépendants ; erreurs distinctes pour manifeste invalide, doublon,
+  absence, conflit de versions et cycle.
+- `src/hypomnesis/cli.py` : `plugins list --manifest CHEMIN [--manifest CHEMIN …] [--role ROLE]`
+  et `plugins show ID --manifest CHEMIN [--version VERSION]`. JSON indenté ; chemins explicites
+  seulement ; dossiers non récursifs ; aucune résolution imposée à l'inspection.
+- `pyproject.toml` : seules nouvelles dépendances, `semantic-version>=2.10,<3` et
+  `resolvelib>=1.2,<2` (NetworkX réutilisé).
+- `src/hypomnesis/contracts/schemas/extension-manifest-1.0.0.json` : SemVer 2.0.0 complet,
+  y compris préversions arbitraires et métadonnées `+build`, sans règle PEP 440.
+- `tests/unit/test_extension_registry.py`, `tests/unit/conftest.py`,
+  `tests/unit/test_cli_contract.py`, `tests/contracts/test_contracts.py` : 55 nouveaux tests.
+  Backend piégé importable qui créerait un fichier puis lèverait : API et CLI vérifient
+  qu'aucun import ni effet n'a lieu. Couverture des mutations, invalides, lots atomiques,
+  neuf rôles, versions multiples, backtracking, dépendances transitives et absentes,
+  conflits, cycles, erreurs d'usage et sorties JSON.
+- `TECHNICAL.md`, `README.md` : API, exemples, contraintes, erreurs et limites documentés.
+  Tâche et checklist actualisées sans réécriture des anciens messages.
+
+Vérifications (avec `PATH="$PWD/.venv/bin:$HOME/.elan/bin:$PATH"`) :
+
+- `pytest tests/unit/test_cli_contract.py tests/unit/test_extension_registry.py tests/contracts/test_contracts.py`
+  : **85 tests passent**.
+- `ruff check .`, `ruff format --check .`, `pyright` : verts, aucune erreur de typage.
+- `./scripts/validate.sh` : vert, **555 tests** (baseline : 500).
+- `./scripts/validate.sh complet` : vert, tous les hooks pre-commit, schémas, workflows,
+  tests, compilation Lean, audit des axiomes et vérificateur de certificats.
+- Diff relu après pre-commit : aucune correction automatique supplémentaire ;
+  `git diff --check` vert.
+- `graphify update .`, puis `./scripts/validate.sh graphe` : verts ; graphe local reconstruit
+  et enrichi du Kanban, fichiers générés ignorés par Git. Aucune installation Graphify.
+
+Commits locaux :
+
+- `2c4767a` — HYP-041 : ajouter le registre statique et la résolution SemVer
+  (validation rapide verte : 542 tests).
+- `cc3d584` — HYP-041 : exposer l'inspection statique des extensions dans la CLI
+  (rapide et complet verts : 555 tests).
+- Le présent bilan est conservé dans le commit « HYP-041 : consigner la validation et préparer
+  la vérification utilisateur ». Aucun push ni fusion.
+
+Écarts et limites : correction ciblée du champ SemVer du manifeste, explicitée ci-dessus.
+Les cycles du graphe sélectionné sont refusés après résolution, sans rechercher une autre
+sélection acyclique ; limite de 10 000 tours du résolveur. Dossiers inspectés sans récursion ;
+aucune découverte de paquets, lecture distante de schémas ou vérification du code backend.
+Le chargement et la conformité aux protocoles restent dans HYP-044.
+Ni Core IR, ni runtime, ni formalisation, ni tickets LLM, ni `scripts/validate.sh`, ni
+`CONTRIBUTING.md` modifiés. Aucun blocage restant pour HYP-041 ; vérification humaine à faire.
+
+### user
+
+### agent
+
+Complément de vérification finale : après les premiers rafraîchissements Graphify réussis,
+une nouvelle exécution de `./scripts/validate.sh graphe` a été refusée par le garde-fou de
+Graphify : nœud sémantique `kanban_path_src_hypomnesis_engine_registry_py` absent du graphe
+reconstruit. Le graphe précédent a été préservé ; la réinjection du Kanban seule a réussi.
+Le défaut d'outillage est consigné dans **HYP-144**, sans correction hors périmètre et sans
+contournement du garde-fou. Il n'affecte pas les validations rapide/complet ni HYP-041.
+La liste de fichiers comprend donc aussi la fiche
+`.agentkanban/tasks/task_20261104_hyp144_graphify-rafraichissement-kanban.md`.
 
 ### user
