@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T15:40:00+01:00
 updated: 2026-11-04T15:50:39+01:00
 description: "Checklist HYP-041 : registre statique, dépendances et CLI"
+priority: P0
+tags: [capacites, contrats, moteur-symbolique, python]
 ---
 
 # Iteration 1

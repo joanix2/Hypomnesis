@@ -22,7 +22,7 @@ from hypomnesis.language.errors import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-MECANIQUE = ROOT / "languages" / "mecanique"
+MECANIQUE = ROOT / "demo" / "languages" / "mecanique"
 
 UNKNOWN_FIELD = """let demande = {
   Plaque.nom = "p";
@@ -107,7 +107,7 @@ def test_valid_program_gives_an_empty_document(tmp_path, capsys):
 
 
 def test_valid_program_in_a_language_context(capsys):
-    program = ROOT / "programs" / "mecanique" / "plaque_120x80.hyp"
+    program = ROOT / "demo" / "programs" / "mecanique" / "plaque_120x80.hyp"
     argv = ["check", "--format", "json", "--langage", str(MECANIQUE), str(program)]
     status, document = run_json(argv, capsys)
     assert (status, document["diagnostics"]) == (0, [])

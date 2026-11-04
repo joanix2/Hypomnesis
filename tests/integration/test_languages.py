@@ -14,11 +14,11 @@ from hypomnesis.epistemics.provenance import Support
 from hypomnesis.language.errors import EvaluationError, TypeCheckError
 
 ROOT = Path(__file__).resolve().parents[2]
-MECANIQUE = ROOT / "languages" / "mecanique"
-VENTILATION = ROOT / "languages" / "ventilation"
-PLAQUE = (ROOT / "programs" / "mecanique" / "plaque_120x80.hyp").read_text()
-MESUREE = (ROOT / "programs" / "mecanique" / "plaque_mesuree.hyp").read_text()
-SALLE = (ROOT / "programs" / "ventilation" / "salle_serveurs.hyp").read_text()
+MECANIQUE = ROOT / "demo" / "languages" / "mecanique"
+VENTILATION = ROOT / "demo" / "languages" / "ventilation"
+PLAQUE = (ROOT / "demo" / "programs" / "mecanique" / "plaque_120x80.hyp").read_text()
+MESUREE = (ROOT / "demo" / "programs" / "mecanique" / "plaque_mesuree.hyp").read_text()
+SALLE = (ROOT / "demo" / "programs" / "ventilation" / "salle_serveurs.hyp").read_text()
 
 
 def plaque(tmp_path, program=PLAQUE, **kwargs):
@@ -164,32 +164,34 @@ def test_runaway_procedure_is_stopped_by_the_step_budget(tmp_path):
 # ------------------------------------------------------------ ventilation (M2)
 
 
-def salle(program=SALLE, **env):
-    return run_procedure(load_language(VENTILATION), program, mode="production", environment=env)
+def salle(tmp_path, program=SALLE, **env):
+    return run_procedure(
+        load_language(VENTILATION), program, mode="production", environment=env, out_dir=tmp_path
+    )
 
 
-def test_working_fan_confirms_the_effect():
-    report = salle()
+def test_working_fan_confirms_the_effect(tmp_path):
+    report = salle(tmp_path)
     assert report.result == "aucune action nécessaire"
     assert report.kb.support("effet_confirme.1") is Support.OBSERVED
     assert report.kb.support("effet_attendu.1") is Support.HYPOTHESIS
 
 
-def test_broken_fan_refutes_the_hypothesis():
-    report = salle(panne="1")
+def test_broken_fan_refutes_the_hypothesis(tmp_path):
+    report = salle(tmp_path, panne="1")
     kb = report.kb
     assert "hypothese" not in kb.facts and "effet_attendu.1" not in kb.facts
     assert kb.support("hypothese.refutee") is Support.OBSERVED
 
 
-def test_regulation_loop_is_bounded_by_the_program():
-    report = salle(SALLE.replace("budget = 5", "budget = 1"), temperature="60")
+def test_regulation_loop_is_bounded_by_the_program(tmp_path):
+    report = salle(tmp_path, SALLE.replace("budget = 5", "budget = 1"), temperature="60")
     assert len(report.commands) == 1 and report.result == "budget épuisé"
 
 
-def test_sensor_message_outside_its_contract_is_rejected():
+def test_sensor_message_outside_its_contract_is_rejected(tmp_path):
     with pytest.raises(ContractError):
-        salle(temperature="999")
+        salle(tmp_path, temperature="999")
 
 
 # ---------------------------------------------------------------- CLI et manifestes
@@ -202,7 +204,7 @@ def test_cli_from_natural_language(tmp_path, capsys):
 
 
 def test_cli_procedure(capsys, tmp_path):
-    args = ["lancer", str(VENTILATION), str(ROOT / "programs/ventilation/salle_serveurs.hyp")]
+    args = ["lancer", str(VENTILATION), str(ROOT / "demo/programs/ventilation/salle_serveurs.hyp")]
     assert main([*args, "--env", "panne=1", "--sortie", str(tmp_path)]) == 0
     assert "hypothèse réfutée" in capsys.readouterr().out
 

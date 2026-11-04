@@ -15,3 +15,4 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0008](0008-niveaux-m3-m2-m1-m0.md) | Séparation stricte des niveaux M3, M2, M1, M0 | Acceptée |
 | [0009](0009-langage-auto-documente-et-prompt-compile.md) | Langage M2 auto-documenté et prompt LLM compilé | Proposée |
 | [0010](0010-types-et-json-reversible.md) | Types statiques, JSON Schema et encodage réversible | Acceptée |
+| [0011](0011-demonstrations-isolees.md) | Démonstrations isolées dans `demo/` | Acceptée |

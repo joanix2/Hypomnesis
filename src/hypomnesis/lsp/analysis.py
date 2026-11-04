@@ -22,12 +22,16 @@ def language_root(path: Path, workspace: Path, configured: str | None) -> Path |
             return parent
         if parent == workspace:
             break
-    try:
-        relative = path.relative_to(workspace / "programs")
-    except ValueError:
-        return None
-    candidate = workspace / "languages" / relative.parts[0]
-    return candidate if (candidate / MANIFEST).is_file() else None
+    for parent in path.parents:
+        if not parent.is_relative_to(workspace):
+            break
+        if parent.name == "programs":
+            relative = path.relative_to(parent)
+            if len(relative.parts) > 1:
+                candidate = parent.parent / "languages" / relative.parts[0]
+                if (candidate / MANIFEST).is_file():
+                    return candidate
+    return None
 
 
 def _position(source: str, line: int, column: int, encoding: str) -> types.Position:

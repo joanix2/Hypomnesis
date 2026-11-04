@@ -43,8 +43,8 @@ jobs:
         run: pytest
       - name: Run examples
         run: |
-          hypomnesis run examples/basics/tour.hyp
-          hypomnesis run examples/mechanics/units.hyp examples/mechanics/plate.hyp
+          hypomnesis run demo/examples/basics/tour.hyp
+          hypomnesis run demo/examples/mechanics/units.hyp demo/examples/mechanics/plate.hyp
 
   proofs:
     runs-on: ubuntu-latest
@@ -67,7 +67,7 @@ jobs:
         run: |
           lake build hypomnesis-check
           pip install -e ..
-          hypomnesis check ../examples/basics/certifiable.hyp --emit-certificate cert.json
+          hypomnesis check ../demo/examples/basics/certifiable.hyp --emit-certificate cert.json
           .lake/build/bin/hypomnesis-check check cert.json
       - name: Reject sorry
         run: "! grep -rnwE 'sorry|admit' Hypomnesis"

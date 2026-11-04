@@ -240,6 +240,49 @@ def test_injection_is_idempotent_and_preserves_graphify_content(board):
     ]
 
 
+def test_synthetic_paths_are_not_graphify_file_duplicates(board):
+    board("001", files="- `src/new.py`\n- `src/ts/`")
+    graph = _graph()
+    kanban.inject(graph, kanban.load([]))
+    paths = [n for n in graph["nodes"] if n["id"].startswith("kanban_path_")]
+    assert len(paths) == 2
+    for node in paths:
+        assert node["file_type"] == "document"
+        assert node["label"] == f"Chemin Kanban : {node['referenced_path']}"
+        assert node["_origin"] == "kanban"
+        assert node["source_file"] == kanban.ANCHOR
+
+
+def test_legacy_path_migrates_then_resolves_to_new_real_file(board):
+    board("001", files="- `src/new.py`")
+    graph = _graph()
+    graph["nodes"].append(
+        {
+            "id": "kanban_path_src_new_py",
+            "label": "src/new.py",
+            "file_type": "code",
+            "source_file": kanban.ANCHOR,
+            "_origin": "kanban",
+        }
+    )
+    tasks = kanban.load([])
+    kanban.inject(graph, tasks)
+    migrated = next(n for n in graph["nodes"] if n["id"] == "kanban_path_src_new_py")
+    assert migrated["label"] == "Chemin Kanban : src/new.py"
+    graph["nodes"].append(
+        {"id": "src_new", "label": "new.py", "source_file": "src/new.py", "_origin": "ast"}
+    )
+    for _ in range(2):
+        kanban.inject(graph, tasks)
+        assert not any(n["id"] == "kanban_path_src_new_py" for n in graph["nodes"])
+        assert any(
+            e["source"] == "kanban_hyp_001"
+            and e["target"] == "src_new"
+            and e["relation"] == "touches"
+            for e in graph["links"]
+        )
+
+
 def test_write_graph_uses_and_releases_lock(board):
     board("001")
     kanban.GRAPH_DIR.mkdir()

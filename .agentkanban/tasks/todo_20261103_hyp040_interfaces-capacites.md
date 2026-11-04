@@ -4,6 +4,8 @@ lane: doing
 created: 2026-11-04T14:30:00+01:00
 updated: 2026-11-04T14:30:00+01:00
 description: "Checklist de HYP-040"
+priority: P0
+tags: [architecture, capacites, contrats, moteur-symbolique, python]
 ---
 
 # Iteration 1

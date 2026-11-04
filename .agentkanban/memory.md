@@ -10,10 +10,10 @@ Détails d'implémentation : `TECHNICAL.md`.
 
 - **M3** `src/hypomnesis/` : moteur, métalangage, bibliothèque standard, procédures génériques.
   **Aucun domaine** (test `test_engine_contains_no_domain`).
-- **M2** `languages/<langage>/` : langage métier en Hypomnesis (règles, estimateurs, contraintes,
+- **M2** `demo/languages/<langage>/` : langage métier en Hypomnesis (règles, estimateurs, contraintes,
   commandes), contrats, adaptateurs Python vers le monde extérieur seulement, `langage.json`.
-- **M1** `programs/<langage>/` : programmes écrits dans un langage M2.
-- **M0** `sortie/` : résultats (non versionné).
+- **M1** `demo/programs/<langage>/` : programmes écrits dans un langage M2.
+- **M0** `demo/sortie/` : résultats (non versionné).
 - Les dépendances ne vont que vers le niveau supérieur. Jamais de logique métier en Python.
 
 ## Conventions
@@ -39,6 +39,11 @@ Détails d'implémentation : `TECHNICAL.md`.
   un validateur (`noqa`, `type: ignore`, test désactivé, `sorry`).
 - Les tâches portent un identifiant `HYP-NNN` dans leur titre ; priorité, taille, epic et
   dépendances sont en tête du premier message `### user` de chaque tâche.
+- Les métadonnées YAML des tickets et de leurs checklists portent aussi `priority: P0|P1|P2|P3`
+  (même priorité que dans le premier message) et `tags: [...]`. Les tags thématiques sont en
+  minuscules ASCII avec tirets : `moteur-symbolique`, `metalangage`, `epistemique`, `contrats`,
+  `lean`, `llm`, `dsl`, `outillage`, etc. Les checklists reprennent les tags et la priorité
+  de leur ticket ; les labels historiques du corps restent conservés.
 - Une tâche portant le label `humain` demande une décision de l'utilisateur.
 - **Couloirs** `todo → doing → qa → done`. L'agent met une tâche en `doing` quand il la commence
   et en `qa` quand il l'a terminée et validée (`./scripts/validate.sh complet`). Seul l'utilisateur

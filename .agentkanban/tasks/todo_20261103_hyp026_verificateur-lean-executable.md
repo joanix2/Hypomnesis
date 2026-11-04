@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T20:00:00+01:00
 updated: 2026-11-03T21:00:00+01:00
 description: "Checklist de HYP-026"
+priority: P0
+tags: [certification, lean]
 ---
 
 # Iteration 1

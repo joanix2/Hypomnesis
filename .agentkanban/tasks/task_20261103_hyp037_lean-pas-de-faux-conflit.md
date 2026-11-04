@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P2 · M · Vérification formelle (Lean) · dépend de HYP-035, HYP-036"
+priority: P2
+tags: [epistemique, lean, moteur-symbolique]
 ---
 
 ## Conversation

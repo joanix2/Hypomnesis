@@ -203,7 +203,7 @@ def _dry_run(root: Path, program: str, environment: dict) -> str:
             load_language(root),
             program,
             mode="dry-run",
-            out_dir=Path("sortie") / "benchmark-llm" / "runs",
+            out_dir=Path("demo/sortie") / "benchmark-llm" / "runs",
             environment=environment,
             max_steps=200,
         )

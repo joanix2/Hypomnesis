@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-03T18:51:02+01:00
 updated: 2026-11-03T18:56:37+01:00
 description: "P0 · L · Phase 8 — Stabilisation · dépend de HYP-002, HYP-025"
+priority: P0
+tags: [dsl, estimateurs, exemple, moteur-symbolique, mvp, python, solveurs]
 ---
 
 ## Conversation

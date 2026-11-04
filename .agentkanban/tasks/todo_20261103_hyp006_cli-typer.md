@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-04T15:00:00+01:00
 updated: 2026-11-04T14:45:00+01:00
 description: "Checklist de HYP-006"
+priority: P2
+tags: [cli, outillage, python]
 ---
 
 # Iteration 1

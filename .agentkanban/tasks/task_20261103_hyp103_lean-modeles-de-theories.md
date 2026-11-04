@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P3 · L · Vérification formelle (Lean) · dépend de HYP-046, HYP-102"
+priority: P3
+tags: [architecture, lean, metalangage, moteur-symbolique, recherche]
 ---
 
 ## Conversation

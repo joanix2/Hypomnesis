@@ -14,7 +14,7 @@ Sous-agents Claude Code définis dans `.claude/agents/`, alignés sur le workflo
 | Agent | Rôle | Écrit dans |
 |---|---|---|
 | `hyp-planner` | choisit la tâche prête suivante, planifie, produit la checklist, crée les tickets | `.agentkanban/` uniquement |
-| `hyp-implementer` | implémente une tâche Python dont la checklist existe, commits réguliers | `src/`, `tests/`, `examples/`, docs |
+| `hyp-implementer` | implémente une tâche Python dont la checklist existe, commits réguliers | `src/`, `tests/`, `demo/examples/`, docs |
 | `hyp-prover` | preuves Lean 4, sans `sorry`, axiomes audités | `formal/`, `docs/verification/` |
 | `hyp-reviewer` | vérifie une tâche contre ses critères et la définition de fini | rien (lecture seule) |
 

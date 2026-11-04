@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P3 · L · Niveau M3 (méta-métamodèle) · dépend de HYP-023, HYP-005"
+priority: P3
+tags: [architecture, lean, metalangage, recherche]
 ---
 
 ## Conversation

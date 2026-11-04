@@ -18,7 +18,7 @@ from hypomnesis.runtime.interpreter import Interpreter
 from hypomnesis.runtime.values import Function, show
 from hypomnesis.session import Session, run_deep
 
-EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
+EXAMPLES = Path(__file__).resolve().parents[2] / "demo" / "examples"
 PROGRAMS = {
     "prélude seul": [],
     "tour": [EXAMPLES / "basics" / "tour.hyp"],

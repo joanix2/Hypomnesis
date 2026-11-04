@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P3 · L · Niveau M3 (méta-métamodèle) · dépend de HYP-081, HYP-012"
+priority: P3
+tags: [architecture, compilateur, llm, metalangage, python]
 ---
 
 ## Conversation

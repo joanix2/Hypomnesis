@@ -13,8 +13,8 @@ from hypomnesis.llm.prompting import BASE
 from hypomnesis.llm.translation import extract_code, system_prompt, translate
 
 ROOT = Path(__file__).resolve().parents[2]
-MECANIQUE = ROOT / "languages" / "mecanique"
-VENTILATION = ROOT / "languages" / "ventilation"
+MECANIQUE = ROOT / "demo" / "languages" / "mecanique"
+VENTILATION = ROOT / "demo" / "languages" / "ventilation"
 GOOD = (
     'let demande = { Plaque.nom = "p"; largeur = 120.0; hauteur = 80.0; '
     "epaisseur = Some 4.0; masse_max = 0.5 }\n"

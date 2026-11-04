@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:50:18+01:00
 updated: 2026-11-03T17:50:18+01:00
 description: "P2 · L · Instances de domaines · dépend de HYP-056, HYP-052, HYP-053 · idée à planifier"
+priority: P2
+tags: [cao, dsl, idee]
 ---
 
 ## Conversation

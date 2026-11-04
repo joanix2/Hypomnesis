@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T18:47:41+01:00
 description: "P0 · M · Vérification formelle (Lean) · dépend de HYP-025, HYP-020"
+priority: P0
+tags: [certification, lean]
 ---
 
 ## Conversation

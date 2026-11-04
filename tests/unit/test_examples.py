@@ -6,7 +6,7 @@ from hypomnesis.cli import main
 from hypomnesis.language.errors import TypeCheckError
 from hypomnesis.session import Session
 
-EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
+EXAMPLES = Path(__file__).resolve().parents[2] / "demo" / "examples"
 MECHANICS = [EXAMPLES / "mechanics" / "units.hyp", EXAMPLES / "mechanics" / "plate.hyp"]
 
 

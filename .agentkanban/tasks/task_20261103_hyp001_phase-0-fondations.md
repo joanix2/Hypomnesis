@@ -4,6 +4,8 @@ lane: done
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · M · Fondations et gouvernance · dépend de aucune"
+priority: P0
+tags: [documentation, outillage, python]
 ---
 
 ## Conversation

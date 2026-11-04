@@ -11,8 +11,8 @@ from hypomnesis import __version__
 from hypomnesis.cli import main
 
 ROOT = Path(__file__).resolve().parents[2]
-VENTILATION = ROOT / "languages" / "ventilation"
-PROGRAM = ROOT / "programs" / "ventilation" / "salle_serveurs.hyp"
+VENTILATION = ROOT / "demo" / "languages" / "ventilation"
+PROGRAM = ROOT / "demo" / "programs" / "ventilation" / "salle_serveurs.hyp"
 
 
 def code(argv: list[str]) -> int:
@@ -92,6 +92,13 @@ def test_lancer_repeated_env_options(tmp_path, capsys):
     argv = ["lancer", str(VENTILATION), str(PROGRAM), "--sortie", str(tmp_path)]
     assert code([*argv, "--env", "a=1", "--env", "panne=1"]) == 0
     assert "hypothèse réfutée" in capsys.readouterr().out
+
+
+def test_lancer_default_results_stay_under_demo(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert code(["lancer", str(VENTILATION), str(PROGRAM)]) == 0
+    assert (tmp_path / "demo" / "sortie" / "rapport.json").is_file()
+    assert not (tmp_path / "sortie").exists()
 
 
 @pytest.mark.parametrize("mode", ["simulate", "dry-run", "production"])

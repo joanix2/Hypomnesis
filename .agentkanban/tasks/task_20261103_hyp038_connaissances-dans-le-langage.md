@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · M · Phase 2 — Moteur épistémique · dépend de HYP-030, HYP-033"
+priority: P1
+tags: [dsl, epistemique, metalangage, moteur-symbolique, python]
 ---
 
 ## Conversation

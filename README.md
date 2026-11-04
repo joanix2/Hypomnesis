@@ -26,20 +26,20 @@ de l'enveloppe de message et du manifeste d'extension.
 | Niveau | Dossier | Contenu |
 |---|---|---|
 | M3 | `src/hypomnesis/` | le moteur : métalangage, typage, runtime, connaissances, effets, solveurs, procédures génériques |
-| M2 | `languages/` | des langages métier écrits en Hypomnesis : `mecanique`, `ventilation` |
-| M1 | `programs/` | des programmes écrits dans ces langages |
-| M0 | `sortie/` | les résultats : rapports, fichiers exportés |
+| M2 | `demo/languages/` | des langages métier écrits en Hypomnesis : `mecanique`, `ventilation` |
+| M1 | `demo/programs/` | des programmes écrits dans ces langages |
+| M0 | `demo/sortie/` | les résultats : rapports, fichiers exportés |
 
 ```bash
-hypomnesis lancer languages/mecanique programs/mecanique/plaque_120x80.hyp
-hypomnesis lancer languages/mecanique programs/mecanique/plaque_mesuree.hyp --mode production --env mesure=5
-hypomnesis lancer languages/mecanique --demande "Crée une plaque de 200 × 150 mm, masse maximale 1 kg."
-hypomnesis lancer languages/ventilation programs/ventilation/salle_serveurs.hyp --mode production --env panne=1
+hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_120x80.hyp
+hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_mesuree.hyp --mode production --env mesure=5
+hypomnesis lancer demo/languages/mecanique --demande "Crée une plaque de 200 × 150 mm, masse maximale 1 kg."
+hypomnesis lancer demo/languages/ventilation demo/programs/ventilation/salle_serveurs.hyp --mode production --env panne=1
 ```
 
 Les procédures sont écrites en Hypomnesis : ce sont des valeurs `'a Effect.t` (observer, agir,
 résoudre, enregistrer, retirer) que seul le moteur exécute, à travers contrats et permissions.
-Exemple, extrait de `languages/mecanique/plaque.hyp` :
+Exemple, extrait de `demo/languages/mecanique/plaque.hyp` :
 
 ```ocaml
 let concevoir (d : demande) (est : estimateur) =
@@ -56,9 +56,9 @@ let concevoir (d : demande) (est : estimateur) =
 python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 
-hypomnesis run examples/basics/tour.hyp
-hypomnesis run examples/mechanics/units.hyp examples/mechanics/plate.hyp
-hypomnesis check examples/mechanics/units.hyp examples/mechanics/plate.hyp
+hypomnesis run demo/examples/basics/tour.hyp
+hypomnesis run demo/examples/mechanics/units.hyp demo/examples/mechanics/plate.hyp
+hypomnesis check demo/examples/mechanics/units.hyp demo/examples/mechanics/plate.hyp
 hypomnesis repl
 ```
 

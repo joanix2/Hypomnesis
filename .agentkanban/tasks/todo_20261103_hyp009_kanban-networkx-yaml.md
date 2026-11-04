@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-04T15:00:00+01:00
 updated: 2026-11-04T15:00:00+01:00
 description: "Checklist de HYP-009"
+priority: P2
+tags: [dette, kanban, networkx, outillage, python]
 ---
 
 # Iteration 1

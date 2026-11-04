@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T08:56:00+01:00
 description: "P1 · S · Outillage et visualisation · dépend de HYP-080, HYP-130"
+priority: P1
+tags: [llm, outillage, python]
 ---
 
 ## Conversation

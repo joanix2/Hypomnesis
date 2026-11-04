@@ -7,7 +7,7 @@ import pytest
 from hypomnesis.engine.language import load_language
 from hypomnesis.llm.describe import catalogue
 
-LANGUAGES = Path(__file__).resolve().parents[2] / "languages"
+LANGUAGES = Path(__file__).resolve().parents[2] / "demo" / "languages"
 SNAPSHOTS = Path(__file__).resolve().parent / "snapshots"
 
 

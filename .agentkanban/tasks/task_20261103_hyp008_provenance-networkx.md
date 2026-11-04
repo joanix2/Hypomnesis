@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-03T21:36:21+01:00
 updated: 2026-11-04T14:50:00+01:00
 description: "P1 · M · Fondations et gouvernance · dépend de HYP-002 · migration vers bibliothèque"
+priority: P1
+tags: [dette, epistemique, moteur-symbolique, networkx, python]
 ---
 
 ## Conversation

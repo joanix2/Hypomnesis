@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P2 · M · Phase 7 — Intégration LLM · dépend de HYP-081"
+priority: P2
+tags: [llm, tests]
 ---
 
 ## Conversation

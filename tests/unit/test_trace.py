@@ -13,8 +13,8 @@ from hypomnesis.engine.procedure import run_procedure
 from hypomnesis.observability.trace import Tracer, trace_context
 
 ROOT = Path(__file__).resolve().parents[2]
-MECANIQUE = ROOT / "languages" / "mecanique"
-PLAQUE = (ROOT / "programs" / "mecanique" / "plaque_120x80.hyp").read_text()
+MECANIQUE = ROOT / "demo" / "languages" / "mecanique"
+PLAQUE = (ROOT / "demo" / "programs" / "mecanique" / "plaque_120x80.hyp").read_text()
 
 
 def scenario() -> Tracer:

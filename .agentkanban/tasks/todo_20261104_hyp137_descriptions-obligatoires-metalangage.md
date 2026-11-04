@@ -4,6 +4,8 @@ lane: doing
 created: 2026-11-04T14:50:00+01:00
 updated: 2026-11-04T14:55:00+01:00
 description: "Checklist de HYP-137"
+priority: P1
+tags: [documentation, dsl, llm, metalangage, python]
 ---
 
 # Iteration 1

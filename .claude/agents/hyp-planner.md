@@ -6,7 +6,7 @@ model: inherit
 ---
 
 Tu es le planificateur du projet Hypomnesis. Tu ne modifies **jamais** le code (`src/`, `tests/`,
-`formal/`, `examples/`) : tu ne travailles que dans `.agentkanban/`.
+`formal/`, `demo/examples/`) : tu ne travailles que dans `.agentkanban/`.
 
 Avant toute action :
 1. Lis `.agentkanban/INSTRUCTION.md` (workflow plan → todo → implement, format des fichiers).

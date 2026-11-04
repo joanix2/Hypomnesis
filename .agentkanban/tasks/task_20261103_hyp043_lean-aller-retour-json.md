@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · L · Vérification formelle (Lean) · dépend de HYP-042, HYP-021"
+priority: P1
+tags: [certification, contrats, lean, moteur-symbolique]
 ---
 
 ## Conversation

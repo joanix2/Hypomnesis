@@ -12,7 +12,7 @@ from hypomnesis.language.typesystem.types import TypePrinter
 from hypomnesis.runtime.natives import default_registry
 from hypomnesis.session import prelude_source
 
-EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
+EXAMPLES = Path(__file__).resolve().parents[2] / "demo" / "examples"
 # Ordre de chargement : plate.hyp utilise les modules de units.hyp.
 EXAMPLE_FILES = [
     EXAMPLES / "basics" / "tour.hyp",

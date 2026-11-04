@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · M · Langage · dépend de HYP-002"
+priority: P1
+tags: [compilateur, metalangage, python, tests]
 ---
 
 ## Conversation

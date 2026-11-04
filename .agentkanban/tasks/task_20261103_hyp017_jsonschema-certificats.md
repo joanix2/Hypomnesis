@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-03T21:36:21+01:00
 updated: 2026-11-04T14:15:00+01:00
 description: "P2 · S · Fondations et gouvernance · dépend de HYP-002 · migration vers bibliothèque"
+priority: P2
+tags: [certification, contrats, dette, jsonschema, python]
 ---
 
 ## Conversation

@@ -35,12 +35,24 @@ def test_utf16_columns_count_surrogate_pairs(tmp_path):
 
 
 def test_context_discovery_for_actual_m1_and_m2():
-    m2 = ROOT / "languages" / "mecanique"
+    m2 = ROOT / "demo" / "languages" / "mecanique"
     assert language_root(m2 / "plaque.hyp", ROOT, None) == m2
-    m1 = ROOT / "programs" / "mecanique" / "plaque_120x80.hyp"
+    m1 = ROOT / "demo" / "programs" / "mecanique" / "plaque_120x80.hyp"
     assert language_root(m1, ROOT, None) == m2
+    assert language_root(m1, ROOT / "demo", None) == m2
     assert analyze(m1, m1.read_text(), ROOT, None, {}) == []
     assert analyze(m2 / "plaque.hyp", (m2 / "plaque.hyp").read_text(), ROOT, None, {}) == []
+
+
+@pytest.mark.parametrize("prefix", ["", "demo", "nested/project"])
+def test_context_discovery_keeps_external_workspace_layouts(tmp_path, prefix):
+    base = tmp_path / prefix
+    root = base / "languages" / "sample"
+    root.mkdir(parents=True)
+    (root / "langage.json").write_text("{}")
+    program = base / "programs" / "sample" / "nested" / "p.hyp"
+    assert language_root(program, tmp_path, None) == root
+    assert language_root(base / "programs" / "standalone.hyp", tmp_path, None) is None
 
 
 def make_language(root):

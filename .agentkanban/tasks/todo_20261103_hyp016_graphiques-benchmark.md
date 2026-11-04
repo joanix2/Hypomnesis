@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-04T15:00:00+01:00
 updated: 2026-11-04T15:10:00+01:00
 description: "Checklist de HYP-016"
+priority: P2
+tags: [llm, matplotlib, python, visualisation]
 ---
 
 # Iteration 1

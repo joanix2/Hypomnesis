@@ -54,7 +54,7 @@ certificate_check() {
     (cd formal && lake build hypomnesis-check) || return 1
     local cert
     cert=$(mktemp "${TMPDIR:-/tmp}/hypomnesis-certificate.XXXXXXXXXX") || return 1
-    "$PY" -m hypomnesis.cli check examples/basics/certifiable.hyp --emit-certificate "$cert" >/dev/null \
+    "$PY" -m hypomnesis.cli check demo/examples/basics/certifiable.hyp --emit-certificate "$cert" >/dev/null \
         && formal/.lake/build/bin/hypomnesis-check check "$cert"
     local status=$?
     rm -f "$cert"
@@ -63,6 +63,9 @@ certificate_check() {
 
 graph_refresh() {
     command -v graphify >/dev/null 2>&1 || { echo "graphify absent du PATH"; return 1; }
+    if [ -f graphify-out/graph.json ]; then
+        "$PY" scripts/kanban.py graph || return 1
+    fi
     graphify update . && "$PY" scripts/kanban.py graph
 }
 

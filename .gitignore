@@ -14,5 +14,6 @@ htmlcov/
 graphify-out/
 
 # Résultats M0
+demo/sortie/
 sortie/
 sortie-plaque/

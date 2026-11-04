@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T14:50:00+01:00
 updated: 2026-11-04T14:50:00+01:00
 description: "Checklist de HYP-139"
+priority: P1
+tags: [llm, python, tests]
 ---
 
 # Iteration 1

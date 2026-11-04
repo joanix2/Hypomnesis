@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · S · Vérification formelle (Lean) · dépend de HYP-026, HYP-004"
+priority: P0
+tags: [certification, ci, compilateur, outillage, python]
 ---
 
 ## Conversation

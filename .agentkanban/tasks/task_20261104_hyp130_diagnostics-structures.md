@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T14:55:00+01:00
 description: "P1 · S · Outillage et visualisation · dépend de HYP-002"
+priority: P1
+tags: [compilateur, llm, metalangage, outillage, python]
 ---
 
 ## Conversation

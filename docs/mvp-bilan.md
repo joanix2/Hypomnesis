@@ -6,7 +6,7 @@ l'établit : une commande à lancer, un test ou un théorème.
 
 | # | Critère (§16.4) | État | Preuve |
 |---|---|---|---|
-| 1 | Un domaine métier peut être défini sans modifier le noyau | ✅ | langages M2 `languages/mecanique` et `languages/ventilation` : toute la logique métier en Hypomnesis, adaptateurs Python limités au monde extérieur ; le moteur n'en connaît aucun (`test_engine_contains_no_domain`, ADR 0008) |
+| 1 | Un domaine métier peut être défini sans modifier le noyau | ✅ | langages M2 `demo/languages/mecanique` et `demo/languages/ventilation` : toute la logique métier en Hypomnesis, adaptateurs Python limités au monde extérieur ; le moteur n'en connaît aucun (`test_engine_contains_no_domain`, ADR 0008) |
 | 2 | Les programmes valides sont typés et exécutés | ✅ | 141 tests, exemples, `hypomnesis run` |
 | 3 | Les erreurs de types sont détectées avant exécution | ✅ | tests ; **prouvé** en Lean pour le fragment (P1) ; certificats revérifiés (`hypomnesis-check`) |
 | 4 | Deux plugins substituables derrière la même interface | ✅ | `--estimateur regle|abaque` : même programme, estimations différentes (`test_swapping_the_estimator_keeps_the_program`) |
@@ -14,7 +14,7 @@ l'établit : une commande à lancer, un test ou un théorème.
 | 6 | Commande invalide rejetée avant tout appel d'actionneur | ✅ | `test_invalid_command_is_rejected_by_contract` (contrat et contraintes métier) |
 | 7 | Action non autorisée impossible | ✅ | `--sans-permission` ; `test_unauthorised_command_never_reaches_the_actuator` |
 | 8 | Les résultats des estimateurs conservent leur provenance | ✅ | provenance en semi-anneau : modèle, version, confiance ; la validité hérite du support « estimé » |
-| 9 | Une nouvelle observation peut réviser une hypothèse | ✅ | `--observer epaisseur=5` : 4 conclusions invalidées puis recalculées ; `lancer languages/ventilation … --env panne=1` : hypothèse réfutée et retirée |
+| 9 | Une nouvelle observation peut réviser une hypothèse | ✅ | `--observer epaisseur=5` : 4 conclusions invalidées puis recalculées ; `lancer demo/languages/ventilation … --env panne=1` : hypothèse réfutée et retirée |
 | 10 | Un solveur externe est appelé à partir de la Problem IR | ✅ | Z3 ; solution **revérifiée** en rationnels exacts, indépendamment de Z3 |
 | 11 | Les commandes d'actionneurs produisent des résultats contrôlés | ✅ | automate d'états, validation des réponses ; modes simulate, dry-run et production |
 | 12 | Un programme fonctionne avec des périphériques simulés | ✅ | langage `ventilation` : capteur et ventilateur simulés, rétroaction bornée |

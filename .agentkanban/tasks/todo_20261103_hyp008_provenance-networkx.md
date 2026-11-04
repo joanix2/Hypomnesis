@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T15:00:00+01:00
 updated: 2026-11-04T15:00:00+01:00
 description: "Checklist de HYP-008"
+priority: P1
+tags: [dette, epistemique, moteur-symbolique, networkx, python]
 ---
 
 # Iteration 1

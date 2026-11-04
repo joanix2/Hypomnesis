@@ -1,9 +1,11 @@
 ---
 title: "HYP-042 · Correspondance types Hypomnesis ↔ JSON Schema"
-lane: todo
+lane: qa
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-03T17:42:26+01:00
+updated: 2026-11-04T16:39:19+01:00
 description: "P0 · L · Phase 3 — Extensions et contrats · dépend de HYP-041"
+priority: P0
+tags: [contrats, metalangage, moteur-symbolique, python]
 ---
 
 ## Conversation
@@ -118,5 +120,23 @@ ne doit pas être confondu avec les validations rapide/complet, toutes deux vert
 
 Publication préparée par fusion en avance rapide dans `main`, selon le workflow confirmé.
 La tâche n'est pas passée en `done` ; la décision de couloir reste à l'utilisateur/l'extension.
+
+### user
+
+### agent
+
+Passage en `qa` à la demande explicite de l'utilisateur : implémentation validée,
+prête pour vérification humaine. Aucun passage en `done`.
+
+### user
+
+### agent
+
+À la demande de l'utilisateur, ajout transversal des champs YAML `tags` et `priority`
+aux 98 tickets et à leurs 20 checklists. Tags thématiques cohérents, complétés par les
+labels existants normalisés en ASCII ; priorités P0 à P3 reprises des descriptions
+existantes, sans réévaluation. Les checklists héritent des métadonnées de leur ticket.
+Les statuts et les messages historiques sont conservés, notamment `qa` pour HYP-041/042.
+Convention documentée dans la mémoire du projet. Validation Kanban et format du diff : verts.
 
 ### user

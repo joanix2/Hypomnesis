@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T21:29:19+01:00
 updated: 2026-11-04T16:47:00+01:00
 description: "P1 · S · Fondations et gouvernance · coordination des migrations vers des bibliothèques"
+priority: P1
+tags: [architecture, coordination, dette, outillage, python]
 ---
 
 ## Conversation
@@ -186,5 +188,21 @@ graphe et fichiers réservés au parent non modifiés par cet audit.
 Commit documentaire : « HYP-007 : documenter l'audit des bibliothèques et ses blocages »
 (sans push) ; les modifications préexistantes de métadonnées et les sections du parent
 ne font pas partie de ce commit. Aucun travail supplémentaire hors périmètre retenu.
+
+### user
+
+### agent
+
+Bilan intégré des trois tickets demandés : HYP-144 corrigé, avec migration des chemins
+synthétiques et rafraîchissements Graphify répétés réussis ; HYP-004 vérifié avec CI
+distante verte sur le commit publié et tests locaux du garde-fou exact contre `sorry`
+et `admit`. Validation complète finale : 655 tests, linters, Pyright, schémas, Kanban,
+Lean et audit des axiomes verts.
+
+HYP-007 dispose maintenant de son audit et des justifications des dépendances, mais
+reste bloqué pour clôture par la comparaison réelle avant/après de HYP-014. Cette mesure
+LLM n'a pas été lancée sur le Mac, conformément au périmètre de gestion du projet.
+Le commit documentaire local `76c19a3` est conservé ; le reste des modifications reste
+dans l'arbre de travail, sans push. Tags et priorités antérieurs préservés.
 
 ### user

@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P2 · M · Phase 6 — Observabilité · dépend de HYP-073, HYP-033, HYP-063"
+priority: P2
+tags: [infra, observabilite, outillage, visualisation]
 ---
 
 ## Conversation

@@ -4,6 +4,8 @@ lane: doing
 created: 2026-11-04T14:45:00+01:00
 updated: 2026-11-04T14:55:00+01:00
 description: "Checklist de HYP-143"
+priority: P1
+tags: [bug, epistemique, moteur-symbolique, python]
 ---
 
 # Iteration 1

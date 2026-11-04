@@ -4,6 +4,8 @@ lane: done
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · L · Langage · dépend de HYP-001"
+priority: P0
+tags: [compilateur, metalangage, python, runtime]
 ---
 
 ## Conversation

@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · S · Phase 6 — Observabilité · dépend de HYP-070"
+priority: P1
+tags: [observabilite, outillage, python, securite]
 ---
 
 ## Conversation

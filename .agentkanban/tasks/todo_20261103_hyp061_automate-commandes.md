@@ -4,6 +4,8 @@ lane: doing
 created: 2026-11-04T14:30:00+01:00
 updated: 2026-11-04T14:30:00+01:00
 description: "Checklist de HYP-061"
+priority: P0
+tags: [effets, moteur-symbolique, python, runtime]
 ---
 
 # Iteration 1

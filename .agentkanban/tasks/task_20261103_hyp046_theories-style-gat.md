@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · L · Niveau M3 (méta-métamodèle) · dépend de HYP-012"
+priority: P1
+tags: [architecture, capacites, dsl, metalangage, moteur-symbolique, python, tests]
 ---
 
 ## Conversation

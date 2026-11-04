@@ -191,7 +191,7 @@ def test_cli_benchmark_llm_figures_follow_the_flag(
     rows = [_Stub(r) for r in synthetic()]
     monkeypatch.setattr(benchmark, "run_benchmark", lambda *args, **kwargs: rows)
     monkeypatch.setattr(benchmark, "summary", lambda results: "table")
-    ventilation = Path(__file__).resolve().parents[2] / "languages" / "ventilation"
+    ventilation = Path(__file__).resolve().parents[2] / "demo" / "languages" / "ventilation"
     argv = ["benchmark-llm", str(ventilation), "--modeles", "alpha:1b", "--sortie", str(tmp_path)]
     assert main([*argv, flag]) == 0
     assert bool(list(tmp_path.glob("*-justesse.png"))) is expected

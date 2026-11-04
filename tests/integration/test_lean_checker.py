@@ -14,7 +14,7 @@ from hypomnesis.session import Session
 
 ROOT = Path(__file__).resolve().parents[2]
 EXE = ROOT / "formal" / ".lake" / "build" / "bin" / "hypomnesis-check"
-EXAMPLES = ROOT / "examples"
+EXAMPLES = ROOT / "demo" / "examples"
 
 pytestmark = pytest.mark.skipif(not EXE.exists(), reason="hypomnesis-check non construit")
 

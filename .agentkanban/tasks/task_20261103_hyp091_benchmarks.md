@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P2 · M · Phase 8 — Stabilisation · dépend de HYP-090"
+priority: P2
+tags: [mvp, outillage, performance, tests]
 ---
 
 ## Conversation

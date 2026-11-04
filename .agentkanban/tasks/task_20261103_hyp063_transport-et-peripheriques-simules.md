@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · M · Phase 5 — Effets et actionneurs · dépend de HYP-062"
+priority: P0
+tags: [contrats, effets, moteur-symbolique, python]
 ---
 
 ## Conversation

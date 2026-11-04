@@ -2,7 +2,7 @@
    entiers, booléens, listes, options, variants, récursion, filtrage, et les
    fonctions polymorphes du prélude (monomorphisées par le décodeur).
 
-   hypomnesis check examples/basics/certifiable.hyp --emit-certificate cert.json
+   hypomnesis check demo/examples/basics/certifiable.hyp --emit-certificate cert.json
    cd formal && lake exe hypomnesis-check check ../cert.json *)
 
 type shape = Square of int | Rect of int * int

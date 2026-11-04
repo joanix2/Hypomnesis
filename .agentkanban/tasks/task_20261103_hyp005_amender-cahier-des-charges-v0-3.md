@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · S · Fondations et gouvernance · dépend de HYP-003"
+priority: P1
+tags: [architecture, documentation, humain, mvp]
 ---
 
 ## Conversation

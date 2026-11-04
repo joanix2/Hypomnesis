@@ -1,9 +1,11 @@
 ---
 title: "HYP-041 · Registre de capacités et manifestes"
-lane: todo
+lane: qa
 created: 2026-11-03T17:42:26+01:00
-updated: 2026-11-04T15:50:39+01:00
+updated: 2026-11-04T16:39:19+01:00
 description: "P0 · M · Phase 3 — Extensions et contrats · dépend de HYP-040"
+priority: P0
+tags: [capacites, contrats, moteur-symbolique, python]
 ---
 
 ## Conversation
@@ -179,5 +181,12 @@ est rétabli ; cela ne remet pas en cause l'implémentation vérifiée et prête
 Les commits locaux du sous-agent sont conservés sans réécriture.
 Publication par fusion en avance rapide dans `main`, conformément au workflow du projet.
 La limite sur les cycles et le défaut Graphify HYP-144 restent explicités ci-dessus.
+
+### user
+
+### agent
+
+Passage en `qa` à la demande explicite de l'utilisateur : implémentation validée,
+prête pour vérification humaine. Aucun passage en `done`.
 
 ### user

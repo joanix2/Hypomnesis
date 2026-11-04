@@ -41,7 +41,7 @@ dépôt utilisé pour ce test. Un fichier témoin confirme que les assertions on
   dossier. Ne pas ajouter d'arguments au chemin.
 - `hypomnesis.languageRoot` : dossier contenant `langage.json`, relatif au dossier ouvert
   ou absolu. Vide : manifeste dans le dossier du fichier ou ses parents ; pour
-  `programs/<nom>/…`, recherche aussi `languages/<nom>/langage.json`.
+  `demo/programs/<nom>/…`, recherche aussi `demo/languages/<nom>/langage.json`.
 - `hypomnesis.debounceMs` : délai de frappe, 300 ms par défaut (0 à 5 000 ms).
 
 Un serveur est lancé par dossier dans un espace de travail multi-racines. Un changement
@@ -52,7 +52,7 @@ Le compilateur signale la première erreur ; les erreurs d'une dépendance ou du
 sont indiquées au début du document avec le chemin concerné. Survol, complétion et
 navigation ne sont pas inclus.
 
-Pour `programs/mecanique/plaque_120x80.hyp`, la détection est automatique en ouvrant la
+Pour `demo/programs/mecanique/plaque_120x80.hyp`, la détection est automatique en ouvrant la
 racine du dépôt. Dans un autre dossier, régler par exemple :
 
 ```json

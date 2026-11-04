@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T08:56:00+01:00
 description: "P2 · M · Phase 7 — Intégration LLM · dépend de HYP-139, HYP-140"
+priority: P2
+tags: [compilateur, fine-tuning, idee, llm, python, tests]
 ---
 
 ## Conversation

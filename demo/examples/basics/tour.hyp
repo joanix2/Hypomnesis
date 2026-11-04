@@ -1,4 +1,4 @@
-(* A short tour of the core language. Run: hypomnesis run examples/basics/tour.hyp *)
+(* A short tour of the core language. Run: hypomnesis run demo/examples/basics/tour.hyp *)
 
 (* Algebraic data types and pattern matching *)
 type expr =

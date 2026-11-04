@@ -16,12 +16,12 @@ from hypomnesis.runtime.values import show
 from hypomnesis.session import Session
 
 ROOT = Path(__file__).resolve().parents[2]
-LANGUAGES = ROOT / "languages"
+LANGUAGES = ROOT / "demo" / "languages"
 LANGUAGE_SOURCES = [
     LANGUAGES / "mecanique" / "plaque.hyp",
     LANGUAGES / "ventilation" / "ventilation.hyp",
 ]
-EXAMPLES = ROOT / "examples"
+EXAMPLES = ROOT / "demo" / "examples"
 # Sets of files loaded together (a file may use the previous one).
 SOURCE_SETS = {
     "plaque": [LANGUAGE_SOURCES[0]],

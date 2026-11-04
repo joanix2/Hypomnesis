@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · M · Phase 5 — Effets et actionneurs · dépend de HYP-060"
+priority: P0
+tags: [effets, moteur-symbolique, python, runtime]
 ---
 
 ## Conversation

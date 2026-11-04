@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T08:56:00+01:00
 description: "P3 · L · Phase 7 — Intégration LLM · dépend de HYP-141"
+priority: P3
+tags: [fine-tuning, idee, llm, python]
 ---
 
 ## Conversation

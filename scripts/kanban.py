@@ -324,8 +324,9 @@ def inject(graph: dict, tasks: dict[str, Task]) -> tuple[int, int]:
             return files[clean]
         path_id = node(
             f"kanban_path_{_slug(clean)}",
-            path,
-            "code" if "." in clean.rsplit("/", 1)[-1] else "document",
+            f"Chemin Kanban : {path}",
+            "document",
+            referenced_path=path,
         )
         prefix = clean + "/"
         for source, file_id in files.items():

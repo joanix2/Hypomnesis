@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-03T21:28:04+01:00
 updated: 2026-11-04T14:45:00+01:00
 description: "P2 · M · Fondations et gouvernance · dépend de HYP-002"
+priority: P2
+tags: [cli, outillage, python]
 ---
 
 ## Conversation

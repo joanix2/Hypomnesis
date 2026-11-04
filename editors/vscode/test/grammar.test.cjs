@@ -78,7 +78,7 @@ test("types, booleans, numbers and operators are recognized", () => {
 
 for (const name of ["mecanique/plaque.hyp", "ventilation/ventilation.hyp"]) {
   test(`real language ${name} has all expected scopes`, () => {
-    const tokens = tokenize(fs.readFileSync(path.join(root, "languages", name), "utf8"));
+    const tokens = tokenize(fs.readFileSync(path.join(root, "demo", "languages", name), "utf8"));
     for (const scope of [
       "keyword.control.hypomnesis", "entity.name.type.hypomnesis",
       "string.quoted.double.hypomnesis", "constant.numeric.hypomnesis",

@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T19:30:00+01:00
 updated: 2026-11-03T19:30:00+01:00
 description: "Checklist de HYP-020"
+priority: P0
+tags: [certification, lean, metalangage]
 ---
 
 # Iteration 1

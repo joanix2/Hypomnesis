@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · L · Vérification formelle (Lean) · dépend de HYP-061"
+priority: P0
+tags: [effets, lean, moteur-symbolique]
 ---
 
 ## Conversation

@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T08:56:00+01:00
 description: "P2 · M · Outillage et visualisation · dépend de HYP-002"
+priority: P2
+tags: [dsl, metalangage, outillage, python, transpileurs, visualisation]
 ---
 
 ## Conversation

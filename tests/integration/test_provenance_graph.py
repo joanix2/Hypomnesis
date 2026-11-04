@@ -13,9 +13,9 @@ from hypomnesis.engine.language import load_language
 from hypomnesis.engine.procedure import run_procedure
 
 ROOT = Path(__file__).resolve().parents[2]
-MESUREE = (ROOT / "programs" / "mecanique" / "plaque_mesuree.hyp").read_text()
-PLAQUE = (ROOT / "programs" / "mecanique" / "plaque_120x80.hyp").read_text()
-SALLE = (ROOT / "programs" / "ventilation" / "salle_serveurs.hyp").read_text()
+MESUREE = (ROOT / "demo" / "programs" / "mecanique" / "plaque_mesuree.hyp").read_text()
+PLAQUE = (ROOT / "demo" / "programs" / "mecanique" / "plaque_120x80.hyp").read_text()
+SALLE = (ROOT / "demo" / "programs" / "ventilation" / "salle_serveurs.hyp").read_text()
 
 OBSERVED = "[support observé, confiance 1.00]"
 DEMANDE = "observé (programme M1 : demande)"
@@ -23,19 +23,20 @@ DEMANDE = "observé (programme M1 : demande)"
 
 def measured(tmp_path):
     return run_procedure(
-        load_language(ROOT / "languages" / "mecanique"),
+        load_language(ROOT / "demo" / "languages" / "mecanique"),
         MESUREE,
         out_dir=tmp_path,
         environment={"mesure": "5"},
     )
 
 
-def broken_fan():
+def broken_fan(tmp_path):
     return run_procedure(
-        load_language(ROOT / "languages" / "ventilation"),
+        load_language(ROOT / "demo" / "languages" / "ventilation"),
         SALLE,
         mode="production",
         environment={"panne": "1"},
+        out_dir=tmp_path,
     )
 
 
@@ -88,8 +89,8 @@ def test_explanation_after_measurement_is_unchanged(tmp_path):
     ]
 
 
-def test_refuted_hypothesis_invalidates_its_dependants_in_order():
-    kb = broken_fan().kb
+def test_refuted_hypothesis_invalidates_its_dependants_in_order(tmp_path):
+    kb = broken_fan(tmp_path).kb
     assert [(e.seq, e.kind, e.key) for e in kb.journal[5:9]] == [
         (6, "retracted", "hyp-1"),
         (7, "invalidated", "hypothese"),
@@ -109,7 +110,7 @@ def test_refuted_hypothesis_invalidates_its_dependants_in_order():
 
 def test_m0_report_contains_the_provenance_graph(tmp_path):
     report = run_procedure(
-        load_language(ROOT / "languages" / "mecanique"), PLAQUE, out_dir=tmp_path
+        load_language(ROOT / "demo" / "languages" / "mecanique"), PLAQUE, out_dir=tmp_path
     )
     data = json.loads(json.dumps(report.to_json()))["provenance_graph"]
     graph = nx.node_link_graph(data, edges="edges")

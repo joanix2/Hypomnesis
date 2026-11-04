@@ -423,7 +423,7 @@ def lancer_command(
     mode: Annotated[
         Mode, typer.Option("--mode", help="mode d'exécution des effets")
     ] = Mode.DRY_RUN,
-    sortie: Annotated[Path, typer.Option("--sortie", help="résultats M0")] = Path("sortie"),
+    sortie: Annotated[Path, typer.Option("--sortie", help="résultats M0")] = Path("demo/sortie"),
     env: Annotated[
         list[str] | None,
         typer.Option(
@@ -481,7 +481,7 @@ def benchmark_command(
         ),
     ] = "",
     sortie: Annotated[Path, typer.Option("--sortie", help="dossier des résultats")] = Path(
-        "sortie/benchmark-llm"
+        "demo/sortie/benchmark-llm"
     ),
     graphiques: Annotated[
         bool,

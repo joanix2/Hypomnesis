@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · S · Phase 3 — Extensions et contrats · dépend de HYP-044"
+priority: P1
+tags: [capacites, contrats, exemple, moteur-symbolique, python, tests]
 ---
 
 ## Conversation

@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · L · Phase 8 — Stabilisation · dépend de HYP-054, HYP-052, HYP-055, HYP-063, HYP-082"
+priority: P0
+tags: [dsl, estimateurs, exemple, moteur-symbolique, mvp, python, solveurs]
 ---
 
 ## Conversation

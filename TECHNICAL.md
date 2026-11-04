@@ -25,7 +25,7 @@ Référence d'implémentation pour les agents et les humains. Les décisions son
 
 | Module | Rôle |
 |---|---|
-| `engine/language.py` | chargement d'un paquet `languages/<langage>/` : manifeste validé (`language-manifest/1.0.0`), sources Hypomnesis, contrats, adaptateurs confinés au paquet |
+| `engine/language.py` | chargement d'un paquet `demo/languages/<langage>/` : manifeste validé (`language-manifest/1.0.0`), sources Hypomnesis, contrats, adaptateurs confinés au paquet |
 | `engine/procedure.py` | **interpréteur d'effets** : exécute une valeur `'a Effect.t` (observer, agir, résoudre, enregistrer, retirer, noter), borné en nombre d'étapes |
 | `engine/bridge.py` | valeur Hypomnesis → JSON ; `Problem.problem` → Problem IR |
 | `engine/registry.py` | registre statique de manifestes d'extensions et résolution SemVer, sans chargement de backend |
@@ -172,7 +172,7 @@ Le vérificateur Lean `hypomnesis-check` (`formal/Main.lean`, `formal/Hypomnesis
 les relit : `cd formal && lake build hypomnesis-check`, puis
 `lake exe hypomnesis-check check cert.json` (codes : 0 accepté, 1 rejeté par `typeOf`, 2 hors du
 fragment, 3 illisible) ou `eval cert.json` (sémantique de référence). Exemple entièrement dans
-le fragment : `examples/basics/certifiable.hyp`.
+le fragment : `demo/examples/basics/certifiable.hyp`.
 
 ## Capacités (HYP-040)
 
@@ -308,7 +308,7 @@ semi-anneau. Propriétés : `docs/verification/proprietes.md`. Stratégie : `doc
 
 ## Exemples
 
-- `examples/basics/`, `examples/mechanics/` : tour du langage, plaque du §4.2.
+- `demo/examples/basics/`, `demo/examples/mechanics/` : tour du langage, plaque du §4.2.
 
 ## Éditeur VS Code et serveur LSP (HYP-131/132)
 
@@ -327,7 +327,7 @@ pas de lancement Python dans un espace non approuvé. Les réglages sont documen
 `lsp/analysis.py` appelle `Session.check` sur le prélude, les sources M2 précédentes
 du manifeste puis le document. Une session neuve par analyse évite les noms obsolètes ;
 aucun programme édité, contrat d'effet ou adaptateur Python n'est exécuté. Le contexte
-M2 vient du `langage.json` le plus proche, de `programs/<nom>` vers `languages/<nom>`,
+M2 vient du `langage.json` le plus proche, de `demo/programs/<nom>` vers `demo/languages/<nom>`,
 ou de `hypomnesis.languageRoot`. Les documents ouverts non enregistrés remplacent les
 sources disque. Une erreur de dépendance est signalée au début du document avec son
 chemin ; une erreur du document reprend exactement message, étape et étendue du compilateur.
@@ -376,7 +376,12 @@ Le front-matter est lu par `yaml.safe_load` à une nuance près : les dates rest
 Le graphe des tâches est un `nx.DiGraph` tâche → dépendance (`dependency_graph`).
 Une reconstruction incrémentale de Graphify conserve les nœuds mais perd les relations vers les
 fichiers qu'elle réextrait : réinjecter après chaque `graphify update .`, ce que fait
-`./scripts/validate.sh graphe`. L'injection prend le verrou de reconstruction de Graphify ;
+`./scripts/validate.sh graphe`. Ce mode réinjecte aussi avant la reconstruction si un graphe
+existe, pour migrer les anciennes représentations synthétiques. Un chemin sans nœud-fichier
+réel est un document nommé `Chemin Kanban : …`, avec son chemin dans `referenced_path` :
+il ne doit pas être confondu avec un fichier AST par la déduplication de Graphify, sous peine
+de déclencher le garde-fou contre la perte de nœuds sémantiques. Les vrais nœuds-fichiers
+restent utilisés dès qu'ils sont disponibles. L'injection prend le verrou de reconstruction de Graphify ;
 `--wait` attend la fin d'une reconstruction en cours.
 
 ## Validation
@@ -429,7 +434,7 @@ descriptions ») et instantanés `tests/unit/snapshots/` (catalogue rendu, octet
 ./scripts/validate.sh complet           # tous les validateurs
 ./scripts/validate.sh graphe            # reconstruire le graphe Graphify + Kanban
 python3 scripts/kanban.py status        # tâches prêtes et bloquées
-.venv/bin/hypomnesis run examples/basics/tour.hyp
+.venv/bin/hypomnesis run demo/examples/basics/tour.hyp
 ```
 
 ## Bibliothèques et infrastructure conservée (audit HYP-007, 2026-11-04)
@@ -487,7 +492,7 @@ le besoin actuel, pas une interdiction de réexaminer une bibliothèque si ce be
 | `observability/trace.py::Tracer.tree`, `export` | **Garder** : rendu des rapports M0 au-dessus des spans SDK ; réexaminer avec l'export OTLP de HYP-070, sans nouveau traceur. |
 | `cli.py::_repl` ; `engine/procedure.py::ProcedureReport.render` | **Garder** : tampon `;;` et rendus spécifiques. `prompt_toolkit` serait disproportionné sans besoin d'édition enrichie ; Rich est déjà fourni par Typer, mise en forme non requise. |
 | `llm/translation.py::extract_code`, `translate` | **Garder** : extraction des blocs et réparation guidée par les diagnostics, protocole propre au projet. |
-| `languages/mecanique/adaptateurs/transcription.py::transcrire` | **Garder** : adaptateur M2 déterministe, non infrastructure M3 ; HYP-081 porte la transcription LLM. Aucune migration métier ici. |
+| `demo/languages/mecanique/adaptateurs/transcription.py::transcrire` | **Garder** : adaptateur M2 déterministe, non infrastructure M3 ; HYP-081 porte la transcription LLM. Aucune migration métier ici. |
 | `llm/retrieval.py::Retriever`, `_normalise` ; `llm/describe.py::_environment` | **Déjà délégué** à scikit-learn et Jinja2 ; garder la normalisation numérique et le catalogue propres au banc. |
 | `contracts/registry.py::SchemaRegistry` | **Garder** : adaptateur de jsonschema et referencing, non validateur structurel maison. |
 | `engine/bridge.py::to_json`, `runtime/natives.py::to_json_value`, `certify/export.py::export_certificate` | **Garder** : codecs des valeurs Hypomnesis et certificat lu par Lean. Les ponts JSON passent désormais par `runtime/json.py` (HYP-042), pas par des conversions dupliquées. |

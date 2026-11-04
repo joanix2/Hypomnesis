@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T08:56:00+01:00
 updated: 2026-11-04T08:56:00+01:00
 description: "P1 · M · Phase 7 — Intégration LLM · dépend de HYP-137, HYP-139"
+priority: P1
+tags: [dsl, llm, python]
 ---
 
 ## Conversation

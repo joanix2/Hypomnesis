@@ -4,6 +4,8 @@ lane: qa
 created: 2026-11-04T14:45:00+01:00
 updated: 2026-11-04T14:55:00+01:00
 description: "P1 · S · Phase 2 — Moteur épistémique · dépend de HYP-008 · bug"
+priority: P1
+tags: [bug, epistemique, moteur-symbolique, python]
 ---
 
 ## Conversation

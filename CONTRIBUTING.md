@@ -9,7 +9,7 @@ nouveaux langages métier et exemples.
   discuter avant d'écrire du code. Les décisions d'architecture passent par une ADR dans
   [docs/adr/](docs/adr/README.md).
 - Le moteur (`src/hypomnesis/`) ne contient aucun concept de domaine : ce qui est propre à un
-  métier va dans un langage de niveau M2 (`languages/`). Un test d'architecture le vérifie.
+  métier va dans un langage de niveau M2 (`demo/languages/`). Un test d'architecture le vérifie.
 
 ## Mise en place
 

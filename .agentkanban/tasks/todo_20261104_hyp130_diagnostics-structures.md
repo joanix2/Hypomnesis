@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T14:30:00+01:00
 updated: 2026-11-04T14:30:00+01:00
 description: "Checklist de HYP-130"
+priority: P1
+tags: [compilateur, llm, metalangage, outillage, python]
 ---
 
 # Iteration 1

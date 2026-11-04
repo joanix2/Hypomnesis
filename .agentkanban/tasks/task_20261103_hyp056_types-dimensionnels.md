@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P2 · L · Phase 4 — Raisonnement hybride · dépend de HYP-002"
+priority: P2
+tags: [compilateur, dsl, metalangage, moteur-symbolique, python]
 ---
 
 ## Conversation

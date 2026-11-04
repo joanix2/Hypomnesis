@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P0 · L · Phase 4 — Raisonnement hybride · dépend de HYP-031, HYP-038"
+priority: P0
+tags: [epistemique, moteur-symbolique, python]
 ---
 
 ## Conversation

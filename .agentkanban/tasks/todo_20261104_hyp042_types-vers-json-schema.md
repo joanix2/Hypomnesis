@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T16:10:00+01:00
 updated: 2026-11-04T16:10:00+01:00
 description: "Codec réversible, contrats et migration JSON"
+priority: P0
+tags: [contrats, metalangage, moteur-symbolique, python]
 ---
 
 # Iteration 1

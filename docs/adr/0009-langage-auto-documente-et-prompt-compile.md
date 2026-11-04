@@ -57,7 +57,7 @@ dans sa syntaxe), et le moteur **compile** cette documentation en prompt.
 
 ## Mesures
 
-Banc `languages/*/benchmark.json`, trois jeux : *dev* (15 cas, les anciens), *test* (20, réservé) et
+Banc `demo/languages/*/benchmark.json`, trois jeux : *dev* (15 cas, les anciens), *test* (20, réservé) et
 *hard* (20, nombres en lettres, ordre inversé, unités mixtes, négations…), soit 55 cas.
 Température 0, contexte 6144, une seule génération (sans réparation) sauf mention. Métrique :
 programme **correct au premier essai** (il compile, s'exécute en simulation et porte les bonnes

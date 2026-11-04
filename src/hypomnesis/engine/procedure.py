@@ -102,7 +102,7 @@ def run_procedure(
     program: str,
     *,
     mode: str = "dry-run",
-    out_dir: Path = Path("sortie"),
+    out_dir: Path = Path("demo/sortie"),
     environment: dict[str, Any] | None = None,
     permissions: frozenset[str] | None = None,
     max_steps: int = 1000,

@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-03T17:42:26+01:00
 updated: 2026-11-03T17:42:26+01:00
 description: "P1 · M · Phase 4 — Raisonnement hybride · dépend de HYP-052"
+priority: P1
+tags: [certification, lean, moteur-symbolique, python, solveurs, tests, validateurs]
 ---
 
 ## Conversation

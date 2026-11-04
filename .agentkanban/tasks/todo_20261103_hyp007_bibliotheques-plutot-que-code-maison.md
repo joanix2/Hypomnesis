@@ -4,6 +4,8 @@ lane: todo
 created: 2026-11-04T15:00:00+01:00
 updated: 2026-11-04T16:55:00+01:00
 description: "Checklist de coordination de HYP-007 (lot 0, ordre des lots, clôture)"
+priority: P1
+tags: [architecture, coordination, dette, outillage, python]
 ---
 
 # Iteration 1
