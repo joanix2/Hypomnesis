@@ -116,8 +116,8 @@ C'est la partie où la preuve a le plus de valeur, car les erreurs y sont physiq
 | noyau pur (§9.1, H5) | **aucun terme du niveau objet n'exécute d'effet** ; il ne peut que le décrire | ✅ par construction pour le fragment (aucun constructeur d'effet) · 🎯 F5 avec la modalité `U` |
 | validation avant appel (§9.8, §16.4) | dans toute trace du runtime, chaque `dispatch(c)` est précédé de `validated(c)` puis `authorized(c)` pour le même `command_id` | 🎯 F5 |
 | action non autorisée (§16.4) | aucune trace ne contient `dispatch(c)` sans permission accordée pour `c` | 🎯 F5 |
-| états des commandes (§9.7) | l'automate n'autorise que les transitions spécifiées ; les états terminaux sont absorbants | 🎯 F5 |
-| doubles commandes (§9.7, §19) | **au plus une exécution** d'une commande non idempotente, quelles que soient les relances et pannes de transport (modèle à journal et déduplication par `command_id`) | 🎯 F5 |
+| états des commandes (§9.7) | l'automate n'autorise que les transitions spécifiées ; les états terminaux sont absorbants | 🎯 F5 · miroir Python : `TRANSITIONS` dans `effects/commands.py` (test exhaustif des paires, HYP-061) |
+| doubles commandes (§9.7, §19) | **au plus une exécution** d'une commande non idempotente, quelles que soient les relances et pannes de transport (modèle à journal et déduplication par `command_id`) | 🎯 F5 (HYP-066, à prouver) · miroir Python : `may_retry` et la déduplication du `Dispatcher`, propriété Hypothesis sur pannes simulées (HYP-061) |
 | simulation, dry-run, production (§10.3) | les trois modes exécutent **le même terme** ; le dry-run n'émet aucun `dispatch` | 🎯 F5 |
 | contrats JSON (§9.4, §13.4) | **aller-retour** : `decode (encode v) = v` ; et `encode v` est conforme à `schemaOf t` dès que `v : t` | 🎯 F5 |
 | sécurité physique d'une commande | — | ⛔ explicitement hors du champ du JSON Schema (§9.4) ; relève de contraintes métier et de capteurs |
