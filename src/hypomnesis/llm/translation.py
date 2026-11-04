@@ -42,7 +42,14 @@ Règles :
 
 
 class ChatClient(Protocol):
-    def chat(self, model: str, messages: list[dict[str, str]], *, num_ctx: int = ...) -> Reply: ...
+    def chat(
+        self,
+        model: str,
+        messages: list[dict[str, str]],
+        *,
+        num_ctx: int = ...,
+        temperature: float = ...,
+    ) -> Reply: ...
 
 
 @dataclass
@@ -167,6 +174,7 @@ def translate(
     max_repairs: int = 2,
     simulate: Callable[[str], str] | None = None,
     strategy: Strategy = DEFAULT,
+    temperature: float = 0.0,
 ) -> Translation:
     messages = [
         {"role": "system", "content": system_prompt(language, examples, strategy)},
@@ -175,7 +183,7 @@ def translate(
     ]
     result = Translation(request)
     for _ in range(max_repairs + 1):
-        reply = client.chat(model, messages)
+        reply = client.chat(model, messages, temperature=temperature)
         program = extract_code(reply.text)
         stage, error = check(language.root, program)
         if not error and simulate is not None:

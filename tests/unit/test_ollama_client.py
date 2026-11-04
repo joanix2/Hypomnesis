@@ -55,6 +55,12 @@ def test_chat_sends_the_expected_request_and_measures_the_reply():
     assert reply.seconds >= 0
 
 
+def test_chat_sends_the_sampling_temperature():
+    client, seen = client_with(serving(ANSWER))
+    client.chat("llama3", [{"role": "user", "content": "hi"}], temperature=0.7)
+    assert json.loads(seen[0].content)["options"]["temperature"] == 0.7
+
+
 def test_zero_duration_gives_zero_throughput():
     client, _ = client_with(serving({**ANSWER, "eval_duration": 0, "eval_count": 0}))
     assert client.chat("m", [{"role": "user", "content": "x"}]).tokens_per_second == 0.0

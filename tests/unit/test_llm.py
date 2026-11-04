@@ -26,9 +26,11 @@ class FakeLLM:
     def __init__(self, *answers: str) -> None:
         self.answers = list(answers)
         self.calls: list[list[dict[str, str]]] = []
+        self.temperatures: list[float] = []
 
-    def chat(self, model, messages, *, num_ctx=16384):
+    def chat(self, model, messages, *, num_ctx=16384, temperature=0.0):
         self.calls.append(messages)
+        self.temperatures.append(temperature)
         return Reply(self.answers.pop(0), 0.1, 10, 100.0)
 
 

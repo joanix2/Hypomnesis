@@ -25,13 +25,13 @@ from typing import Any
 import matplotlib
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from scipy.stats import binomtest
 
 matplotlib.use("Agg")
 
 Result = dict[str, Any]
 
 SPLIT_ORDER = ("dev", "test", "hard")
-Z_95 = 1.959963984540054
 
 
 class ResultsError(ValueError):
@@ -62,6 +62,13 @@ def normalize(raw: Mapping[str, Any]) -> Result:
         row["correct_first"] = row["correct"] and row.get("attempts", 1) <= 1
     row["correct_first"] = bool(row["correct_first"])
     row["seconds"] = float(row.get("seconds") or 0.0)
+    row["load_seconds"] = float(row.get("load_seconds") or 0.0)
+    # Older runs only have the total: no load time is known, so nothing is subtracted.
+    row["seconds_without_load"] = float(
+        row["seconds"] - row["load_seconds"]
+        if row.get("seconds_without_load") is None
+        else row["seconds_without_load"]
+    )
     row["output_tokens"] = int(row.get("output_tokens") or 0)
     row["tokens_per_second"] = float(row.get("tokens_per_second") or 0.0)
     row["label"] = f"{row['model']} · {row['strategy']}" if row["strategy"] else row["model"]
@@ -96,17 +103,14 @@ class Rate:
         return self.successes / self.total if self.total else 0.0
 
 
-def wilson_interval(successes: int, total: int, z: float = Z_95) -> tuple[float, float]:
+def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> tuple[float, float]:
     """Wilson score interval of a binomial proportion (``(0, 0)`` when ``total`` is 0)."""
     if total == 0:
         return (0.0, 0.0)
-    p = successes / total
-    denominator = 1 + z * z / total
-    centre = (p + z * z / (2 * total)) / denominator
-    half = z * math.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / denominator
-    low = 0.0 if successes == 0 else min(p, max(0.0, centre - half))
-    high = 1.0 if successes == total else max(p, min(1.0, centre + half))
-    return (low, high)
+    interval = binomtest(successes, total).proportion_ci(
+        confidence_level=confidence, method="wilson"
+    )
+    return (interval.low, interval.high)
 
 
 def rate(successes: int, total: int) -> Rate:
@@ -242,21 +246,36 @@ def accuracy_by_split_figure(results: Sequence[Result]) -> Figure:
 
 
 def cost_figure(results: Sequence[Result]) -> Figure:
-    """Mean seconds and mean generated tokens per case, per model/strategy (± std. error)."""
+    """Mean seconds (total, and without model loading) and mean generated tokens per case,
+    per model/strategy (± std. error)."""
     figure, panels = _new_figure(max(8.0, 3.0 * len(ordered_labels(results)) + 2), 4.5, 2)
-    for axes, key, title, color in (
-        (panels[0], "seconds", "temps par cas (s)", FIRST_COLOR),
-        (panels[1], "output_tokens", "jetons générés par cas", REPAIRED_COLOR),
+    for axes, series, title in (
+        (
+            panels[0],
+            (
+                ("seconds", "total", FIRST_COLOR),
+                ("seconds_without_load", "hors chargement du modèle", REPAIRED_COLOR),
+            ),
+            "temps par cas (s)",
+        ),
+        (panels[1], (("output_tokens", "jetons", REPAIRED_COLOR),), "jetons générés par cas"),
     ):
-        costs = cost_by_label(results, key)
-        axes.bar(
-            range(len(costs)),
-            [mean for mean, _ in costs.values()],
-            yerr=[error for _, error in costs.values()],
-            capsize=3,
-            color=color,
-        )
-        axes.set_xticks(range(len(costs)), list(costs))
+        width = 0.8 / len(series)
+        for i, (key, name, color) in enumerate(series):
+            costs = cost_by_label(results, key)
+            offset = (i - (len(series) - 1) / 2) * width
+            axes.bar(
+                [j + offset for j in range(len(costs))],
+                [mean for mean, _ in costs.values()],
+                width,
+                yerr=[error for _, error in costs.values()],
+                capsize=3,
+                color=color,
+                label=name,
+            )
+            axes.set_xticks(range(len(costs)), list(costs))
+        if len(series) > 1:
+            axes.legend(fontsize="small")
         _tilt(axes)
         axes.set_title(title)
     figure.tight_layout()

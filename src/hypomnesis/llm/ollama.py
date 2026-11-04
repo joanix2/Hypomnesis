@@ -54,8 +54,11 @@ class OllamaClient:
         num_ctx: int = 16384,
         num_predict: int | None = None,
         format: dict[str, Any] | None = None,
+        temperature: float = 0.0,
     ) -> Reply:
-        """One non-streaming chat turn; `format` is an optional JSON Schema (structured output)."""
+        """One non-streaming chat turn; `format` is an optional JSON Schema (structured output).
+
+        At temperature 0 (default) answers are deterministic; repeated trials need ``> 0``."""
         import httpx
         import ollama
 
@@ -65,7 +68,7 @@ class OllamaClient:
                 *messages[:-1],
                 {**messages[-1], "content": messages[-1]["content"] + " /no_think"},
             ]
-        options: dict[str, Any] = {"temperature": 0, "num_ctx": num_ctx}
+        options: dict[str, Any] = {"temperature": temperature, "num_ctx": num_ctx}
         if num_predict is not None:
             options["num_predict"] = num_predict
         start = time.perf_counter()

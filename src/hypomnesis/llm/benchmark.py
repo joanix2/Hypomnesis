@@ -22,6 +22,8 @@ from dataclasses import dataclass, field, fields, is_dataclass
 from pathlib import Path
 from typing import Any
 
+from scipy.stats import binomtest
+
 from hypomnesis.engine.bridge import to_json
 from hypomnesis.engine.language import Language, load_language
 from hypomnesis.engine.procedure import run_procedure
@@ -32,6 +34,7 @@ from hypomnesis.llm.prompting import DEFAULT, Strategy
 from hypomnesis.llm.translation import ChatClient, Translation, translate
 
 ANY = "*"
+REPEAT_TEMPERATURE = 0.7  # default sampling temperature once a case is repeated
 
 
 @dataclass
@@ -46,6 +49,8 @@ class CaseResult:
     first_ok: bool = False  # the first attempt ran and is semantically right (no repair needed)
     strategy: str = ""  # prompting strategy, empty for the default one
     split: str = "dev"
+    repetition: int = 0  # index of this trial among the repetitions of the same case
+    temperature: float = 0.0  # sampling temperature (0: deterministic, repeating is useless)
 
     @property
     def label(self) -> str:
@@ -79,6 +84,15 @@ class CaseResult:
     def seconds(self) -> float:
         return sum(a.reply.seconds for a in self.translation.attempts)
 
+    @property
+    def load_seconds(self) -> float:
+        return sum(a.reply.load_seconds for a in self.translation.attempts)
+
+    @property
+    def seconds_without_load(self) -> float:
+        """Total time minus the model load time (the cost of the translation itself)."""
+        return max(0.0, self.seconds - self.load_seconds)
+
     def to_json(self) -> dict[str, Any]:
         return {
             "language": self.language,
@@ -92,7 +106,11 @@ class CaseResult:
             "split": self.split,
             "executed": self.executed,
             "attempts": len(self.translation.attempts),
+            "repetition": self.repetition,
+            "temperature": self.temperature,
             "seconds": round(self.seconds, 2),
+            "load_seconds": round(self.load_seconds, 2),
+            "seconds_without_load": round(self.seconds_without_load, 2),
             "output_tokens": self.output_tokens,
             "tokens_per_second": round(
                 sum(a.reply.tokens_per_second for a in self.translation.attempts)
@@ -204,6 +222,9 @@ def run_case(
     case: dict,
     repairs: int,
     strategy: Strategy = DEFAULT,
+    *,
+    temperature: float = 0.0,
+    repetition: int = 0,
 ) -> CaseResult:
     language = load_language(root)
     examples = [(root / e).read_text(encoding="utf-8") for e in spec.get("examples", [])]
@@ -217,6 +238,7 @@ def run_case(
         max_repairs=repairs,
         simulate=lambda program: _dry_run(root, program, environment),
         strategy=strategy,
+        temperature=temperature,
     )
     result = CaseResult(
         language.name,
@@ -225,6 +247,8 @@ def run_case(
         translation,
         strategy="" if strategy == DEFAULT else str(strategy),
         split=case.get("split", "dev"),
+        repetition=repetition,
+        temperature=temperature,
     )
     if not translation.compiled:
         return result
@@ -254,8 +278,18 @@ def run_benchmark(
     repairs: int = 2,
     strategy: Strategy = DEFAULT,
     splits: Sequence[str] | None = None,
+    repetitions: int = 1,
+    temperature: float | None = None,
     log=print,
 ) -> list[CaseResult]:
+    """Run every selected case ``repetitions`` times per model.
+
+    At temperature 0 trials of a case are identical, so ``repetitions > 1`` samples at
+    ``temperature`` (default ``REPEAT_TEMPERATURE``); a single run defaults to 0."""
+    if repetitions < 1:
+        raise ValueError("repetitions must be at least 1")
+    if temperature is None:
+        temperature = REPEAT_TEMPERATURE if repetitions > 1 else 0.0
     results = []
     for root in languages:
         spec = json.loads((root / "benchmark.json").read_text(encoding="utf-8"))
@@ -263,23 +297,73 @@ def run_benchmark(
             for case in spec["cases"]:
                 if splits is not None and case.get("split", "dev") not in splits:
                     continue
-                r = run_case(client, model, root, spec, case, repairs, strategy)
-                mark = "✓" if r.correct and r.executed else ("~" if r.typed else "✗")
-                log(
-                    f"  {mark} {model:<14} {r.language}/{r.case}  {r.seconds:5.1f} s  "
-                    f"{len(r.translation.attempts)} essai(s)  {'; '.join(r.semantic_errors)[:90]}"
-                )
-                results.append(r)
+                for repetition in range(repetitions):
+                    r = run_case(
+                        client,
+                        model,
+                        root,
+                        spec,
+                        case,
+                        repairs,
+                        strategy,
+                        temperature=temperature,
+                        repetition=repetition,
+                    )
+                    mark = "✓" if r.correct and r.executed else ("~" if r.typed else "✗")
+                    again = f"#{repetition + 1} " if repetitions > 1 else ""
+                    log(
+                        f"  {mark} {model:<14} {r.language}/{r.case} {again}"
+                        f"{r.seconds:5.1f} s ({r.seconds_without_load:.1f} s hors chargement)  "
+                        f"{len(r.translation.attempts)} essai(s)  "
+                        f"{'; '.join(r.semantic_errors)[:90]}"
+                    )
+                    results.append(r)
     return results
 
 
+def wilson(k: int, n: int, confidence: float = 0.95) -> tuple[float, float]:
+    """Wilson score interval of ``k`` successes out of ``n`` trials (``(0, 0)`` when ``n`` is 0)."""
+    if n == 0:
+        return (0.0, 0.0)
+    interval = binomtest(k, n).proportion_ci(confidence_level=confidence, method="wilson")
+    return (interval.low, interval.high)
+
+
+def repetition_table(results: list[CaseResult]) -> str:
+    """Per model, how repeated trials of the same case agree (empty when nothing is repeated)."""
+    if not any(r.repetition for r in results):
+        return ""
+    lines = [
+        "| Modèle | Cas distincts | Essais par cas | Température "
+        "| Correct 1er essai moy. par cas | Cas stables (même issue à chaque essai) |",
+        "|---|---|---|---|---|---|",
+    ]
+    for model in dict.fromkeys(r.label for r in results):
+        by_case: dict[tuple[str, str], list[CaseResult]] = {}
+        for r in results:
+            if r.label == model:
+                by_case.setdefault((r.language, r.case), []).append(r)
+        rates = [sum(r.correct_first for r in rs) / len(rs) for rs in by_case.values()]
+        stable = sum(1 for rate in rates if rate in (0.0, 1.0))
+        trials = max(len(rs) for rs in by_case.values())
+        temperatures = sorted({r.temperature for rs in by_case.values() for r in rs})
+        lines.append(
+            f"| {model} | {len(by_case)} | {trials} | {', '.join(f'{t:g}' for t in temperatures)} "
+            f"| {100 * sum(rates) / len(rates):.0f} % | {stable}/{len(by_case)} |"
+        )
+    return "\n".join(lines)
+
+
 def summary(results: list[CaseResult]) -> str:
+    """Markdown table per model: parsed / typed / correct (first try and final, with 95 % Wilson
+    intervals), repaired cases, mean time with and without model loading, then — when cases
+    were repeated — a table of agreement between trials."""
     models = list(dict.fromkeys(r.label for r in results))
     lines = [
         "| Modèle | Cas | Parsé (1er essai) | Typé (1er essai) | **Correct (1er essai)** "
-        "| Typé (après réparations) | **Correct** | Exécuté | Essais moy. | Temps moy. "
-        "| Jetons générés moy. | Jetons/s |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| Typé (après réparations) | **Correct** | Exécuté | Cas réparés | Essais moy. "
+        "| Temps moy. | Temps moy. hors chargement | Jetons générés moy. | Jetons/s |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for model in models:
         rs = [r for r in results if r.label == model]
@@ -287,6 +371,10 @@ def summary(results: list[CaseResult]) -> str:
 
         def pct(k: int, n: int = n) -> str:
             return f"{k}/{n} ({100 * k // n} %)"
+
+        def pct_ci(k: int, n: int = n) -> str:
+            low, high = wilson(k, n)
+            return f"{pct(k)} [{100 * low:.0f}-{100 * high:.0f} %]"
 
         tps = [
             a.reply.tokens_per_second
@@ -297,10 +385,14 @@ def summary(results: list[CaseResult]) -> str:
         lines.append(
             f"| {model} | {n} | {pct(sum(r.parsed_first for r in rs))} "
             f"| {pct(sum(r.typed_first for r in rs))} "
-            f"| **{pct(sum(r.correct_first for r in rs))}** | {pct(sum(r.typed for r in rs))} "
-            f"| **{pct(sum(r.correct for r in rs))}** | {pct(sum(r.executed for r in rs))} "
+            f"| **{pct_ci(sum(r.correct_first for r in rs))}** | {pct(sum(r.typed for r in rs))} "
+            f"| **{pct_ci(sum(r.correct for r in rs))}** | {pct(sum(r.executed for r in rs))} "
+            f"| {sum(len(r.translation.attempts) > 1 for r in rs)} "
             f"| {sum(len(r.translation.attempts) for r in rs) / n:.2f} "
-            f"| {sum(r.seconds for r in rs) / n:.1f} s | {sum(r.output_tokens for r in rs) // n} "
+            f"| {sum(r.seconds for r in rs) / n:.1f} s "
+            f"| {sum(r.seconds_without_load for r in rs) / n:.1f} s "
+            f"| {sum(r.output_tokens for r in rs) // n} "
             f"| {sum(tps) / len(tps) if tps else 0:.0f} |"
         )
-    return "\n".join(lines)
+    repeated = repetition_table(results)
+    return "\n".join(lines) + (f"\n\n{repeated}" if repeated else "")

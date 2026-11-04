@@ -132,6 +132,24 @@ affichage, aucun état global). Le texte SVG reste du texte (`svg.fonttype = non
 CLI : `hypomnesis benchmark-llm … [--graphiques/--sans-graphiques]` (actif par défaut ; ignoré avec un
 avertissement si matplotlib est absent) écrit les figures à côté du résumé ; `hypomnesis graphiques-llm
 FICHIER.json [--sortie DIR]` les régénère sans relancer le banc ni appeler Ollama.
+
+### Banc LLM : intervalles, temps hors chargement, répétitions (HYP-139)
+
+- **Intervalles de Wilson** : `benchmark.wilson(k, n)` et `plots.wilson_interval` s'appuient sur
+  `scipy.stats.binomtest(k, n).proportion_ci(method="wilson")` (extras `llm` et `dev`). `summary()` les
+  affiche à 95 % pour « Correct (1er essai) » et « Correct ». Le tableau distingue aussi parsé, typé
+  (1er essai / après réparations), exécuté, **cas réparés** (plus d'une tentative), et deux temps :
+  « Temps moy. » (total) et « Temps moy. hors chargement » (total − `Reply.load_seconds`).
+- **JSON de résultats** : `seconds`, `load_seconds`, `seconds_without_load`, `repetition`, `temperature`
+  s'ajoutent à chaque ligne ; `plots.normalize` tolère les anciens lots (aucun chargement soustrait). La
+  figure de coût trace les deux temps côte à côte.
+- **Répétitions** (bibliothèque seulement) : `run_benchmark(..., repetitions=N, temperature=T)` et
+  `run_case(..., temperature=, repetition=)`, `translate(..., temperature=)`,
+  `OllamaClient.chat(..., temperature=)`. À température 0 les essais sont identiques : avec `N > 1` la
+  température par défaut est `REPEAT_TEMPERATURE` (0,7). Chaque essai est une ligne de résultat ; les
+  intervalles supposent des essais indépendants, d'où un second tableau (`repetition_table`) : correct au
+  1er essai moyen par cas et nombre de cas « stables » (même issue à chaque essai).
+- Option CLI `--repetitions`/`--temperature` : pas encore branchée (`cli.py` appartient à HYP-130).
 ## Certificats
 
 `src/hypomnesis/certify/` exporte la Core IR élaborée et annotée (prélude compris) en JSON,
@@ -260,6 +278,24 @@ Aucun hook git : les validateurs se lancent à la demande, via la skill `/valide
 | `graphe` | `graphify update .` puis réinjection du Kanban |
 
 La CI exécute les mêmes linters à chaque push.
+
+## Automate des commandes (HYP-061)
+
+`src/hypomnesis/effects/commands.py` (pur, sans horloge ni `sleep`) : `State` (§9.7 + `DryRun`,
+`Simulated`), table explicite `TRANSITIONS`, `can_move`, `CommandRecord` (journal, tentatives,
+échéance ; `move` lève `IllegalTransition`), `RetryPolicy` (tentatives max, délai, backoff) et
+`may_retry`. Les états terminaux (`Completed`, `Rejected`, `Failed`, `TimedOut`, `UnknownOutcome`,
+`DryRun`, `Simulated`) sont absorbants. La seule façon d'exécuter deux fois est l'auto-transition
+`Dispatched → Dispatched` (relance), accordée **aux seules commandes idempotentes** (`Actuator.idempotent`,
+`False` par défaut) dans la limite de `max_attempts`.
+
+`Dispatcher` (`effects/dispatcher.py`) : déduplication par `command_id` (la même commande rend l'issue
+existante sans rappeler l'actionneur ; même id avec un autre contenu → `DuplicateCommand`) ; horloge et
+`sleep` injectables ; `Actuator.timeout` fixe l'échéance. Une exception ordinaire de l'actionneur donne
+`Failed` (pas de relance) ; `TransportError` (aucune réponse fiable : l'action a pu avoir lieu) donne une
+relance si idempotent, sinon `UnknownOutcome`. Une réponse tardive donne `TimedOut`. `Accepted` est dans
+la table mais n'est émis que par un transport asynchrone (HYP-063). Miroir de la propriété Lean HYP-066
+(`docs/verification/proprietes.md`) ; tests : `tests/unit/test_commands.py`.
 
 ## Commandes
 
