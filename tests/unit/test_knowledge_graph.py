@@ -6,7 +6,7 @@ import networkx as nx
 import pytest
 
 from hypomnesis.epistemics.knowledge import Fact, KnowledgeBase
-from hypomnesis.epistemics.provenance import obs
+from hypomnesis.epistemics.provenance import Support, obs
 
 
 def chain(depth: int) -> tuple[KnowledgeBase, str]:
@@ -61,11 +61,58 @@ def test_fact_with_two_derivations_survives_when_one_source_is_retracted():
     assert "d" in kb.facts and "b" in kb.facts
 
 
-def test_premise_less_fact_is_invalidated_by_any_retraction():
+def test_premise_less_fact_is_not_invalidated_by_an_unrelated_retraction():
     kb = KnowledgeBase()
     kb.observe("a", 1, "capteur")
     kb.derive("axiome", True, "postulat", [])
-    assert kb.retract_source("obs-1", "test") == ["a", "axiome"]
+    assert kb.retract_source("obs-1", "test") == ["a"]
+    assert kb.value("axiome") is True
+
+
+def test_premise_less_fact_has_a_readable_support_and_confidence():
+    # HYP-143, symptom (a): the provenance used to mention an undeclared source.
+    kb = KnowledgeBase()
+    kb.derive("c.k", 1, "constante", [])
+    assert kb.support("c.k") == Support.DEFAULTED
+    assert kb.confidence("c.k") == 1.0
+    assert [s.id for s in kb.sources_of("c.k")] == ["axiome"]
+    assert kb.explain("c.k") == ["- c.k = 1 : constante [support par défaut, confiance 1.00]"]
+    data = json.loads(json.dumps(kb.provenance_graph()))
+    nodes = {n["id"]: n for n in data["nodes"]}
+    assert nodes["fact:c.k"]["support"] == "par défaut"
+    assert nodes["source:axiome"]["source_kind"] == "default"
+    assert nodes["source:axiome"]["retracted"] is False
+
+
+def test_premise_less_fact_survives_the_retraction_of_an_unrelated_source():
+    # HYP-143, symptom (b): the first retraction used to invalidate it.
+    kb = KnowledgeBase()
+    kb.derive("c.k", 1, "constante", [])
+    kb.observe("a", 1, "capteur")
+    assert kb.retract_source("obs-1", "test") == ["a"]
+    assert kb.value("c.k") == 1
+    assert kb.support("c.k") == Support.DEFAULTED
+
+
+def test_axiom_is_declared_once_and_never_retracted():
+    kb = KnowledgeBase()
+    kb.derive("c.k", 1, "constante", [])
+    kb.derive("c.j", 2, "constante", [])
+    assert list(kb.sources) == ["axiome"]
+    with pytest.raises(ValueError, match="axiome"):
+        kb.retract_source("axiome", "test")
+    assert "axiome" not in kb.retracted
+    assert set(kb.facts) == {"c.k", "c.j"}
+
+
+def test_conclusion_from_an_axiom_and_an_observation_follows_the_observation():
+    kb = KnowledgeBase()
+    kb.derive("c.k", 2, "constante", [])
+    kb.observe("a", 1, "capteur")
+    kb.derive("d", 3, "produit", ["c.k", "a"])
+    assert kb.support("d") == Support.DEFAULTED  # the weakest premise wins
+    assert kb.retract_source("obs-1", "panne") == ["a", "d"]
+    assert "c.k" in kb.facts
 
 
 def test_retracting_an_unrelated_source_touches_nothing():
@@ -113,10 +160,20 @@ def test_provenance_graph_is_json_and_reloads():
     assert g.has_edge("fact:a", "fact:b")
 
 
-def test_undeclared_sources_appear_as_such():
+def test_axiom_source_is_declared_in_the_graph():
     kb = KnowledgeBase()
     kb.derive("axiome", True, "postulat", [])
     graph = kb.graph(detailed=False)
     assert graph.nodes["source:axiome"]["kind"] == "source"
+    assert "declared" not in graph.nodes["source:axiome"]
     assert graph.has_edge("source:axiome", "fact:axiome")
     assert obs("axiome") == kb.facts["axiome"].provenance
+
+
+def test_undeclared_sources_appear_as_such():
+    kb = KnowledgeBase()
+    kb.facts["x"] = Fact("x", 1, obs("fantome"), "à la main")
+    graph = kb.graph(detailed=False)
+    assert graph.nodes["source:fantome"]["kind"] == "source"
+    assert kb.retract_source("autre", "test") == []  # an unknown source is not dropped
+    assert "x" in kb.facts

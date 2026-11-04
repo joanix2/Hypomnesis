@@ -9,8 +9,8 @@ import networkx as nx
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from hypomnesis.epistemics.knowledge import Fact, KnowledgeBase
-from hypomnesis.epistemics.provenance import BOOLEAN, evaluate
+from hypomnesis.epistemics.knowledge import AXIOM, Fact, KnowledgeBase
+from hypomnesis.epistemics.provenance import BOOLEAN, evaluate, obs
 
 # One step builds one fresh fact: a direct record, or a derivation from a subset of
 # earlier facts (picked by index modulo their number; empty = an axiom).
@@ -53,7 +53,7 @@ def reference_invalidated(kb: KnowledgeBase, source_id: str) -> list[str]:
 @given(st.lists(steps, min_size=1, max_size=14), st.data())
 def test_revision_equals_boolean_evaluation_of_every_fact(plan, data):
     kb = build(plan, axioms=True)
-    sources = sorted(kb.sources)
+    sources = sorted(set(kb.sources) - {AXIOM})  # the axiom is never retracted
     if not sources:
         return
     source = data.draw(st.sampled_from(sources))
@@ -92,3 +92,30 @@ def test_alternative_derivations_make_the_graph_over_approximate(plan, data):
     expected = reference_invalidated(kb, source)
     assert kb.retract_source(source, "test") == expected
     assert {f"fact:{k}" for k in expected} <= candidates
+
+
+@settings(max_examples=100, deadline=None)
+@given(st.lists(steps, min_size=1, max_size=14), st.data())
+def test_premise_less_facts_survive_the_retraction_of_any_other_source(plan, data):
+    kb = build(plan, axioms=True)
+    axioms = {k for k, f in kb.facts.items() if not f.premises and f.provenance == obs(AXIOM)}
+    sources = sorted(set(kb.sources) - {AXIOM})
+    if not sources:
+        return
+    source = data.draw(st.sampled_from(sources))
+    invalidated = kb.retract_source(source, "test")
+    assert not axioms & set(invalidated)
+    assert axioms <= set(kb.facts)
+
+
+@settings(max_examples=100, deadline=None)
+@given(st.lists(steps, min_size=1, max_size=14), st.data())
+def test_retraction_never_touches_a_fact_whose_provenance_omits_the_source(plan, data):
+    kb = build(plan, axioms=True)
+    sources = sorted(set(kb.sources) - {AXIOM})
+    if not sources:
+        return
+    source = data.draw(st.sampled_from(sources))
+    untouched = {k for k, f in kb.facts.items() if source not in set(f.provenance.observations())}
+    assert not untouched & set(kb.retract_source(source, "test"))  # P11
+    assert untouched <= set(kb.facts)

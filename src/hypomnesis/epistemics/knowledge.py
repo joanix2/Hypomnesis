@@ -40,6 +40,7 @@ from hypomnesis.epistemics.provenance import (
 
 FACT = "fact:"  # node-id prefixes: a fact key may look like a source id
 SOURCE = "source:"
+AXIOM = "axiome"  # id of the declared source of premise-less facts (never retracted)
 
 
 @dataclass(frozen=True)
@@ -134,15 +135,28 @@ class KnowledgeBase:
         return fact
 
     def derive(self, key: str, value: Any, method: str, premises: list[str]) -> Fact:
-        """A conclusion from existing facts: its provenance is the product of theirs."""
+        """A conclusion from existing facts: its provenance is the product of theirs.
+
+        A conclusion without premises is a *program constant* (HYP-143, option A): it
+        rests on the declared source :data:`AXIOM` — kind ``default``, support
+        « par défaut », confidence 1 — which is never retracted, so the fact survives
+        the retraction of any other source and keeps a readable support.
+        """
         provenance: Prov | None = None
         for premise in premises:
             p = self.facts[premise].provenance
             provenance = p if provenance is None else provenance * p
-        fact = Fact(key, value, provenance or obs("axiome"), method, tuple(premises))
+        if provenance is None:
+            self._declare_axiom()
+            provenance = obs(AXIOM)
+        fact = Fact(key, value, provenance, method, tuple(premises))
         self._replace(key, fact)
         self._log("derived", key, f"{value!r} — {method} ← {', '.join(premises)}")
         return fact
+
+    def _declare_axiom(self) -> None:
+        if AXIOM not in self.sources:
+            self.sources[AXIOM] = Source(AXIOM, "default", "constante du programme", 1.0)
 
     def _replace(self, key: str, fact: Fact) -> None:
         self.facts[key] = fact
@@ -155,13 +169,15 @@ class KnowledgeBase:
 
         Implements the revision of §7.3 as the substitution ``x ↦ 0`` (P10, P11):
         a fact still holds iff its provenance evaluates to true without the source;
-        facts that do not mention it are untouched.
+        facts that do not mention it are untouched. The :data:`AXIOM` source of
+        premise-less facts cannot be retracted.
         """
+        if source_id == AXIOM:
+            raise ValueError(f"la source {AXIOM!r} (constantes du programme) n'est pas rétractable")
         self.retracted.add(source_id)
         self._log("retracted", source_id, reason)
         graph = self.graph(detailed=False)
-        # Candidates: everything downstream of a source that no longer holds (the
-        # retracted ones, and undeclared ones such as the axiom of a premise-less fact).
+        # Candidates: everything downstream of a retracted source.
         candidates: set[str] = set()
         for node, data in graph.nodes(data=True):
             if data["kind"] == "source" and not self._holds(node.removeprefix(SOURCE)):
@@ -179,7 +195,8 @@ class KnowledgeBase:
         return invalidated
 
     def _holds(self, source_id: str) -> bool:
-        return source_id not in self.retracted and source_id in self.sources
+        # A source holds until retracted; an unknown id is never silently dropped.
+        return source_id not in self.retracted
 
     # ------------------------------------------------------------ queries
 
@@ -201,8 +218,9 @@ class KnowledgeBase:
     def graph(self, *, detailed: bool = True) -> nx.DiGraph[str]:
         """The dependency graph, built on demand from ``sources``, ``facts`` and provenance.
 
-        Nodes are ``fact:<key>`` and ``source:<id>`` (a provenance may mention an
-        undeclared source such as ``axiome``). Edges go from a source to every fact
+        Nodes are ``fact:<key>`` and ``source:<id>`` (a hand-built provenance may still
+        mention an undeclared source, flagged ``declared=False``). Edges go from a
+        source to every fact
         whose provenance mentions it, and from a premise to its conclusion
         (``kind`` is ``"provenance"`` or ``"premise"``). With ``detailed`` the nodes
         carry value, method, support and confidence, ready for export.
