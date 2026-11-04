@@ -11,7 +11,7 @@ from hypomnesis.runtime.natives import default_registry
 from hypomnesis.session import Session
 
 
-def backend(tmp_path, monkeypatch, extension_manifest, body, *, timeout=2, **changes):
+def backend(tmp_path, monkeypatch, extension_manifest, body, *, timeout=5, **changes):
     (tmp_path / "test_plugin.py").write_text(body)
     monkeypatch.syspath_prepend(str(tmp_path))
     schema = {"$id": "urn:test:integer", "type": "integer"}
@@ -131,3 +131,32 @@ def test_permissions_and_preconditions_refused(tmp_path, monkeypatch, extension_
             "def run(x): return x",
             preconditions=["must be calibrated"],
         )
+
+
+@pytest.mark.parametrize(
+    "response", ["{}", '{"ok":false,"value":null}', '{"ok":1,"value":1}', "[]"]
+)
+def test_corrupt_worker_response_is_a_typed_error(
+    tmp_path, monkeypatch, extension_manifest, response
+):
+    plugin = backend(
+        tmp_path,
+        monkeypatch,
+        extension_manifest,
+        "import os,sys\nfrom pathlib import Path\n"
+        f"def run(x):\n Path(sys.argv[1]).write_text({response!r})\n os._exit(0)\n",
+    )
+    with pytest.raises(BackendError, match="protocol"):
+        plugin.invoke(1)
+
+
+def test_language_receives_typed_output_error(tmp_path, monkeypatch, extension_manifest):
+    plugin = backend(tmp_path, monkeypatch, extension_manifest, "def run(x): return 'wrong'")
+    natives = default_registry()
+    plugin.register(natives, "sample.call")
+    session = Session(natives)
+    session.load('external operation : int -> int = "sample.call"')
+    with pytest.raises(BackendError) as error:
+        session.eval("operation 1")
+    assert error.value.phase == "output"
+    assert error.value.stage_id == "runtime"

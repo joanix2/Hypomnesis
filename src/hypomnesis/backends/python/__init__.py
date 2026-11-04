@@ -127,13 +127,16 @@ class PythonBackend:
                     response = json.loads(response_path.read_text())
                 except (OSError, ValueError) as exc:
                     raise BackendError(self.identifier, "protocol", str(exc)) from exc
-                if not isinstance(response, dict) or set(response) not in (
-                    {"ok", "value"},
-                    {"ok", "error", "phase"},
-                ):
+                if not isinstance(response, dict):
                     raise BackendError(self.identifier, "protocol", "invalid worker response")
-                if response["ok"] is False:
+                if response.get("ok") is False:
+                    if (
+                        set(response) != {"ok", "error", "phase"}
+                        or not isinstance(response["phase"], str)
+                        or not isinstance(response["error"], str)
+                    ):
+                        raise BackendError(self.identifier, "protocol", "invalid worker error")
                     raise BackendError(self.identifier, response["phase"], response["error"])
-                if response["ok"] is not True:
+                if response.get("ok") is not True or set(response) != {"ok", "value"}:
                     raise BackendError(self.identifier, "protocol", "invalid worker status")
                 return response["value"]
