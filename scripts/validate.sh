@@ -5,7 +5,7 @@
 #   scripts/validate.sh complet    # tout : pre-commit (linters, Pyright, schémas,
 #                                  #   workflows, Lean), tests, audit des axiomes
 #   scripts/validate.sh lean       # preuves : lake build, aucun sorry, audit des axiomes,
-#                                  #   vérificateur de certificats sur l'exemple certifiable
+#                                  #   certificats et pont CLI sur tous les exemples
 #   scripts/validate.sh graphe     # reconstruit le graphe Graphify et y réinjecte le Kanban
 #
 # Chaque étape s'exécute même si une précédente échoue ; un résumé final liste les
@@ -52,13 +52,7 @@ lean_audit() {
 
 certificate_check() {
     (cd formal && lake build hypomnesis-check) || return 1
-    local cert
-    cert=$(mktemp "${TMPDIR:-/tmp}/hypomnesis-certificate.XXXXXXXXXX") || return 1
-    "$PY" -m hypomnesis.cli check demo/examples/basics/certifiable.hyp --emit-certificate "$cert" \
-        --certify --checker formal/.lake/build/bin/hypomnesis-check >/dev/null
-    local status=$?
-    rm -f "$cert"
-    return $status
+    "$PY" -m pytest -q tests/integration/test_lean_checker.py
 }
 
 graph_refresh() {

@@ -61,7 +61,9 @@ def test_altered_certificate_is_rejected(tmp_path):
 
 
 def test_program_outside_the_fragment_is_reported(tmp_path):
-    result = run("check", certificate(EXAMPLES / "basics" / "tour.hyp"), tmp_path)
+    session = Session()
+    session.check("let x = match 1 with (n as whole) -> n + whole")
+    result = run("check", session_certificate(session), tmp_path)
     assert result.returncode == 2
     assert "hors du fragment" in result.stderr
 
@@ -133,7 +135,7 @@ def test_cli_refuses_injected_miselaboration(tmp_path, capsys, monkeypatch):
 
 CASES = (
     (("basics/certifiable.hyp",), 0),
-    (("basics/tour.hyp",), 2),
+    (("basics/tour.hyp",), 0),
     (("knowledge/plaque.hyp",), 0),
     (("knowledge/regles.hyp",), 0),
     (("mechanics/units.hyp",), 0),
@@ -142,19 +144,37 @@ CASES = (
 
 
 def test_every_example_has_an_explicit_certification_expectation():
+    assert all(status == 0 for _, status in CASES), "No unsupported-example exemptions"
     assert {name for names, _ in CASES for name in names} == {
         str(path.relative_to(EXAMPLES)) for path in EXAMPLES.rglob("*.hyp")
     }
 
 
 @pytest.mark.parametrize(("names", "status"), CASES, ids=lambda value: str(value))
-def test_all_examples_are_examined_without_claiming_unsupported_forms_are_certified(
-    tmp_path, names, status
-):
+def test_all_examples_are_actually_certified(tmp_path, names, status):
     result = run("check", certificate(*(EXAMPLES / name for name in names)), tmp_path)
     assert result.returncode == status, result.stderr
-    if status == 2:
-        assert "hors du fragment" in result.stderr
+
+
+@pytest.mark.parametrize("names", [names for names, _ in CASES])
+def test_cli_certifies_every_example(capsys, names):
+    assert (
+        main(
+            [
+                "check",
+                *(str(EXAMPLES / name) for name in names),
+                "--certify",
+                "--checker",
+                str(EXE),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr()
+    assert json.loads(output.out)["diagnostics"] == []
+    assert "accepté" in output.err
 
 
 @pytest.mark.parametrize(
@@ -308,3 +328,50 @@ def test_native_signatures_are_not_trusted_from_the_certificate(tmp_path):
     native["symbol"] = "int.add"
     result = run("check", document, tmp_path)
     assert result.returncode == 2, result.stderr
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "let answer = match (1, 2) with | (x, _) | (_, x) when x = 2 -> 99992 | _ -> 99991",
+        "let answer = match (7, 8, 0) with "
+        "| (0, x, y) | (y, x, 0) -> if x = 8 && y = 7 then 99991 else 99992 | _ -> 99992",
+        "type t = A of int | B of int | C of int\n"
+        "let answer = match C 7 with A n | B n | C n -> "
+        "if n = 7 then 99991 else 99992",
+    ],
+)
+def test_alternative_order_and_guard_semantics(tmp_path, source):
+    session = Session()
+    session.load(source)
+    assert session.value("answer") == 99991
+    result = run("eval", session_certificate(session), tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "99991" in result.stdout and "99992" not in result.stdout
+
+
+def test_alternatives_must_bind_the_same_types_even_when_unused(tmp_path):
+    session = Session()
+    session.check(
+        "type t = A of int | B of int\nlet f v = match v with A x | B x -> 17\nlet answer = f (A 1)"
+    )
+    document = session_certificate(session)
+    declaration = next(t for t in document["types"] if t["name"] == "t")
+    declaration["constructors"][1]["arg"] = {"con": "bool", "args": []}
+    result = run("check", document, tmp_path)
+    assert result.returncode == 1, result.stderr
+    assert "variables incompatibles" in result.stderr
+
+
+def test_complete_tour_evaluates_like_python(tmp_path):
+    source = (EXAMPLES / "basics/tour.hyp").read_text()
+    source += (
+        '\nlet answer = if result = 42.0 && total = 220 && alice.owner = "alice" '
+        "&& alice.balance = 150 then 99991 else 99992\n"
+    )
+    session = Session()
+    session.load(source)
+    assert session.value("answer") == 99991
+    result = run("eval", session_certificate(session), tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "99991" in result.stdout and "99992" not in result.stdout

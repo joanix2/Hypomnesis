@@ -45,7 +45,7 @@ Le format de certificat 1.1 conserve les bits des littéraux flottants.
 
 Frontière JSON (HYP-042, ADR 0010). `Json.Int` est un constructeur de bibliothèque
 Python/Hypomnesis, pas une nouvelle forme IR. La primitive `core.to_json` et les
-codecs JSON restent hors de ce fragment de primitives entières ; les tests
+codecs JSON restent hors du catalogue scalaire formalisé ; les tests
 d'aller-retour ne constituent pas les preuves JSON prévues par HYP-043.
 -/
 

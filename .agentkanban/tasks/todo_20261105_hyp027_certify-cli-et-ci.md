@@ -1,6 +1,6 @@
 ---
 title: "TODO HYP-027 · Certification CLI sans faux succès"
-lane: doing
+lane: qa
 created: 2026-11-05T00:20:00+01:00
 updated: 2026-11-05T00:20:00+01:00
 description: "Checker Lean réel, diagnostics atomiques et couverture honnête des exemples"
@@ -20,5 +20,12 @@ tags: [certification, ci, compilateur, outillage, python]
 
 # Itération 2 — couverture globale encore ouverte
 
-- [ ] Certifier effectivement tous les exemples après extensions formelles
+- [x] Certifier effectivement tous les exemples après extensions formelles
   HYP-021/HYP-150 et traitement des autres formes bloquantes rencontrées.
+
+# Itération 3 — dernier obstacle mesuré
+
+- [x] Traduire les alternatives racines en case, signatures de slots compatibles.
+- [x] Tester gardes sans réessai, permutations et mutations incompatibles.
+- [x] Exiger six acceptations Lean et CLI réelles en CI/validateur.
+- [x] Actualiser couverture et limites ; validations complète/rapide/graphe.

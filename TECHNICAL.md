@@ -758,9 +758,12 @@ HYP-027 : `check --certify` appelle le checker Lean avec découverte explicite
 et délai fini. `_load_files` renvoie la session réellement chargée pour ne
 pas certifier un prélude vide après une entrée de langage. Le JSON final
 attend la fin du contrôle. Tests d'élaboration falsifiée et couverture
-explicite des six exemples : cinq acceptés, tour bloqué sur les alternatives. Le pont est
-opérationnel, mais HYP-027 reste ouvert pour la couverture totale, dépendant
-des extensions formelles. Guide : [certification.md](docs/verification/certification.md).
+explicite des six exemples : tous acceptés, chacun via checker et CLI.
+Le validateur rebâtit le checker avant de lancer ces tests. Les alternatives
+racines deviennent des chaînes de case, sans modifier le noyau ; signatures
+de variables par slot compatibles, garde fausse vers le cas suivant (pas
+vers l'autre alternative). Alternatives imbriquées et alias restent refusés.
+Guide : [certification.md](docs/verification/certification.md).
 
 HYP-021 : les records sont des données nominales à constructeur unique,
 portant un produit terminé par unit (`Core/Records.lean`). Construction,

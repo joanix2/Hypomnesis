@@ -33,27 +33,30 @@ La CI appelle le vrai pont CLI, injecte une mauvaise élaboration et examine
 tous les fichiers de `demo/examples`. Le tableau ci-dessous est une mesure,
 **pas une liste d'exemptions assimilées à des succès**.
 
-| Exemple | Code Lean | Premier obstacle |
+| Exemple | Code Lean | Résultat |
 |---|---|---|
 | basics/certifiable.hyp | 0 | accepté |
-| basics/tour.hyp | 2 | motif alternatif |
+| basics/tour.hyp | 0 | accepté |
 | knowledge/plaque.hyp | 0 | accepté |
 | knowledge/regles.hyp | 0 | accepté |
 | mechanics/units.hyp | 0 | accepté |
 | mechanics/plate.hyp, après units.hyp | 0 | accepté |
 
-Une assertion vérifie que chaque nouveau fichier d'exemple possède un cas
-de couverture explicite. Les obstacles ci-dessus sont les premiers rencontrés,
-pas nécessairement les seuls (motifs alternatifs, primitives et
-polymorphisme peuvent ensuite nécessiter des extensions).
+Une assertion vérifie que chaque fichier d'exemple possède un cas explicite,
+avec acceptation obligatoire, jamais une exemption hors fragment. Cela ne
+certifie pas tout nouveau programme possible : les motifs alternatifs imbriqués,
+primitives non modélisées et polymorphisme peuvent nécessiter des extensions.
 
-La certification de **tous** les exemples n'est donc pas terminée.
+La certification des **six exemples actuels** est vérifiée sans exemption.
 HYP-021 couvre désormais les records nominaux, accès, mises à jour et motifs
 partiels (y compris les gardes et les champs permutés). HYP-150 couvre les
 flottants binary64, les chaînes Unicode et les primitives scalaires nécessaires.
-Les alternatives de motifs restent à traiter. Le pont HYP-027 est utilisable, mais son périmètre
-global reste ouvert tant que ces formes ne sont pas couvertes sans affaiblir
-le checker ni ses théorèmes.
+HYP-027 traduit aussi les alternatives racines en chaînes de case et contrôle
+la signature des variables par slot. Une garde fausse passe au cas source
+suivant, jamais à l'autre alternative du même cas. Le validateur Lean et la CI
+exigent chaque acceptation via le checker indépendant et le pont CLI.
+Les alternatives imbriquées, alias et primitives non modélisés restent refusés ;
+aucune extension du noyau ni preuve d'exhaustivité n'est revendiquée.
 
 P3 garantit le typage du terme **traduit et accepté dans le fragment Lean**.
 Ni le décodage ni le runtime Python n'ont de preuve complète de raffinement :

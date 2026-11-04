@@ -6,7 +6,7 @@ import Hypomnesis.Core.Records
 /-!
 # Décodage des certificats (HYP-026)
 
-Traduit un certificat JSON (`certificate/1.0.0`, émis par le compilateur Python)
+Traduit un certificat JSON (`certificate/1.0.0` ou `1.1.0`, émis par le compilateur Python)
 en un terme du fragment formalisé, que **`typeOf` — prouvé correct et complet —
 vérifie ensuite**. Ce décodeur n'est pas prouvé et n'en a pas besoin : il ne
 fait que construire des termes, il ne décide rien. Un défaut ici peut faire
@@ -262,6 +262,12 @@ def namedFields (items : List Json) : M (List (String × Json)) := do
   unless names.length == names.eraseDups.length do malformed "champs dupliqués"
   return result
 
+partial def patternChoices (j : Json) : M (List Json) := do
+  if let some choices := opt j "or" then
+    let [left, right] ← arr choices | malformed "deux alternatives de motif attendues"
+    return (← patternChoices left) ++ (← patternChoices right)
+  return [j]
+
 /-- Motif ; rend aussi les emplacements dans l'ordre d'occurrence. -/
 partial def decPat (j : Json) (expected : Ty := .unit) : M (Pat × List Nat) := do
   if (opt j "wild").isSome then return (.wild, [])
@@ -442,7 +448,9 @@ mutual
     let some first := cases.head? | malformed "match sans cas"
     -- Type du résultat : celui du corps du premier cas (pour le `fail` final).
     let resultT ← do
-      let (pat, slots) ← decPat (← field first "pattern") tx
+      let choices ← patternChoices (← field first "pattern")
+      let some firstChoice := choices.head? | malformed "motif alternatif vide"
+      let (pat, slots) ← decPat firstChoice tx
       let bodyScope ← caseScope inner tx pat slots
       checkType bodyScope (← dec bodyScope (← field first "body")) "corps d'un cas"
     return .letE scrut (← decCases inner (sc.depth) tx resultT cases)
@@ -467,11 +475,24 @@ mutual
     match cases with
     | [] => return .fail resultT
     | c :: rest =>
-      let (pat, slots) ← decPat (← field c "pattern") tx
+      decChoices sc scrutLevel tx resultT (← patternChoices (← field c "pattern"))
+        (← field c "guard") (← field c "body") rest none
+
+  partial def decChoices (sc : Scope) (scrutLevel : Nat) (tx resultT : Ty)
+      (choices : List Json) (guard bodyJ : Json) (rest : List Json)
+      (bindings : Option (List (Option Ty))) : M Expr := do
+    match choices with
+    | [] => decCases sc scrutLevel tx resultT rest
+    | choice :: choices =>
+      let (pat, slots) ← decPat choice tx
       let bodyScope ← caseScope sc tx pat slots
-      let body ← dec bodyScope (← field c "body")
-      let onFail ← decCases sc scrutLevel tx resultT rest
-      let guard ← field c "guard"
+      let signature := (bodyScope.levels.take slots.length).map fun level =>
+        bodyScope.locals[bodyScope.depth - 1 - level]?
+      if let some expected := bindings then
+        unless signature == expected do
+          throw (.illTyped "variables incompatibles entre alternatives de motif")
+      let body ← dec bodyScope bodyJ
+      let onFail ← decChoices sc scrutLevel tx resultT choices guard bodyJ rest (some signature)
       let onMatch ← if isNull guard then pure body else do
         let g ← dec bodyScope guard
         -- La suite, dupliquée sous les variables du motif (invisibles pour le certificat).

@@ -55,9 +55,10 @@ la sémantique Lean, couverte par les tests différentiels (HYP-028).
 **Pont CLI (HYP-027).** `hypomnesis check --certify` émet et vérifie le certificat,
 sans exécuter le programme, avec refus explicite hors fragment et délai fini.
 La CI teste ce chemin et refuse une élaboration falsifiée. L'export seul ne
-certifie rien. Cinq exemples sur six sont actuellement acceptés ; tour est
-explicitement refusé sur un motif alternatif, pas exempté comme certifié. HYP-027 reste ouvert
-sur cette couverture totale. Voir [certification.md](certification.md).
+certifie rien. Les six exemples actuels sont acceptés par le checker et le pont
+CLI en CI, sans exemption ; une élaboration falsifiée est refusée.
+Les alternatives racines sont traduites en case, avec gardes sans réessai.
+Voir [certification.md](certification.md) pour les limites du fragment.
 
 **Fragment couvert** (`formal/Hypomnesis/Core/Syntax.lean`) :
 - types `int`, `bool`, `unit`, `float` binary64, `string` Unicode, fonctions, produits et **types de données** (variants, listes),
@@ -71,11 +72,11 @@ sur cette couverture totale. Voir [certification.md](certification.md).
   mise à jour et motifs partiels ; mêmes P1–P7, sans changer le noyau.
 
 Ne sont **pas encore** couverts : réels mathématiques et primitives hors catalogue,
-motifs alternatifs et alias, exhaustivité
+motifs alternatifs imbriqués et alias, exhaustivité
 (F1c) et polymorphisme (F2).
 
 **Frontière JSON (HYP-042, ADR 0010).** La primitive Python `core.to_json`, les conversions
-`Json.t` et les codecs/contrats JSON ne font pas partie des primitives entières du fragment
+`Json.t` et les codecs/contrats JSON ne font pas partie du catalogue de primitives du fragment
 prouvé. `Json.Int` est un constructeur de bibliothèque, pas une forme IR supplémentaire.
 La migration des options étiquetées et des entiers exacts est couverte par les tests
 Hypothesis et d'intégration, sans nouvelle garantie Lean revendiquée. Les preuves JSON
