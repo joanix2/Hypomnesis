@@ -30,6 +30,8 @@ class Strategy:
     def parse(cls, spec: str) -> Strategy:
         if spec == "base":
             return cls()
+        if spec == "defaut":
+            return DEFAULT
         source = catalogue = programs = retrieval = False
         shots = 0
         for token in (t.strip() for t in spec.split("+") if t.strip()):
@@ -57,4 +59,7 @@ class Strategy:
         return "+".join(parts) or "rien"
 
 
-BASE = Strategy()
+BASE = Strategy()  # the historical prompt: raw source and static example programs
+# Chosen from the benchmark (see ADR 0009): the generated catalogue and the five worked examples
+# closest to the request.
+DEFAULT = Strategy(source=False, catalogue=True, programs=False, shots=5, retrieval=True)

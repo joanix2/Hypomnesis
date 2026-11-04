@@ -8,7 +8,7 @@ import pytest
 
 from hypomnesis.engine.language import LanguageError, load_language
 from hypomnesis.engine.procedure import run_procedure
-from hypomnesis.llm.prompting import BASE, Strategy
+from hypomnesis.llm.prompting import BASE, DEFAULT, Strategy
 from hypomnesis.llm.retrieval import Retriever, load_examples
 from hypomnesis.llm.translation import shots, system_prompt
 
@@ -18,6 +18,8 @@ NAMES = ["mecanique", "ventilation"]
 
 def test_strategy_spec_parsing_and_printing():
     assert Strategy.parse("base") == BASE and str(BASE) == "source+programmes"
+    assert Strategy.parse("defaut") == DEFAULT and str(DEFAULT) == "catalogue+rag5"
+    assert Strategy.parse(str(DEFAULT)) == DEFAULT
     s = Strategy.parse("catalogue+rag3")
     assert (s.source, s.catalogue, s.programs, s.shots, s.retrieval) == (
         False,

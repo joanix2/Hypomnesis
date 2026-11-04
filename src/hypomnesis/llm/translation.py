@@ -21,7 +21,7 @@ from hypomnesis.engine.language import Language, load_language
 from hypomnesis.language.errors import HypomnesisError
 from hypomnesis.llm.describe import catalogue
 from hypomnesis.llm.ollama import Reply
-from hypomnesis.llm.prompting import BASE, Strategy
+from hypomnesis.llm.prompting import DEFAULT, Strategy
 from hypomnesis.llm.retrieval import Retriever, load_examples
 
 SYSTEM = """Tu traduis une demande en français en un programme Hypomnesis.
@@ -82,15 +82,17 @@ def extract_code(text: str) -> str:
     return (fenced[0] if fenced else text).strip() + "\n"
 
 
-def system_prompt(language: Language, examples: list[str], strategy: Strategy = BASE) -> str:
+def system_prompt(language: Language, examples: list[str], strategy: Strategy = DEFAULT) -> str:
     parts = [SYSTEM.replace("{entry}", language.procedure["entry"])]
-    if strategy.source:
+    published = catalogue(language) if strategy.catalogue else None
+    # A language that documents nothing has no catalogue: fall back on its source.
+    if strategy.source or (published is not None and not published.modules):
         sources = "\n\n".join(
             (language.root / s).read_text(encoding="utf-8") for s in language.manifest["sources"]
         )
         parts.append(f"=== Langage « {language.name} » ===\n{sources}")
-    if strategy.catalogue:
-        parts.append(catalogue(language).render())
+    if published is not None and published.modules:
+        parts.append(published.render())
     if strategy.programs:
         for i, example in enumerate(examples, 1):
             parts.append(f"=== Exemple de programme {i} ===\n{example}")
@@ -164,7 +166,7 @@ def translate(
     examples: list[str],
     max_repairs: int = 2,
     simulate: Callable[[str], str] | None = None,
-    strategy: Strategy = BASE,
+    strategy: Strategy = DEFAULT,
 ) -> Translation:
     messages = [
         {"role": "system", "content": system_prompt(language, examples, strategy)},

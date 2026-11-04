@@ -28,7 +28,7 @@ from hypomnesis.engine.procedure import run_procedure
 from hypomnesis.language import ast as A
 from hypomnesis.language.errors import HypomnesisError, Span
 from hypomnesis.language.parser import parse_program
-from hypomnesis.llm.prompting import BASE, Strategy
+from hypomnesis.llm.prompting import DEFAULT, Strategy
 from hypomnesis.llm.translation import ChatClient, Translation, translate
 
 ANY = "*"
@@ -203,7 +203,7 @@ def run_case(
     spec: dict,
     case: dict,
     repairs: int,
-    strategy: Strategy = BASE,
+    strategy: Strategy = DEFAULT,
 ) -> CaseResult:
     language = load_language(root)
     examples = [(root / e).read_text(encoding="utf-8") for e in spec.get("examples", [])]
@@ -223,7 +223,7 @@ def run_case(
         case["id"],
         model,
         translation,
-        strategy="" if strategy == BASE else str(strategy),
+        strategy="" if strategy == DEFAULT else str(strategy),
         split=case.get("split", "dev"),
     )
     if not translation.compiled:
@@ -252,7 +252,7 @@ def run_benchmark(
     languages: list[Path],
     *,
     repairs: int = 2,
-    strategy: Strategy = BASE,
+    strategy: Strategy = DEFAULT,
     splits: Sequence[str] | None = None,
     log=print,
 ) -> list[CaseResult]:

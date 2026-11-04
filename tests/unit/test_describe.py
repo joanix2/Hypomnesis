@@ -57,3 +57,15 @@ def test_program_skeleton_is_rendered_as_a_code_block():
     text = render("mecanique")
     assert "- Squelette de programme :\n    ```\n    let demande = {" in text
     assert "let procedure = Plaque.concevoir demande Plaque.estimateur_regle\n    ```" in text
+
+
+def test_decrire_command_prints_the_catalogue_and_its_size(capsys):
+    from hypomnesis.cli import main
+
+    assert main(["decrire", str(LANGUAGES / "ventilation")]) == 0
+    captured = capsys.readouterr()
+    assert "`Ventilation.reguler`" in captured.out
+    assert "caractères" in captured.err
+    assert main(["decrire", str(LANGUAGES / "ventilation"), "--format", "json"]) == 0
+    assert '"entry": "procedure"' in capsys.readouterr().out
+    assert main(["decrire", str(LANGUAGES / "absent")]) == 1

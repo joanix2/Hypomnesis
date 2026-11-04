@@ -1,15 +1,18 @@
 """Traduction langage naturel → programme M1 et banc d'essai, avec un faux LLM."""
 
+import re
 import shutil
 from pathlib import Path
 
 from hypomnesis.engine.language import load_language
 from hypomnesis.llm.benchmark import run_benchmark, semantic_errors, summary
 from hypomnesis.llm.ollama import Reply
-from hypomnesis.llm.translation import extract_code, translate
+from hypomnesis.llm.prompting import BASE
+from hypomnesis.llm.translation import extract_code, system_prompt, translate
 
 ROOT = Path(__file__).resolve().parents[2]
 MECANIQUE = ROOT / "languages" / "mecanique"
+VENTILATION = ROOT / "languages" / "ventilation"
 GOOD = (
     'let demande = { Plaque.nom = "p"; largeur = 120.0; hauteur = 80.0; '
     "epaisseur = Some 4.0; masse_max = 0.5 }\n"
@@ -34,11 +37,32 @@ def test_extract_code_drops_markdown_and_reasoning():
     assert extract_code("Okay, let's think…\n</think>\n\nlet x = 1") == "let x = 1\n"
 
 
-def test_prompt_is_built_from_the_language():
+def test_default_prompt_is_the_generated_catalogue_with_similar_examples():
     llm = FakeLLM(GOOD)
-    translate(llm, "m", load_language(MECANIQUE), "plaque", examples=["(* exemple *)"])
+    translate(
+        llm, "m", load_language(MECANIQUE), "plaque 120 x 80 mm, 0,5 kg", examples=["(* exemple *)"]
+    )
+    system = llm.calls[0][0]["content"]
+    assert "=== Catalogue du langage « mecanique »" in system and "let procedure" in system
+    assert "module Plaque" not in system and "(* exemple *)" not in system
+    assert len(llm.calls[0]) == 2 + 5 * 2  # system, five worked examples, the request
+
+
+def test_historical_prompt_is_the_raw_source_and_example_programs():
+    llm = FakeLLM(GOOD)
+    translate(
+        llm, "m", load_language(MECANIQUE), "plaque", examples=["(* exemple *)"], strategy=BASE
+    )
     system = llm.calls[0][0]["content"]
     assert "module Plaque" in system and "(* exemple *)" in system and "let procedure" in system
+
+
+def test_an_undocumented_language_falls_back_on_its_source(tmp_path):
+    shutil.copytree(VENTILATION, tmp_path / "ventilation")
+    source = tmp_path / "ventilation" / "ventilation.hyp"
+    source.write_text(re.sub(r"\(\*\*.*?\*\)", "", source.read_text(encoding="utf-8"), flags=re.S))
+    language = load_language(tmp_path / "ventilation")
+    assert "module Ventilation" in system_prompt(language, [])
 
 
 def test_compiler_diagnostics_drive_the_repair():

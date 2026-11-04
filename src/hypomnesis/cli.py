@@ -82,6 +82,27 @@ def _lancer(args: argparse.Namespace) -> int:
         return 1
 
 
+def _decrire(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+
+    from hypomnesis.engine.language import LanguageError, load_language
+    from hypomnesis.llm.describe import catalogue
+
+    try:
+        published = catalogue(load_language(args.langage))
+    except LanguageError as exc:
+        print(f"refusé : {exc}", file=sys.stderr)
+        return 1
+    text = (
+        json.dumps(asdict(published), indent=2, ensure_ascii=False)
+        if args.format == "json"
+        else published.render()
+    )
+    print(text)
+    print(f"-- {len(text)} caractères (≈ {len(text) // 3} jetons)", file=sys.stderr)
+    return 0
+
+
 def _benchmark(args: argparse.Namespace) -> int:
     from datetime import datetime
 
@@ -176,6 +197,12 @@ def main(argv: list[str] | None = None) -> int:
     lancer.add_argument(
         "--sans-permission", action="store_true", help="n'accorder aucune permission"
     )
+    decrire = commands.add_parser(
+        "decrire",
+        help="exporter ce que le langage M2 dit de lui-même (catalogue du prompt LLM)",
+    )
+    decrire.add_argument("langage", type=Path, help="dossier du langage M2")
+    decrire.add_argument("--format", choices=["md", "json"], default="md")
     bench = commands.add_parser(
         "benchmark-llm", help="mesurer la traduction langage naturel → programme M1 par des LLM"
     )
@@ -186,14 +213,14 @@ def main(argv: list[str] | None = None) -> int:
     bench.add_argument("--reparations", type=int, default=2, help="réparations par les diagnostics")
     bench.add_argument(
         "--strategie",
-        default="base",
+        default="defaut",
         help="prompt : éléments joints par « + » parmi source, catalogue, programmes, tirsN, "
-        "ragN (ex. catalogue+rag3) ; « base » = source+programmes",
+        "ragN (ex. catalogue+rag3) ; « defaut » = catalogue+rag5, « base » = source+programmes",
     )
     bench.add_argument(
         "--jeux",
         default="",
-        help="jeux de cas (dev, test), séparés par des virgules ; défaut : tous",
+        help="jeux de cas (dev, test, hard), séparés par des virgules ; défaut : tous",
     )
     bench.add_argument("--sortie", type=Path, default=Path("sortie/benchmark-llm"))
     args = parser.parse_args(argv)
@@ -202,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
         return _lancer(args)
     if args.command == "benchmark-llm":
         return _benchmark(args)
+    if args.command == "decrire":
+        return _decrire(args)
     session = Session()
     if args.command == "repl":
         return _repl(session)

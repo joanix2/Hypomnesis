@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 from hypomnesis.engine.language import Language, LanguageError
 
@@ -60,6 +61,6 @@ class Retriever:
         """The ``k`` examples most similar to the request, most similar last (closest to it)."""
         if self._matrix is None or k <= 0:
             return []
-        scores = (self._matrix @ self._vectorizer.transform([_normalise(request)]).T).toarray()
-        order = scores.ravel().argsort()[::-1][:k]
+        scores = cosine_similarity(self._vectorizer.transform([_normalise(request)]), self._matrix)
+        order = scores[0].argsort()[::-1][:k]
         return [self.examples[i] for i in reversed(order)]
