@@ -1,4 +1,4 @@
-"""Command-line interface (Typer): ``hypomnesis run|check|repl|lancer|decrire|benchmark-llm``."""
+"""Command-line interface (Typer): one function per ``hypomnesis`` subcommand."""
 
 from __future__ import annotations
 
@@ -136,6 +136,7 @@ def _benchmark(
     strategie: str,
     jeux: str,
     sortie: Path,
+    graphiques: bool = True,
 ) -> int:
     from datetime import datetime
 
@@ -155,11 +156,37 @@ def _benchmark(
     table = summary(results)
     sortie.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    rows = [r.to_json() for r in results]
     (sortie / f"resultats-{stamp}.json").write_text(
-        json.dumps([r.to_json() for r in results], indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     (sortie / f"resume-{stamp}.md").write_text(table + "\n", encoding="utf-8")
     print("\n" + table)
+    if graphiques:
+        try:
+            from hypomnesis.llm.plots import normalize, render_all
+        except ImportError:
+            print("graphiques ignorés : matplotlib absent (extra « llm »)", file=sys.stderr)
+        else:
+            for path in render_all([normalize(r) for r in rows], sortie, f"resultats-{stamp}"):
+                print(f"graphique : {path}", file=sys.stderr)
+    return 0
+
+
+def _graphiques(fichier: Path, sortie: Path | None) -> int:
+    from hypomnesis.llm.plots import ResultsError, load_results, render_all
+
+    try:
+        results = load_results(fichier)
+    except ResultsError as exc:
+        print(f"graphiques-llm : {exc}", file=sys.stderr)
+        return 1
+    written = render_all(results, sortie if sortie is not None else fichier.parent, fichier.stem)
+    if not written:
+        print(f"graphiques-llm : {fichier} ne contient aucun résultat", file=sys.stderr)
+        return 1
+    for path in written:
+        print(path)
     return 0
 
 
@@ -345,9 +372,33 @@ def benchmark_command(
     sortie: Annotated[Path, typer.Option("--sortie", help="dossier des résultats")] = Path(
         "sortie/benchmark-llm"
     ),
+    graphiques: Annotated[
+        bool,
+        typer.Option(
+            "--graphiques/--sans-graphiques",
+            help="écrire les figures (PNG et SVG, matplotlib) à côté du résumé",
+        ),
+    ] = True,
 ) -> None:
     """Mesurer la traduction langage naturel → programme M1 par des LLM."""
-    _exit_with(_benchmark(langages, modeles, reparations, strategie, jeux, sortie))
+    _exit_with(_benchmark(langages, modeles, reparations, strategie, jeux, sortie, graphiques))
+
+
+@app.command("graphiques-llm")
+def graphiques_command(
+    fichier: Annotated[
+        Path,
+        typer.Argument(
+            exists=True, dir_okay=False, readable=True, help="resultats-*.json de benchmark-llm"
+        ),
+    ],
+    sortie: Annotated[
+        Path | None,
+        typer.Option("--sortie", help="dossier des figures ; défaut : celui du fichier"),
+    ] = None,
+) -> None:
+    """Régénérer les figures (PNG et SVG) d'un lot de résultats, sans relancer le banc."""
+    _exit_with(_graphiques(fichier, sortie))
 
 
 def main(argv: list[str] | None = None) -> int:

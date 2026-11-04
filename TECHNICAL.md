@@ -85,6 +85,21 @@ code 1). `main(argv) -> int` appelle `app` en mode autonome et convertit le `Sys
 retourné : les tests l'appellent directement, le point d'entrée `hypomnesis` fait
 `sys.exit(main())`.
 
+### Banc LLM : graphiques (HYP-016)
+
+`src/hypomnesis/llm/plots.py` (matplotlib, extra `llm`) lit un `resultats-*.json` de `benchmark-llm` et
+trace trois figures, chacune en PNG et SVG (`<stem>-justesse`, `<stem>-justesse-par-jeu`, `<stem>-cout`) :
+justesse au premier essai et après réparations par modèle/stratégie, puis par jeu (dev/test/hard), avec
+intervalles de Wilson à 95 % ; temps et jetons générés par cas (moyenne ± erreur standard). Trois
+couches testables séparément : `load_results`/`normalize` (tolère les anciens lots : sans `strategy`,
+`split` ni `correct_first`, on suppose stratégie par défaut, jeu `dev`, et « juste au premier essai » =
+juste avec au plus une tentative), fonctions de séries pures (`accuracy_by_label`, `accuracy_by_split`,
+`cost_by_label`, `wilson_interval`), figures (`Figure` + `FigureCanvasAgg`, jamais `pyplot` : aucun
+affichage, aucun état global). Le texte SVG reste du texte (`svg.fonttype = none`).
+
+CLI : `hypomnesis benchmark-llm … [--graphiques/--sans-graphiques]` (actif par défaut ; ignoré avec un
+avertissement si matplotlib est absent) écrit les figures à côté du résumé ; `hypomnesis graphiques-llm
+FICHIER.json [--sortie DIR]` les régénère sans relancer le banc ni appeler Ollama.
 ## Certificats
 
 `src/hypomnesis/certify/` exporte la Core IR élaborée et annotée (prélude compris) en JSON,
