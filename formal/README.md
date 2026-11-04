@@ -23,4 +23,8 @@ lake env lean Audit.lean   # liste les axiomes utilisés
 lake build hypomnesis-check && lake exe hypomnesis-check check ../cert.json
 ```
 
+Depuis la racine : `hypomnesis check demo/examples/basics/certifiable.hyp --certify`.
+L'export `--emit-certificate` seul n'appelle pas Lean.
+Couverture et refus hors fragment : [certification](../docs/verification/certification.md).
+
 Aucune dépendance (pas de Mathlib) ; version de Lean fixée dans `lean-toolchain`.

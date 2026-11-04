@@ -54,8 +54,8 @@ certificate_check() {
     (cd formal && lake build hypomnesis-check) || return 1
     local cert
     cert=$(mktemp "${TMPDIR:-/tmp}/hypomnesis-certificate.XXXXXXXXXX") || return 1
-    "$PY" -m hypomnesis.cli check demo/examples/basics/certifiable.hyp --emit-certificate "$cert" >/dev/null \
-        && formal/.lake/build/bin/hypomnesis-check check "$cert"
+    "$PY" -m hypomnesis.cli check demo/examples/basics/certifiable.hyp --emit-certificate "$cert" \
+        --certify --checker formal/.lake/build/bin/hypomnesis-check >/dev/null
     local status=$?
     rm -f "$cert"
     return $status

@@ -23,7 +23,7 @@ la manière dont on peut en établir la validité.
 |---|---|---|---|
 | P1 | `Core.eval_safe` | un terme bien typé, évalué dans un environnement bien typé, rend une valeur du type annoncé, épuise son budget ou échoue au filtrage (`Match_failure`) ; **il ne se bloque jamais** | §4.1, §16.4 « erreurs de types détectées avant exécution », H2 |
 | P2 | `Core.closed_never_stuck` | corollaire pour les programmes clos | idem |
-| P3 | `Core.typeOf_sound` | le vérificateur exécutable n'accepte que des termes dérivables | §13.2, §14.3 (une sortie LLM typée est réellement bien typée) |
+| P3 | `Core.typeOf_sound` | le vérificateur Lean n'accepte que des termes dérivables ; `check --certify` exige cette acceptation dans le fragment couvert | §13.2, §14.3 (garantie sur le terme traduit, pas raffinement Python complet) |
 | P4 | `Core.typeOf_complete` | il accepte tous les termes dérivables | §13.2 |
 | P5 | `Core.hasType_unique` | un terme élaboré a au plus un type | §13.4 (signatures canoniques) |
 | P6 | instance `Decidable (HasType Γ e t)` | le typage du fragment est décidable | §13.4 « détecter les incompatibilités avant l'exécution » |
@@ -48,6 +48,13 @@ donc au programme traduit : il ne peut pas se bloquer dans la sémantique de ré
 reste de confiance : la fidélité de la traduction (décodeur) et celle de l'interpréteur Python à
 la sémantique Lean, couverte par les tests différentiels (HYP-028).
 
+**Pont CLI (HYP-027).** `hypomnesis check --certify` émet et vérifie le certificat,
+sans exécuter le programme, avec refus explicite hors fragment et délai fini.
+La CI teste ce chemin et refuse une élaboration falsifiée. L'export seul ne
+certifie rien. Un exemple sur six est actuellement accepté ; les cinq autres
+sont explicitement refusés, pas exemptés comme certifiés. HYP-027 reste ouvert
+sur cette couverture totale. Voir [certification.md](certification.md).
+
 **Fragment couvert** (`formal/Hypomnesis/Core/Syntax.lean`) :
 - types `int`, `bool`, `unit`, fonctions, produits et **types de données** (variants, listes),
   monomorphisés dans une signature ;
@@ -56,7 +63,8 @@ la sémantique Lean, couverte par les tests différentiels (HYP-028).
   littéral, paire, constructeur ;
 - primitives entières.
 
-Ne sont **pas encore** couverts : records (F1b), motifs alternatifs et alias, exhaustivité
+Ne sont **pas encore** couverts : réels/flottants, chaînes et leurs primitives,
+records (F1b), motifs alternatifs et alias, exhaustivité
 (F1c) et polymorphisme (F2).
 
 **Frontière JSON (HYP-042, ADR 0010).** La primitive Python `core.to_json`, les conversions

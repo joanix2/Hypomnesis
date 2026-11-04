@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from hypomnesis.certify import session_certificate
+from hypomnesis.cli import main
 from hypomnesis.session import Session
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,3 +73,85 @@ def test_malformed_certificate(tmp_path):
         [str(EXE), "check", str(path)], capture_output=True, text=True, check=False
     )
     assert result.returncode == 3
+
+
+def test_cli_certifies_real_example_with_one_final_json_document(capsys):
+    assert (
+        main(
+            [
+                "check",
+                str(EXAMPLES / "basics/certifiable.hyp"),
+                "--certify",
+                "--checker",
+                str(EXE),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["diagnostics"] == []
+    assert "accepté" in captured.err
+
+
+def test_cli_refuses_injected_miselaboration(tmp_path, capsys, monkeypatch):
+    import hypomnesis.certify as module
+
+    original = module.session_certificate
+
+    def altered(session):
+        document = original(session)
+        document["definitions"][-1]["value"]["expr"]["app"]["args"][0]["lit"] = {
+            "kind": "bool",
+            "value": True,
+        }
+        return document
+
+    monkeypatch.setattr(module, "session_certificate", altered)
+    path = tmp_path / "altered.json"
+    assert (
+        main(
+            [
+                "check",
+                str(EXAMPLES / "basics/certifiable.hyp"),
+                "--certify",
+                "--emit-certificate",
+                str(path),
+                "--checker",
+                str(EXE),
+                "--format",
+                "json",
+            ]
+        )
+        == 1
+    )
+    diagnostics = json.loads(capsys.readouterr().out)["diagnostics"]
+    assert diagnostics and "rejeté" in diagnostics[0]["message"]
+    assert path.is_file()
+
+
+CASES = (
+    (("basics/certifiable.hyp",), 0),
+    (("basics/tour.hyp",), 2),
+    (("knowledge/plaque.hyp",), 2),
+    (("knowledge/regles.hyp",), 2),
+    (("mechanics/units.hyp",), 2),
+    (("mechanics/units.hyp", "mechanics/plate.hyp"), 2),
+)
+
+
+def test_every_example_has_an_explicit_certification_expectation():
+    assert {name for names, _ in CASES for name in names} == {
+        str(path.relative_to(EXAMPLES)) for path in EXAMPLES.rglob("*.hyp")
+    }
+
+
+@pytest.mark.parametrize(("names", "status"), CASES, ids=lambda value: str(value))
+def test_all_examples_are_examined_without_claiming_unsupported_forms_are_certified(
+    tmp_path, names, status
+):
+    result = run("check", certificate(*(EXAMPLES / name for name in names)), tmp_path)
+    assert result.returncode == status, result.stderr
+    if status == 2:
+        assert "hors du fragment" in result.stderr

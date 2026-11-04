@@ -85,9 +85,10 @@ jobs:
       - name: Certificate checker on the certifiable example
         run: |
           lake build hypomnesis-check
-          pip install -e ..
-          hypomnesis check ../demo/examples/basics/certifiable.hyp --emit-certificate cert.json
-          .lake/build/bin/hypomnesis-check check cert.json
+          pip install -e '..[dev]'
+          hypomnesis check ../demo/examples/basics/certifiable.hyp --emit-certificate cert.json --certify --checker .lake/build/bin/hypomnesis-check
+      - name: Certification bridge and explicit coverage of every example
+        run: pytest ../tests/integration/test_lean_checker.py
       - name: Reject sorry
         run: "! grep -rnwE 'sorry|admit' Hypomnesis"
       - name: Audit axioms

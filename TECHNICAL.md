@@ -721,6 +721,16 @@ langage et journalisées par `Tracer`. Le groupe enfant est arrêté et le proce
 direct récolté. Aucune relance implicite ; pas de bac à sable de sécurité.
 Voir [le guide](docs/architecture/backend-python.md).
 
+## Certification CLI (HYP-027)
+
+HYP-027 : `check --certify` appelle le checker Lean avec découverte explicite
+et délai fini. `_load_files` renvoie la session réellement chargée pour ne
+pas certifier un prélude vide après une entrée de langage. Le JSON final
+attend la fin du contrôle. Tests d'élaboration falsifiée et couverture
+explicite des six exemples : un accepté, cinq hors fragment. Le pont est
+opérationnel, mais HYP-027 reste ouvert pour la couverture totale, dépendant
+des extensions formelles. Guide : [certification.md](docs/verification/certification.md).
+
 ## Problem IR déclarative (HYP-051)
 
 `ir/problem.py` conserve les variables bornées/discrètes, contraintes linéaires et

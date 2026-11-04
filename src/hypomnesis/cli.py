@@ -6,6 +6,7 @@ import json
 import sys
 from enum import StrEnum
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated
 
 import typer
@@ -19,9 +20,14 @@ from hypomnesis.session import Session
 
 
 def _load_files(
-    session: Session, paths: list[Path], *, execute: bool, as_json: bool = False
-) -> int:
-    """Load files in order; with ``as_json``, stdout carries only the diagnostics document."""
+    session: Session,
+    paths: list[Path],
+    *,
+    execute: bool,
+    as_json: bool = False,
+    report_success: bool = True,
+) -> tuple[int, Session]:
+    """Load files in order and return the actual session, including language entries."""
     for path in paths:
         try:
             source = path.read_text(encoding="utf-8")
@@ -40,7 +46,7 @@ def _load_files(
                 print(json.dumps(diagnostics_document([exc.to_diagnostic(str(path))])))
             else:
                 print(exc.render(source, str(path)), file=sys.stderr)
-            return 1
+            return 1, session
         except (LanguageError, OSError, UnicodeError) as exc:
             if as_json:
                 print(
@@ -50,13 +56,13 @@ def _load_files(
                 )
             else:
                 print(f"refusé : {exc}", file=sys.stderr)
-            return 1
+            return 1, session
         if not as_json:
             for binding in result.bindings:
                 print(binding.render() if execute else binding.render_signature())
-    if as_json:
+    if as_json and report_success:
         print(json.dumps(diagnostics_document([])))
-    return 0
+    return 0, session
 
 
 def _check(
@@ -64,6 +70,9 @@ def _check(
     output_format: CheckFormat,
     langage: Path | None,
     emit_certificate: Path | None,
+    certify: bool = False,
+    checker: Path | None = None,
+    checker_timeout: float = 30.0,
 ) -> int:
     """Type-check files, alone or in the context of a M2 language."""
     session = Session()
@@ -80,31 +89,63 @@ def _check(
                 message = exc.render() if isinstance(exc, HypomnesisError) else str(exc)
                 print(f"refusé : {message}", file=sys.stderr)
             return 1
-    status = _load_files(session, files, execute=False, as_json=output_format is CheckFormat.JSON)
-    if status == 0 and emit_certificate is not None:
-        status = _emit_certificate(session, emit_certificate)
-    return status
+    as_json = output_format is CheckFormat.JSON
+    status, session = _load_files(
+        session, files, execute=False, as_json=as_json, report_success=False
+    )
+    if status:
+        return status
+    from hypomnesis.certify.checker import CertificationError, check_certificate
+
+    try:
+        if checker is not None and not certify:
+            raise CertificationError("--checker exige --certify")
+        if certify or emit_certificate is not None:
+            with TemporaryDirectory(prefix="hyp-certify-") as directory:
+                path = (
+                    emit_certificate
+                    if emit_certificate is not None
+                    else (Path(directory) / "certificate.json")
+                )
+                _emit_certificate(session, path)
+                if certify:
+                    accepted = check_certificate(
+                        path, checker=checker, timeout_seconds=checker_timeout
+                    )
+                    print(f"certification Lean : {accepted}", file=sys.stderr)
+    except (CertificationError, OSError) as exc:
+        if as_json:
+            diagnostic = HypomnesisError(str(exc)).to_diagnostic(str(files[-1]))
+            print(json.dumps(diagnostics_document([diagnostic])))
+        else:
+            print(f"certification refusée : {exc}", file=sys.stderr)
+        return 1
+    if as_json:
+        print(json.dumps(diagnostics_document([])))
+    return 0
 
 
-def _emit_certificate(session: Session, path: Path) -> int:
+def _emit_certificate(session: Session, path: Path) -> None:
     """Write the session's certificate, validated against its JSON Schema."""
     from hypomnesis.certify import CERTIFICATE_SCHEMA_ID, CertificateError, session_certificate
+    from hypomnesis.certify.checker import CertificationError
     from hypomnesis.contracts.registry import SchemaRegistry
 
     try:
         certificate = session_certificate(session)
     except CertificateError as exc:
-        print(f"certificate: {exc}", file=sys.stderr)
-        return 1
+        raise CertificationError(f"export du certificat : {exc}") from exc
     issues = SchemaRegistry.with_builtin_schemas().issues(CERTIFICATE_SCHEMA_ID, certificate)
     if issues:
-        print("certificate: invalid against its schema", file=sys.stderr)
-        for issue in issues[:10]:
-            print(f"  {issue}", file=sys.stderr)
-        return 1
-    path.write_text(json.dumps(certificate, ensure_ascii=False), encoding="utf-8")
+        detail = "; ".join(map(str, issues[:10]))
+        raise CertificationError(f"certificat invalide pour son schéma : {detail}")
+    try:
+        path.write_text(
+            json.dumps(certificate, ensure_ascii=False, allow_nan=False), encoding="utf-8"
+        )
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise CertificationError(f"écriture du certificat : {exc}") from exc
     print(f"certificate: {len(session.definitions)} definitions -> {path}", file=sys.stderr)
-    return 0
 
 
 def _pairs(items: list[str]) -> dict[str, str]:
@@ -282,7 +323,8 @@ def _root(
 @app.command("run")
 def run_command(files: SourceFiles) -> None:
     """Typer et évaluer des fichiers, dans l'ordre."""
-    _exit_with(_load_files(Session(), files, execute=True))
+    status, _ = _load_files(Session(), files, execute=True)
+    _exit_with(status)
 
 
 @app.command("check")
@@ -312,9 +354,23 @@ def check_command(
             help="dossier d'un langage M2 : vérifier les fichiers M1 dans son contexte",
         ),
     ] = None,
+    certify: Annotated[
+        bool,
+        typer.Option("--certify", help="exiger l'acceptation du certificat par Lean"),
+    ] = False,
+    checker: Annotated[
+        Path | None,
+        typer.Option("--checker", help="exécutable Lean à utiliser avec --certify"),
+    ] = None,
+    checker_timeout: Annotated[
+        float,
+        typer.Option("--checker-timeout", help="délai maximal du vérificateur en secondes"),
+    ] = 30.0,
 ) -> None:
     """Typer des fichiers et afficher leurs signatures."""
-    _exit_with(_check(files, output_format, langage, emit_certificate))
+    _exit_with(
+        _check(files, output_format, langage, emit_certificate, certify, checker, checker_timeout)
+    )
 
 
 @app.command("repl")
