@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/language-catalogue/1.0.0",
+  "title": "HypomnesisLanguageCatalogue",
+  "type": "object",
+  "properties": {
+    "version": { "const": "1.0.0" },
+    "language": { "type": "string" },
+    "description": { "type": "string" },
+    "entry": { "type": ["string", "null"] },
+    "modules": { "type": "array", "items": { "$ref": "#/$defs/module" } },
+    "contracts": { "$ref": "#/$defs/strings" },
+    "adapters": { "$ref": "#/$defs/strings" },
+    "plugins": { "type": "array", "items": { "$ref": "#/$defs/plugin" } }
+  },
+  "required": ["version", "language", "description", "entry", "modules", "contracts", "adapters", "plugins"],
+  "additionalProperties": false,
+  "$defs": {
+    "strings": { "type": "array", "items": { "type": "string" } },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2
+      }
+    },
+    "member": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" }, "summary": { "type": "string" },
+        "tags": { "$ref": "#/$defs/tags" }, "type": { "type": "string" }
+      },
+      "required": ["path", "summary", "tags", "type"],
+      "additionalProperties": false
+    },
+    "type": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" }, "summary": { "type": "string" },
+        "tags": { "$ref": "#/$defs/tags" },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/member" } },
+        "constructors": { "type": "array", "items": { "$ref": "#/$defs/member" } }
+      },
+      "required": ["path", "summary", "tags", "fields", "constructors"],
+      "additionalProperties": false
+    },
+    "value": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" }, "summary": { "type": "string" },
+        "tags": { "$ref": "#/$defs/tags" }, "signature": { "type": "string" }
+      },
+      "required": ["path", "summary", "tags", "signature"],
+      "additionalProperties": false
+    },
+    "module": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" }, "summary": { "type": "string" },
+        "tags": { "$ref": "#/$defs/tags" },
+        "types": { "type": "array", "items": { "$ref": "#/$defs/type" } },
+        "values": { "type": "array", "items": { "$ref": "#/$defs/value" } }
+      },
+      "required": ["path", "summary", "tags", "types", "values"],
+      "additionalProperties": false
+    },
+    "plugin": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" }, "version": { "type": "string" },
+        "role": { "type": "string" }, "signature": { "type": "string" },
+        "input_schema": { "type": "string" }, "output_schema": { "type": "string" },
+        "permissions": { "$ref": "#/$defs/strings" }
+      },
+      "required": ["id", "version", "role", "signature", "input_schema", "output_schema", "permissions"],
+      "additionalProperties": false
+    }
+  }
+}

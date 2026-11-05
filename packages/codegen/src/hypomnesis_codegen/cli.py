@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import asdict
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
@@ -32,7 +31,7 @@ def _decrire(langage: Path, output_format: Format, plugin_paths: list[Path] | No
         print(f"refusé : {exc}", file=sys.stderr)
         return 1
     text = (
-        json.dumps(asdict(published), indent=2, ensure_ascii=False)
+        json.dumps(published.to_json(), indent=2, ensure_ascii=False, allow_nan=False)
         if output_format is Format.JSON
         else published.render()
     )

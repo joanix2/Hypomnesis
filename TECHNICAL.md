@@ -529,6 +529,30 @@ Binary64, variants généraux, tuples autres que paires et références récursi
 restent couverts par les tests HYP-042, pas par P32–P33 ; aucune régression de
 leur prise en charge Python n'est introduite.
 
+### CLI structurée pour les agents (HYP-133)
+
+Guide court : [cli-agents.md](docs/outillage/cli-agents.md). Le catalogue HYP-080
+reste dans Codegen, sans duplication ni import inverse dans le moteur :
+`Catalogue.to_json()` ajoute la version et valide language-catalogue/1.0.0 ;
+la CLI `hypomnesis-codegen decrire --format json` l'utilise. Markdown et
+instantanés de prompts inchangés. `check --format json` garde diagnostics/1.0.0.
+
+`hypomnesis lancer --format json` émet cli-execution/1.0.0 : version, mode,
+status ok/stopped/error, rapport (dont étapes, connaissances, commandes,
+journal, trace) et diagnostics. Sérialisation JSON stricte sans `default=str`,
+validation du véritable document JSON avant émission. Les impressions Python
+de l'exécution vont sur stderr ; données seules sur stdout. Un arrêt budget
+donne status stopped/code 1 avec rapport partiel ; un refus donne error/rapport
+nul. Le code 0 n'implique pas que chaque commande a réussi. Le mode texte
+reste inchangé et conserve ses codes ; --env mal formé est désormais refusé
+explicitement plutôt qu'ignoré. Aucune permission implicite ni invite ajoutée.
+
+Tests réels : `tests/integration/test_agent_cli.py` utilise uniquement le
+catalogue JSON pour produire un M1, provoquer/corriger une erreur, vérifier
+puis simulate/dry-run ; stdin fermé et tous les documents validés. Tests de
+refus structurés, logs d'adaptateur sur stderr et seuil réel 1000/1001 étapes.
+Erreurs d'usage Typer : code 2, stderr, stdout vide. Aucun appel LLM.
+
 ## Observabilité (HYP-015)
 
 `src/hypomnesis/observability/trace.py` : la classe `Tracer` est une façade au-dessus du SDK

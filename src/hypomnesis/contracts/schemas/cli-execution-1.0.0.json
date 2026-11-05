@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/cli-execution/1.0.0",
+  "title": "HypomnesisCliExecution",
+  "type": "object",
+  "properties": {
+    "version": { "const": "1.0.0" },
+    "mode": { "enum": ["simulate", "dry-run", "production"] },
+    "status": { "enum": ["ok", "stopped", "error"] },
+    "report": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/report" }] },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "https://schemas.example.org/hypomnesis/diagnostics/1.0.0#/$defs/diagnostic" }
+    }
+  },
+  "required": ["version", "mode", "status", "report", "diagnostics"],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "error" } } },
+      "then": {
+        "properties": { "report": { "type": "null" }, "diagnostics": { "minItems": 1 } }
+      },
+      "else": { "properties": { "report": { "$ref": "#/$defs/report" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "stopped" } } },
+      "then": {
+        "properties": {
+          "diagnostics": { "minItems": 1 },
+          "report": { "properties": { "stopped": { "minLength": 1 } } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "ok" } } },
+      "then": { "properties": { "report": { "properties": { "stopped": { "const": "" } } } } }
+    }
+  ],
+  "$defs": {
+    "report": {
+      "type": "object",
+      "properties": {
+        "language": { "type": "string" },
+        "program": { "type": "string" },
+        "generated": { "type": "boolean" },
+        "steps": { "type": "integer", "minimum": 0 },
+        "notes": { "type": "array", "items": { "type": "string" } },
+        "result": {},
+        "stopped": { "type": "string" },
+        "knowledge": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "value": {}, "method": { "type": "string" }, "support": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "required": ["value", "method", "support", "confidence"],
+            "additionalProperties": false
+          }
+        },
+        "provenance_graph": { "type": "object" },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "states": {
+                "type": "array",
+                "items": { "type": "array", "minItems": 2, "maxItems": 2 }
+              },
+              "result": {},
+              "checks": { "type": "array", "items": { "type": "object" } }
+            },
+            "required": ["id", "states", "result", "checks"],
+            "additionalProperties": false
+          }
+        },
+        "journal": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "seq": { "type": "integer", "minimum": 1 }, "kind": { "type": "string" },
+              "key": { "type": "string" }, "detail": { "type": "string" }
+            },
+            "required": ["seq", "kind", "key", "detail"],
+            "additionalProperties": false
+          }
+        },
+        "trace": {
+          "type": "object",
+          "properties": {
+            "trace_id": { "type": "string" },
+            "spans": { "type": "array", "items": { "type": "object" } }
+          },
+          "required": ["trace_id", "spans"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["language", "program", "generated", "steps", "notes", "result", "stopped", "knowledge", "provenance_graph", "commands", "journal", "trace"],
+      "additionalProperties": false
+    }
+  }
+}

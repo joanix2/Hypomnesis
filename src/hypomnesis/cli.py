@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from contextlib import nullcontext, redirect_stdout
 from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -207,7 +208,13 @@ def _emit_certificate(session: Session, path: Path) -> None:
 
 
 def _pairs(items: list[str]) -> dict[str, str]:
-    return dict(item.split("=", 1) for item in items if "=" in item)
+    result = {}
+    for item in items:
+        key, separator, value = item.partition("=")
+        if not separator or not key:
+            raise ValueError(f"--env exige CLE=VALEUR : {item!r}")
+        result[key] = value
+    return result
 
 
 def _plugins(
@@ -241,7 +248,7 @@ class Mode(StrEnum):
 
 
 class CheckFormat(StrEnum):
-    """Output format of ``check``."""
+    """Output format of compiler diagnostics and procedure execution."""
 
     TEXT = "text"
     JSON = "json"
@@ -256,37 +263,100 @@ def _lancer(
     env: list[str],
     sans_permission: bool,
     generated: bool = False,
+    output_format: CheckFormat = CheckFormat.TEXT,
 ) -> int:
     from hypomnesis.engine.language import LanguageError, load_language
     from hypomnesis.engine.procedure import render, run_procedure
 
+    as_json = output_format is CheckFormat.JSON
     try:
-        language = load_language(langage)
-        if programme is not None:
-            program = programme.read_text(encoding="utf-8")
-        elif demande is not None and language.adapters.identifiers("transcriber"):
-            program = language.adapters.get("transcriber")(demande)
-        else:
-            print("un programme M1 ou une --demande transcriptible est requis", file=sys.stderr)
+        missing_program = False
+        report = None
+        with redirect_stdout(sys.stderr) if as_json else nullcontext():
+            language = load_language(langage)
+            if programme is not None:
+                program = programme.read_text(encoding="utf-8")
+            elif demande is not None and language.adapters.identifiers("transcriber"):
+                program = language.adapters.get("transcriber")(demande)
+            else:
+                missing_program = True
+            if not missing_program:
+                report = run_procedure(
+                    language,
+                    program,
+                    mode=mode.value,
+                    out_dir=sortie,
+                    environment=_pairs(env),
+                    permissions=frozenset() if sans_permission else None,
+                    generated=generated or (programme is None and demande is not None),
+                )
+        if missing_program:
+            message = "un programme M1 ou une --demande transcriptible est requis"
+            if as_json:
+                _print_execution(
+                    _execution_document(
+                        mode, "error", None, [HypomnesisError(message).to_diagnostic("<programme>")]
+                    )
+                )
+            else:
+                print(message, file=sys.stderr)
             return 64
-        report = run_procedure(
-            language,
-            program,
-            mode=mode.value,
-            out_dir=sortie,
-            environment=_pairs(env),
-            permissions=frozenset() if sans_permission else None,
-            generated=generated or (programme is None and demande is not None),
-        )
+        assert report is not None
+        if as_json:
+            diagnostics = [w.to_diagnostic() for w in language.session.warnings]
+            if report.stopped:
+                diagnostics.append(HypomnesisError(report.stopped).to_diagnostic(str(programme)))
+            _print_execution(
+                _execution_document(
+                    mode,
+                    "stopped" if report.stopped else "ok",
+                    {**report.to_json(), "steps": report.steps},
+                    diagnostics,
+                )
+            )
+            return int(bool(report.stopped))
         print(render(report))
         return 0
-    except (LanguageError, HypomnesisError, ValueError) as exc:
+    except (LanguageError, HypomnesisError, ValueError, OSError, UnicodeError) as exc:
+        if as_json:
+            error = exc if isinstance(exc, HypomnesisError) else HypomnesisError(str(exc))
+            _print_execution(
+                _execution_document(
+                    mode, "error", None, [error.to_diagnostic(str(programme or "<programme>"))]
+                )
+            )
+            return 1
         if isinstance(exc, HypomnesisError):
             message = exc.render(None, str(programme or "<programme>"))
         else:
             message = str(exc)
         print(f"refusé : {message}", file=sys.stderr)
         return 1
+
+
+def _execution_document(
+    mode: Mode, status: str, report: object, diagnostics: list[dict[str, object]]
+) -> dict[str, object]:
+    return {
+        "version": "1.0.0",
+        "mode": mode.value,
+        "status": status,
+        "report": report,
+        "diagnostics": diagnostics,
+    }
+
+
+def _print_execution(document: dict[str, object]) -> None:
+    from hypomnesis.contracts.registry import SchemaRegistry
+
+    try:
+        text = json.dumps(document, ensure_ascii=False, allow_nan=False)
+    except TypeError as exc:
+        raise ValueError(f"résultat d'exécution non JSON : {exc}") from exc
+    SchemaRegistry.with_builtin_schemas().validate(
+        "https://schemas.example.org/hypomnesis/cli-execution/1.0.0", json.loads(text)
+    )
+    print(text)
 
 
 def _repl(session: Session) -> int:
@@ -506,10 +576,24 @@ def lancer_command(
     generated: Annotated[
         bool, typer.Option("--generated", help="fichier généré : Record reste Hypothesis")
     ] = False,
+    output_format: Annotated[
+        CheckFormat,
+        typer.Option("--format", help="text : rapport lisible ; json : résultat versionné"),
+    ] = CheckFormat.TEXT,
 ) -> None:
     """Exécuter un programme M1 écrit dans un langage M2 (entrée langage.hyp)."""
     _exit_with(
-        _lancer(langage, programme, demande, mode, sortie, env or [], sans_permission, generated)
+        _lancer(
+            langage,
+            programme,
+            demande,
+            mode,
+            sortie,
+            env or [],
+            sans_permission,
+            generated,
+            output_format,
+        )
     )
 
 

@@ -10,11 +10,14 @@ prompt. The wording lives in a template
 
 from __future__ import annotations
 
+import json
 import textwrap
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from jinja2 import Environment, PackageLoader
 
+from hypomnesis.contracts.registry import SchemaRegistry
 from hypomnesis.engine.language import Language
 from hypomnesis.engine.registry import ExtensionRegistry
 from hypomnesis.language.docs import Declaration, Doc, declarations, is_public, published
@@ -87,6 +90,13 @@ class Catalogue:
 
     def render(self) -> str:
         return _environment().get_template("catalogue.md.j2").render(c=self).strip() + "\n"
+
+    def to_json(self) -> dict[str, Any]:
+        document = json.loads(json.dumps({"version": "1.0.0", **asdict(self)}, allow_nan=False))
+        SchemaRegistry.with_builtin_schemas().validate(
+            "https://schemas.example.org/hypomnesis/language-catalogue/1.0.0", document
+        )
+        return document
 
 
 def _environment() -> Environment:
