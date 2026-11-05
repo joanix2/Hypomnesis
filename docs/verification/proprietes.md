@@ -56,6 +56,10 @@ la manière dont on peut en établir la validité.
 | P33 | `Contracts.encode_conforms` | l'encodage d'une valeur ValTy satisfait le schéma produit : types, propriétés requises, aucun champ supplémentaire | §9.4, §13.4 ; HYP-043, objets à champs distincts, ordre des propriétés indifférent |
 | P34 | `Coverage.check_sound`, `exhaustive_sound`, `guarded_exhaustive_selects` | un résultat `some true` du calcul par matrices couvre toute valeur bien typée ; la sélection réussit quelles que soient les réponses booléennes des gardes si les bras non gardés couvrent | §4 ; HYP-022, fragment monomorphe, budget épuisé = indéterminé, pas de complétude revendiquée |
 | P35 | `Coverage.Certified.typed`, `eval_protected`, `certified_program_no_matchFail` | tout programme clos certifié ne rend ni `matchFail` ni `stuck` dans le véritable `Core.eval`, pour tout budget ; corps et fermetures récursives compris | §4 ; HYP-022, jugement renforcé explicite, timeout/erreur permis, pas encore attaché au pont CLI |
+| P36 | `Poly.Ty.subst_var`, `subst_comp`, `subst_congr`, `subst_scoped`, `rename_comp`, `rename_scoped` | identité/composition des substitutions et renommages des monotypes paramétriques ; la substitution conserve les portées si ses images sont bien scopées | §4 ; fondations HYP-023, aucune nouvelle garantie des programmes ou du CLI |
+| P37 | `Poly.lift_comp`, `lift_scoped`, `Scheme.subst_comp`, `subst_scoped`, `instantiate_scoped`, `instantiate_subst` | la substitution sous les quantificateurs protège les variables liées ; la bonne portée est préservée et l'instanciation commute avec la substitution extérieure | §4 ; schémas de rang 1, pas encore le jugement de généralisation des termes |
+| P38 | `Poly.Signature.constructorType_scoped` | dans une signature paramétrique bien formée, instancier un constructeur avec des arguments bien scopés produit un type bien scopé | §4 ; pas encore une preuve de sûreté des valeurs de données paramétriques |
+| P39 | `Poly.Ty.ofCore_subst`, `closed_subst` | la substitution ne change ni les types du fragment historique inclus ni les types paramétriques clos bien scopés | §4 ; inclusion des types seulement, pas un pont des programmes |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -85,6 +89,13 @@ Voir [certification.md](certification.md) pour les limites du fragment.
 Ne sont **pas encore** couverts : réels mathématiques et primitives hors catalogue,
 élaboration des motifs alternatifs imbriqués et alias, certification automatique
 d'exhaustivité par la CLI et polymorphisme (F2).
+
+**Fondations HYP-023 (en cours).** P36–P39 portent sur l'algèbre des types
+dans `Core/PolyTypes.lean`, importée et auditée. Les régressions
+`PolyTypeExamples.lean` contrôlent arités, variables libres, substitutions
+sans capture et représentation du schéma de map. Le corps de `List.map`,
+les termes polymorphes, leur sûreté et le checker CLI ne sont **pas encore**
+couverts par ces nouveaux lemmes. Le CLI historique continue à monomorphiser.
 
 **Exhaustivité (HYP-022, F1c).** P34 prouve le calcul positif par matrices ;
 P35 ajoute un jugement `Certified` qui exige la couverture et certifie tous

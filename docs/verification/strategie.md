@@ -90,6 +90,24 @@ l'interpréteur doit, **dans le même changement** :
 
 ## Ce qui reste de confiance
 
+### Polymorphisme de rang 1 : fondations, pas encore le checker (HYP-023)
+
+`Core/PolyTypes.lean` définit les types ouverts, les données nominales
+paramétriques et les schémas à indices de de Bruijn. Il prouve les lois
+des substitutions et renommages, la protection des variables liées,
+la préservation des portées et la commutation de l'instanciation avec la
+substitution extérieure. Les types des constructeurs sont instanciés
+sous un contrôle d'arité ; leur bonne portée découle d'une signature
+bien formée et d'arguments bien scopés.
+
+Ces lemmes sont audités et les régressions positives/négatives sont
+compilées avec la bibliothèque. Ils ne modifient encore ni `Core.typeOf`
+ni le décodeur de certificats. Le schéma de type de map est un test de
+représentation, **pas** la vérification du corps du prélude. Les étapes
+suivantes doivent étendre les termes et environnements, prouver la sûreté,
+préserver records/couverture/fuel et brancher le vrai checker avant de
+déclarer HYP-023 en QA. Voir [ADR 0020](../adr/0020-polymorphisme-rang1.md).
+
 ### Exhaustivité : preuve distincte du typage (HYP-022)
 
 `Core.Coverage.exhaustive_sound` relie une analyse par matrices à la réussite

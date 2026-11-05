@@ -23,3 +23,4 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0017](0017-imports-locaux-python.md) | Imports locaux avec syntaxe Python | Acceptée |
 | [0018](0018-signatures-opaques.md) | Signatures lexicales et scellement opaque | Acceptée |
 | [0019](0019-identite-producteurs-metriques.md) | Identité standard des producteurs de métriques indépendants | Acceptée |
+| [0020](0020-polymorphisme-rang1.md) | Polymorphisme explicite de rang 1 | Approche acceptée ; implémentation en cours |

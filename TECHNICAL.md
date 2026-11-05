@@ -12,6 +12,15 @@ garantie Lean au runtime existant.
 
 ## Pipeline du langage
 
+HYP-023 est en cours : `formal/Hypomnesis/Core/PolyTypes.lean` prépare
+les types paramétriques et schémas de rang 1 (ADR 0020). Substitutions
+sans capture, lois d'identité/composition, bonne portée et instanciation
+des constructeurs sont prouvées et auditées ; les régressions sont dans
+`PolyTypeExamples.lean`. Ces fondations ne sont pas encore branchées
+sur les termes, `Core.typeOf` ou le CLI. La certification existante
+continue à monomorphiser ; aucune nouvelle garantie de sûreté du
+polymorphisme ou du vrai `List.map` n'est revendiquée à ce stade.
+
 | Étape | Fichier | Rôle |
 |---|---|---|
 | Grammaire | `src/hypomnesis/language/grammar/hypomnesis.lark` | Lark LALR(1), points d'entrée `start` et `expr` |
