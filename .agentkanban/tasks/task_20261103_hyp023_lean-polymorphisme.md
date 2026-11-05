@@ -12,6 +12,18 @@ tags: [certification, lean, metalangage]
 
 ### user
 
+Périmètre global confirmé : keep-local-and-gates.
+
+### agent
+
+Le jalon des environnements de schémas est committé localement en
+`9bc234e` (sans push). `validate.sh lean`, `validate.sh rapide`,
+`validate.sh graphe` et `kanban.py check` passent ; le worktree est propre.
+Le ticket reste en cours : les termes polymorphes, leur sûreté et le
+branchement du vérificateur ne sont pas encore implémentés.
+
+### user
+
 Reprise après approbation du plan global de clôture des P1. Continuer
 HYP-023 depuis le jalon e7271e6, sans sous-agent ni push.
 

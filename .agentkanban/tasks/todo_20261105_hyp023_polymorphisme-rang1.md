@@ -38,4 +38,4 @@ tags: [certification, lean, metalangage]
 - [x] Documenter et auditer les propriétés de contexte P40.
 - [ ] Étendre les termes et le jugement de typage polymorphe ; brancher cette vérification au noyau.
 - [x] Valider le jalon : Lean/audit, 500 différentiels, validation rapide et graphe.
-- [ ] Committer ce jalon localement, sans push.
+- [x] Committer le jalon localement, sans push (9bc234e).
