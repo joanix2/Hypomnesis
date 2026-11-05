@@ -56,6 +56,7 @@ certificate_check() {
         tests/integration/test_lean_checker.py tests/differential \
         tests/integration/test_effects_model.py tests/integration/test_effect_handlers_model.py \
         tests/integration/test_problem_model.py tests/integration/test_solver_effect.py \
+        tests/integration/test_revision_model.py \
         --hypothesis-show-statistics
 }
 

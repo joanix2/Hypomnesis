@@ -225,10 +225,12 @@ def from_document(
             if base.facts.get(event.key) != fact:
                 raise JournalError(path + ".fact", "snapshot differs from the current fact")
             if kind == "invalidated" and fact is not None and unknown is not None:
-                if not (set(fact.provenance.observations()) & base.retracted) or evaluate(
+                if not base.retracted or evaluate(
                     fact.provenance, BOOLEAN, lambda s: s not in base.retracted
                 ):
-                    raise JournalError(path + ".fact", "invalidation requires withdrawn evidence")
+                    raise JournalError(
+                        path + ".fact", "invalidation requires revision and unsupported provenance"
+                    )
                 del base.facts[event.key]
                 base.unknowns[event.key] = unknown
         elif kind == "unknown" and unknown is not None:

@@ -335,6 +335,40 @@ historique de statuts exclusifs. Tests : vraie base SQLite, upgrade non vide,
 échec SQL injecté au milieu d'un ajout, redémarrage, 30 historiques générés
 et conservation des trois axes.
 
+## Révision incrémentale prouvée (HYP-036)
+
+Le modèle `formal/Hypomnesis/Epistemics/Revision.lean` représente
+les provenances complètes, l'index observation → clés, la sélection des
+candidats, les faits et inconnues, les sources retirées et les événements
+avec leurs instantanés. Les autres données des faits et le contexte
+(sources, compteur, configuration) sont des paramètres génériques conservés.
+Les dictionnaires Python se projettent en listes à clés uniques, dans leur
+ordre d'insertion. Les observations retirées ne sont testées qu'en appartenance.
+
+P29 prouve l'égalité de l'opération incrémentale et de la référence qui
+évalue chaque fait ; P30 prouve le préfixe du journal. Les deux opérations
+partagent uniquement la construction des inconnues et événements après
+sélection des invalidations, comme deux stratégies de calcul du même delta.
+L'axiome non rétractable est rejeté dans les deux modèles.
+
+La formalisation a exposé puis corrigé un cas manquant dans l'algorithme
+Python : une provenance `ZERO` ne mentionne aucune observation et échappait
+donc à l'index, contrairement au recalcul exhaustif. Les termes contenant
+zéro sont désormais ajoutés conservativement aux candidats. La décision
+finale reste l'évaluation booléenne : `ZERO + ONE`, par exemple, n'est pas
+invalidé. L'analyse supplémentaire est structurelle ; les termes sans zéro
+et non concernés par les retraits ne sont pas évalués. Aucun prérequis
+artificiel n'exclut zéro ou les assertions déjà non étayées du théorème.
+
+Le rejeu SQLite accepte aussi ces invalidations de provenance nulle après
+révision. Leur message ne prétend plus que le fait dépendait de la dernière
+source retirée : les provenances et retraits restent les causes structurées.
+Des tests couvrent toute l'algèbre zéro/un/observation/alternatives/produits,
+ainsi que 160 cas Python/Lean exécutés (dont 40 refus d'axiome), comparant
+faits, valeurs, provenances, inconnues, contexte et chaque champ du journal.
+Ce n'est pas une preuve du code Python, du stockage ou d'un moteur de
+recalcul de règles ; les règles doivent toujours être relancées explicitement.
+
 ## Chaînage avant et défauts (HYP-050)
 
 `engine.rules.Rule(name, target, premises, evaluate, default=False)` décrit

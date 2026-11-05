@@ -49,6 +49,8 @@ la manière dont on peut en établir la validité.
 | P26 | `Effects.Handlers.handlers_interpret_same_term`, `ordinary_answers_shared`, `equal_answers_equal_results` | les trois modes s'effacent vers le même fold du terme original ; les opérations hors Act partagent les mêmes réponses ; à réponses/transitions hôte identiques, les résultats effacés sont égaux, même avec des continuations qui branchent sur la réponse | §10.3 ; HYP-067, pas d'égalité inconditionnelle entre résultats simulés et réels |
 | P27 | `Problem.evalLinear_sound`, `evalLinear_complete` | l'évaluateur linéaire exact et la relation inductive de somme rationnelle décrivent les mêmes valeurs, booléens 0/1 compris | §6 ; projection normalisée de Problem IR, HYP-053 |
 | P28 | `Problem.check_sound`, `check_complete` | une affectation est acceptée si et seulement si ses noms sont connus et si elle satisfait tous les domaines typés, bornes, choix et contraintes linéaires | §6 ; modèle HYP-053, correspondance Python testée ; ni optimalité ni unsat |
+| P29 | `Revision.candidate_complete`, `invalidated_eq_full`, `revise_incr_eq_full` | l'index inverse augmenté des provenances contenant zéro couvre toute invalidation ; la révision incrémentale donne le même état que l'évaluation exhaustive | §7.3 ; HYP-036, valeurs/contexte génériques inchangés, correspondance Python testée |
+| P30 | `Revision.journal_prefix` | toute révision acceptée prolonge exactement le journal précédent sans modifier aucune entrée | §7.3 ; modèle HYP-036, pas une preuve de durabilité SQLite |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -126,8 +128,8 @@ dédiées restent HYP-043.
 |---|---|---|
 | provenance (§7.2) | toute lecture se déduit de la provenance par homomorphisme | ✅ P9 |
 | révision (§7.3) | localité, exactitude après retrait | ✅ P10, P11 |
-| | **révision incrémentale = recalcul complet** : invalider puis recalculer les seuls dépendants donne le même état qu'un recalcul de zéro | 🎯 F4 |
-| | conservation de l'historique : aucune révision ne détruit d'entrée du journal | 🎯 F4 (journal en ajout seul) |
+| | **révision incrémentale = recalcul complet** : invalider les candidats donne le même état qu'une évaluation exhaustive ; aucune règle n'est exécutée implicitement | ✅ P29 ; correspondance Python testée, pas de raffinement Python complet |
+| | conservation de l'historique : aucune révision ne détruit d'entrée du journal | ✅ P30 ; durabilité du stockage testée séparément |
 | statuts (§7.1) | monotonie du support | ✅ P12, P13 |
 | conflits | si le moteur signale `Conflict`, `⊥` est réellement dérivable (pas de faux conflit) | 🎯 F4 |
 

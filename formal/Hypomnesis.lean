@@ -5,6 +5,7 @@ import Hypomnesis.Core.Soundness
 import Hypomnesis.Core.Check
 import Hypomnesis.Core.Fuel
 import Hypomnesis.Epistemics.Provenance
+import Hypomnesis.Epistemics.Revision
 import Hypomnesis.Effects.Dispatch
 import Hypomnesis.Effects.Commands
 import Hypomnesis.Effects.Handlers

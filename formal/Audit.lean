@@ -38,6 +38,10 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms retract_unrelated
 #print axioms support_mono
 #print axioms conjunction_no_stronger
+#print axioms Revision.candidate_complete
+#print axioms Revision.invalidated_eq_full
+#print axioms Revision.revise_incr_eq_full
+#print axioms Revision.journal_prefix
 #print axioms Hypomnesis.Effects.dispatch_ordered
 #print axioms Hypomnesis.Effects.dispatch_permitted
 #print axioms Hypomnesis.Effects.no_dispatch_without_permission

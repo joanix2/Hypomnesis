@@ -6,9 +6,64 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from hypomnesis.epistemics import revision
 from hypomnesis.epistemics.knowledge import Fact, KnowledgeBase
-from hypomnesis.epistemics.provenance import obs
+from hypomnesis.epistemics.provenance import ONE, ZERO, Plus, Times, obs
 from hypomnesis.epistemics.revision import dependency_index, invalidated, recompute
+
+
+def test_zero_provenance_is_not_missed_by_the_observation_index():
+    kb = KnowledgeBase()
+    kb.publish_fact(Fact("unsupported", 1, ZERO, "explicit empty evidence"))
+    original = dict(kb.facts)
+    kb.retract_source("unrelated", "revision")
+    assert kb.facts == recompute(original, kb.retracted)
+
+
+@pytest.mark.parametrize(
+    ("term", "removed"), [(ZERO, True), (ONE, False), (ZERO + ONE, False), (ZERO * ONE, True)]
+)
+def test_zero_bearing_candidates_still_require_a_false_boolean_reading(term, removed):
+    fact = Fact("x", 1, term, "constant provenance")
+    assert bool(invalidated({"x": fact}, set())) is removed
+
+
+@given(
+    st.lists(
+        st.recursive(
+            st.sampled_from([ZERO, ONE, obs("a"), obs("b")]),
+            lambda terms: st.one_of(st.builds(Plus, terms, terms), st.builds(Times, terms, terms)),
+            max_leaves=10,
+        ),
+        max_size=12,
+    ),
+    st.sets(st.sampled_from(["a", "b", "unrelated"])),
+)
+def test_full_term_algebra_matches_reference_even_without_retracted_observations(terms, withdrawn):
+    facts = {str(i): Fact(str(i), i, term, "generated") for i, term in enumerate(terms)}
+    removed = set(invalidated(facts, withdrawn))
+    assert {key: fact for key, fact in facts.items() if key not in removed} == recompute(
+        facts, withdrawn
+    )
+
+
+def test_unaffected_zero_free_provenances_are_not_evaluated(monkeypatch):
+    facts = {
+        "constant": Fact("constant", 1, ONE, "constant"),
+        "unrelated": Fact("unrelated", 2, obs("alive"), "unrelated"),
+        "affected": Fact("affected", 3, obs("withdrawn"), "affected"),
+        "zero": Fact("zero", 4, ZERO * obs("alive"), "unsupported"),
+    }
+    original = revision.evaluate
+    evaluated = []
+
+    def tracked(term, semiring, valuation):
+        evaluated.append(term)
+        return original(term, semiring, valuation)
+
+    monkeypatch.setattr(revision, "evaluate", tracked)
+    assert invalidated(facts, {"withdrawn"}) == ["affected", "zero"]
+    assert evaluated == [facts["affected"].provenance, facts["zero"].provenance]
 
 
 @settings(deadline=None)

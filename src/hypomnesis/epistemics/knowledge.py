@@ -385,7 +385,8 @@ class KnowledgeBase:
 
         Implements the revision of §7.3 as the substitution ``x ↦ 0`` (P10, P11):
         a fact still holds iff its provenance evaluates to true without the source;
-        facts that do not mention it are untouched. The :data:`AXIOM` source of
+        supported zero-free facts mentioning no withdrawn source are untouched.
+        Zero-bearing terms are additional conservative candidates. The :data:`AXIOM` source of
         premise-less facts cannot be retracted.
         """
         if source_id == AXIOM:
@@ -399,7 +400,7 @@ class KnowledgeBase:
             self._log(
                 "invalidated",
                 key,
-                f"dépendait de {source_id}",
+                "provenance non étayée après révision",
                 fact,
                 unknown=self.unknowns[key],
             )

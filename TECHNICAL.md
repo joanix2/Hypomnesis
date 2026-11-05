@@ -176,6 +176,16 @@ ou incomplets restent `unchecked`. Aucun nouveau statut concret ou schéma
 JSON ; preuve de correction réservée HYP-037. Tests de construction générés :
 `tests/unit/test_conflicts.py`. Détails : guide des connaissances.
 
+HYP-036 prouve dans `formal/Hypomnesis/Epistemics/Revision.lean`
+l'équivalence index/référence exhaustive et le préfixe du journal (P29–P30).
+Les valeurs et le contexte sont génériques et inchangés. Correction associée :
+les provenances contenant zéro, sans forcément dépendre d'une observation,
+sont candidates à l'invalidation ; décision booléenne exacte, pas de faux
+retrait pour `ZERO + ONE`. Les termes non concernés sans zéro restent non
+évalués. Le rejeu suit cette règle, avec message d'invalidation non trompeur.
+160 cas réels Python/Lean comparent l'état et chaque champ du journal ;
+test obligatoire en CI des preuves et validation Lean/complète.
+
 HYP-032 : `epistemics/metavariables.py` ajoute `MetaVar` (TypeCodec fermé,
 contraintes nommées), `Proposal`, `propose`, `best`, `resolve` et `conflict`.
 Opérations persistantes ; toute nouvelle proposition rouvre la résolution.
