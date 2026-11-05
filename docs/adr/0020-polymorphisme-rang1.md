@@ -32,9 +32,10 @@ de données, les arités et les variables des types imbriqués.
 
 ## Mise en œuvre progressive et frontière
 
-`Core/PolyTypes.lean` établit d'abord cette algèbre et ses lemmes, avec des
-régressions compilées dans `Core/PolyTypeExamples.lean`. Il est importé
-par le point d'entrée de la bibliothèque et ses propriétés sont auditées.
+`Core/PolyTypes.lean` établit d'abord cette algèbre, les environnements
+de schémas et leurs lemmes, avec des régressions compilées dans
+`Core/PolyTypeExamples.lean`. Il est importé par le point d'entrée de la
+bibliothèque et ses propriétés sont auditées.
 La représentation historique est conservée pendant cette étape pour ne
 pas retirer une garantie existante avant son adaptation.
 

@@ -60,6 +60,7 @@ la manière dont on peut en établir la validité.
 | P37 | `Poly.lift_comp`, `lift_scoped`, `Scheme.subst_comp`, `subst_scoped`, `instantiate_scoped`, `instantiate_subst` | la substitution sous les quantificateurs protège les variables liées ; la bonne portée est préservée et l'instanciation commute avec la substitution extérieure | §4 ; schémas de rang 1, pas encore le jugement de généralisation des termes |
 | P38 | `Poly.Signature.constructorType_scoped` | dans une signature paramétrique bien formée, instancier un constructeur avec des arguments bien scopés produit un type bien scopé | §4 ; pas encore une preuve de sûreté des valeurs de données paramétriques |
 | P39 | `Poly.Ty.ofCore_subst`, `closed_subst` | la substitution ne change ni les types du fragment historique inclus ni les types paramétriques clos bien scopés | §4 ; inclusion des types seulement, pas un pont des programmes |
+| P40 | `Poly.TyEnv.subst_scoped`, `instantiate_scoped`, `instantiate_subst` | les environnements de schémas conservent leurs portées sous substitution ; l'instanciation d'une liaison conserve la portée et commute avec la substitution des types extérieurs | §4 ; brique d'environnement HYP-023, sans jugement de typage des termes ni nouvelle garantie CLI |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -90,10 +91,11 @@ Ne sont **pas encore** couverts : réels mathématiques et primitives hors catal
 élaboration des motifs alternatifs imbriqués et alias, certification automatique
 d'exhaustivité par la CLI et polymorphisme (F2).
 
-**Fondations HYP-023 (en cours).** P36–P39 portent sur l'algèbre des types
-dans `Core/PolyTypes.lean`, importée et auditée. Les régressions
+**Fondations HYP-023 (en cours).** P36–P40 portent sur l'algèbre des types
+et les environnements de schémas dans `Core/PolyTypes.lean`, importés et audités. Les régressions
 `PolyTypeExamples.lean` contrôlent arités, variables libres, substitutions
-sans capture et représentation du schéma de map. Le corps de `List.map`,
+sans capture, représentation du schéma de map et instanciation polymorphe
+depuis un environnement, y compris les variables extérieures. Le corps de `List.map`,
 les termes polymorphes, leur sûreté et le checker CLI ne sont **pas encore**
 couverts par ces nouveaux lemmes. Le CLI historique continue à monomorphiser.
 

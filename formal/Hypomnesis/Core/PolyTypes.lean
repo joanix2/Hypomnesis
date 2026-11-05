@@ -291,6 +291,50 @@ theorem Scheme.instantiate_subst (s : Scheme) (args : List Ty) (σ : Nat → Ty)
         Ty.instantiate_rename (σ (i - args.length)) (args.map (Ty.subst σ))
   · simp [instantiate, subst, length]
 
+abbrev TyEnv := List Scheme
+
+def TyEnv.wellScoped (arities : Arities) (depth : Nat) (env : TyEnv) : Bool :=
+  env.all (Scheme.wellScoped arities depth)
+
+def TyEnv.subst (σ : Nat → Ty) (env : TyEnv) : TyEnv :=
+  env.map (Scheme.subst σ)
+
+def TyEnv.instantiate (env : TyEnv) (index : Nat) (args : List Ty) : Option Ty :=
+  (env[index]?).bind fun scheme => scheme.instantiate args
+
+theorem TyEnv.subst_scoped {arities : Arities} {depth target : Nat}
+    {env : TyEnv} (henv : env.wellScoped arities depth = true) (σ : Nat → Ty)
+    (hσ : ∀ i, i < depth → (σ i).wellScoped arities target = true) :
+    (env.subst σ).wellScoped arities target = true := by
+  simp only [TyEnv.wellScoped, TyEnv.subst, List.all_map, List.all_eq_true] at *
+  intro scheme hscheme
+  exact Scheme.subst_scoped (henv scheme hscheme) σ hσ
+
+theorem TyEnv.instantiate_scoped {arities : Arities} {depth : Nat}
+    {env : TyEnv} (henv : env.wellScoped arities depth = true)
+    {index : Nat} {args : List Ty} (hargs : ∀ a ∈ args, a.wellScoped arities depth = true)
+    {t : Ty} (h : env.instantiate index args = some t) :
+    t.wellScoped arities depth = true := by
+  unfold TyEnv.instantiate at h
+  cases hindex : env[index]? with
+  | none => simp [hindex] at h
+  | some scheme =>
+    have hscheme := List.all_eq_true.mp henv scheme (List.mem_of_getElem? hindex)
+    have hinst : scheme.instantiate args = some t := by
+      simpa [hindex] using h
+    exact Scheme.instantiate_scoped hscheme hargs hinst
+
+theorem TyEnv.instantiate_subst (env : TyEnv) (index : Nat) (args : List Ty)
+    (σ : Nat → Ty) :
+    (env.subst σ).instantiate index (args.map (Ty.subst σ)) =
+      (env.instantiate index args).map (Ty.subst σ) := by
+  induction env generalizing index with
+  | nil => simp [TyEnv.instantiate, TyEnv.subst]
+  | cons scheme env ih =>
+    cases index with
+    | zero => simp [TyEnv.instantiate, TyEnv.subst, Scheme.instantiate_subst]
+    | succ index => exact ih index
+
 def mono (t : Ty) : Scheme := ⟨0, t⟩
 
 @[simp] theorem mono_instantiate (t : Ty) : (mono t).instantiate [] = some t := by

@@ -16,6 +16,8 @@ def list (a : Ty) : Ty := .data 0 [a]
 def mapScheme : Scheme :=
   ⟨2, .arrow (.arrow (.var 0) (.var 1)) (.arrow (list (.var 0)) (list (.var 1)))⟩
 
+def mapEnv : TyEnv := [mapScheme]
+
 theorem list_signature_valid : listSig.wellFormed = true := by
   simp [listSig, Signature.wellFormed, Signature.arities, Ty.wellScoped]
 
@@ -34,6 +36,26 @@ theorem map_int_bool :
 
 theorem map_wrong_arity : mapScheme.instantiate [.int] = none := by
   simp [mapScheme, Scheme.instantiate]
+
+theorem map_environment_int_bool :
+    mapEnv.instantiate 0 [.int, .bool] =
+      some (.arrow (.arrow .int .bool) (.arrow (list .int) (list .bool))) := by
+  simp [mapEnv, mapScheme, list, TyEnv.instantiate, Scheme.instantiate, Ty.subst,
+    instantiateSubst]
+
+theorem map_environment_wrong_arity : mapEnv.instantiate 0 [.int] = none := by
+  simp [mapEnv, mapScheme, TyEnv.instantiate, Scheme.instantiate]
+
+theorem environment_instantiation_retains_outer_scope :
+    TyEnv.instantiate ([Scheme.mk 1 (.prod (.var 0) (.var 1))] : TyEnv) 0 [.bool] =
+      some (.prod .bool (.var 0)) := by
+  simp [TyEnv.instantiate, Scheme.instantiate, Ty.subst, instantiateSubst]
+
+theorem environment_instantiation_commutes_with_substitution
+    (σ : Nat → Ty) :
+    (mapEnv.subst σ).instantiate 0 ([.int, .bool].map (Ty.subst σ)) =
+      (mapEnv.instantiate 0 [.int, .bool]).map (Ty.subst σ) :=
+  TyEnv.instantiate_subst mapEnv 0 [.int, .bool] σ
 
 theorem unbound_variable_rejected : (Ty.var 1).wellScoped listSig.arities 1 = false := by
   simp [Ty.wellScoped]

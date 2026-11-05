@@ -29,3 +29,13 @@ tags: [certification, lean, metalangage]
 - [x] Déclarations nominales paramétriques et portée des arguments de constructeurs.
 - [x] Régressions Lean positives/négatives, import central, catalogue et audit.
 - [x] Valider le jalon avec Lean, contrôle rapide et graphe ; commit local.
+
+## Itération 3 — environnements de schémas
+
+- [x] Représenter les contextes de variables par des schémas instanciables.
+- [x] Prouver la conservation de portée et la commutation substitution/instanciation dans un contexte.
+- [x] Ajouter les régressions map int→bool, arité invalide et variable de type extérieure.
+- [x] Documenter et auditer les propriétés de contexte P40.
+- [ ] Étendre les termes et le jugement de typage polymorphe ; brancher cette vérification au noyau.
+- [x] Valider le jalon : Lean/audit, 500 différentiels, validation rapide et graphe.
+- [ ] Committer ce jalon localement, sans push.

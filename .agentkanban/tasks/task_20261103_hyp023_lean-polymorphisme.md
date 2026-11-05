@@ -12,6 +12,25 @@ tags: [certification, lean, metalangage]
 
 ### user
 
+Reprise après approbation du plan global de clôture des P1. Continuer
+HYP-023 depuis le jalon e7271e6, sans sous-agent ni push.
+
+### agent
+
+Itération 3 ajoutée dans `Core/PolyTypes.lean` : contextes de variables
+représentés par des schémas, instanciation indexée, conservation de portée,
+et commutation de la substitution avec l'instanciation. Les régressions
+couvrent `List.map` instancié à int/bool, l'arité invalide et une variable
+de type extérieure. P40, l'audit d'axiomes et la documentation sont mis à
+jour. `lake build` et l'audit Lean passent avec les seuls axiomes standard.
+
+Cette étape ne type toujours pas les termes polymorphes, ne modifie pas
+`Core.typeOf` ou le décodeur, et ne vérifie pas le corps du véritable
+`List.map`. HYP-023 reste `doing` ; prochaine étape : termes et jugement de
+typage, puis sûreté et branchement.
+
+### user
+
 **Ticket** HYP-023 · **Priorité** P1 · **Taille** L · **Epic** Vérification formelle (Lean) · **Dépend de** HYP-020 · **Labels** lean
 
 #### Contexte
