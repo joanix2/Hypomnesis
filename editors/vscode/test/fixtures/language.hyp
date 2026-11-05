@@ -1,0 +1,4 @@
+language arithmetique = {
+  version = "1.0.0";
+  description = "Arithmétique entière réutilisable, sans entrée/sortie."
+}

@@ -5,6 +5,7 @@
     {"include": "#documentation"},
     {"include": "#comment"},
     {"include": "#string"},
+    {"include": "#language-declaration"},
     {"include": "#type-declaration"},
     {"include": "#keywords"},
     {"include": "#numbers"},
@@ -15,6 +16,45 @@
     {"name": "punctuation.section.hypomnesis", "match": "[()\\[\\]{};,\\.]"}
   ],
   "repository": {
+    "language-declaration": {
+      "name": "meta.language.hypomnesis",
+      "begin": "\\b(language)\\s+([a-z_][A-Za-z0-9_']*)",
+      "beginCaptures": {
+        "1": {"name": "keyword.control.hypomnesis"},
+        "2": {"name": "entity.name.type.language.hypomnesis"}
+      },
+      "end": "(?<=\\})",
+      "patterns": [
+        {"include": "#documentation"},
+        {"include": "#comment"},
+        {"include": "#language-record"},
+        {"name": "keyword.operator.hypomnesis", "match": "="}
+      ]
+    },
+    "language-record": {
+      "name": "meta.record.language.hypomnesis",
+      "begin": "\\{",
+      "beginCaptures": {"0": {"name": "punctuation.section.hypomnesis"}},
+      "end": "\\}",
+      "endCaptures": {"0": {"name": "punctuation.section.hypomnesis"}},
+      "patterns": [
+        {"include": "#documentation"},
+        {"include": "#comment"},
+        {"include": "#string"},
+        {"include": "#language-record"},
+        {
+          "match": "\\b([a-z_][A-Za-z0-9_']*)\\s*(=)",
+          "captures": {
+            "1": {"name": "variable.other.property.hypomnesis"},
+            "2": {"name": "keyword.operator.hypomnesis"}
+          }
+        },
+        {"include": "#keywords"},
+        {"include": "#numbers"},
+        {"name": "keyword.operator.hypomnesis", "match": "-"},
+        {"name": "punctuation.section.hypomnesis", "match": "[\\[\\];,]"}
+      ]
+    },
     "type-declaration": {
       "match": "\\b(type)\\s+(?:('[a-z_][A-Za-z0-9_']*|\\([^)]*\\))\\s+)?([a-z_][A-Za-z0-9_']*)",
       "captures": {

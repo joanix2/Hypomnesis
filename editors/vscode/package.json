@@ -2,7 +2,7 @@
   "name": "hypomnesis",
   "displayName": "Hypomnesis",
   "description": "Coloration syntaxique et diagnostics du compilateur Hypomnesis.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "hypomnesis",
   "license": "MIT",
   "repository": {
@@ -13,8 +13,13 @@
   "engines": {
     "vscode": "^1.91.0"
   },
-  "categories": ["Programming Languages", "Linters"],
-  "activationEvents": ["onLanguage:hypomnesis"],
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:hypomnesis"
+  ],
   "main": "./out/extension.js",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -27,8 +32,13 @@
     "languages": [
       {
         "id": "hypomnesis",
-        "aliases": ["Hypomnesis", "hypomnesis"],
-        "extensions": [".hyp"],
+        "aliases": [
+          "Hypomnesis",
+          "hypomnesis"
+        ],
+        "extensions": [
+          ".hyp"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],

@@ -2,44 +2,16 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { test, before } = require("node:test");
-const textmate = require("vscode-textmate");
-const oniguruma = require("vscode-oniguruma");
+const { loadTokenizer, scoped } = require("./tokenize.cjs");
 
 const root = path.resolve(__dirname, "../../..");
 const grammarPath = path.join(__dirname, "../syntaxes/hypomnesis.tmLanguage.json");
 const definition = JSON.parse(fs.readFileSync(grammarPath, "utf8"));
-let grammar;
+let tokenize;
 
 before(async () => {
-  const wasm = fs.readFileSync(require.resolve("vscode-oniguruma/release/onig.wasm"));
-  await oniguruma.loadWASM(wasm);
-  const registry = new textmate.Registry({
-    onigLib: Promise.resolve({
-      createOnigScanner: patterns => new oniguruma.OnigScanner(patterns),
-      createOnigString: source => new oniguruma.OnigString(source),
-    }),
-    loadGrammar: async () => definition,
-  });
-  grammar = await registry.loadGrammar("source.hypomnesis");
+  tokenize = await loadTokenizer(grammarPath);
 });
-
-function tokenize(source) {
-  let state = textmate.INITIAL;
-  return source.split("\n").map(line => {
-    const result = grammar.tokenizeLine(line, state);
-    state = result.ruleStack;
-    return result.tokens.map(token => ({
-      text: line.slice(token.startIndex, token.endIndex),
-      scopes: token.scopes,
-    }));
-  });
-}
-
-function scoped(tokens, scope, text) {
-  return tokens.flat().some(token =>
-    token.scopes.includes(scope) && (text === undefined || token.text.includes(text)),
-  );
-}
 
 test("keywords exactly match alphabetic literals in the Lark grammar", () => {
   const lark = fs.readFileSync(path.join(root, "src/hypomnesis/language/grammar/hypomnesis.lark"), "utf8");
@@ -80,6 +52,33 @@ test("native language declarations highlight without a JSON manifest", () => {
   const tokens = tokenize('language exemple = { imports = ["../base"]; version = "1" }');
   assert(scoped(tokens, "keyword.control.hypomnesis", "language"));
   assert(scoped(tokens, "string.quoted.double.hypomnesis", "../base"));
+});
+
+test("the reported language declaration colors its name and metadata", () => {
+  const tokens = tokenize(fs.readFileSync(path.join(__dirname, "fixtures/language.hyp"), "utf8"));
+  for (const [scope, text] of [
+    ["keyword.control.hypomnesis", "language"],
+    ["entity.name.type.language.hypomnesis", "arithmetique"],
+    ["variable.other.property.hypomnesis", "version"],
+    ["variable.other.property.hypomnesis", "description"],
+    ["string.quoted.double.hypomnesis", "1.0.0"],
+    ["keyword.operator.hypomnesis", "="],
+    ["punctuation.section.hypomnesis", ";"],
+  ]) assert(scoped(tokens, scope, text), `${scope}: ${text}`);
+});
+
+test("nested metadata and multiline declarations stop at the right closing brace", () => {
+  const tokens = tokenize([
+    "language test",
+    '= { procedure = { kind = "program"; entry = "version = }" };',
+    '(* description = } *) version = "1" }',
+    'let normal = { version = "ordinary" }',
+  ].join("\n"));
+  assert(scoped(tokens, "variable.other.property.hypomnesis", "kind"));
+  assert(scoped(tokens, "variable.other.property.hypomnesis", "entry"));
+  assert(scoped(tokens[2], "variable.other.property.hypomnesis", "version"));
+  assert(!scoped([tokens[3]], "meta.language.hypomnesis"));
+  assert(!scoped([tokens[3]], "variable.other.property.hypomnesis"));
 });
 
 for (const name of ["mecanique/plaque.hyp", "ventilation/ventilation.hyp"]) {

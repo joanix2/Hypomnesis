@@ -559,6 +559,18 @@ puis simulate/dry-run ; stdin fermé et tous les documents validés. Tests de
 refus structurés, logs d'adaptateur sur stderr et seuil réel 1000/1001 étapes.
 Erreurs d'usage Typer : code 2, stderr, stdout vide. Aucun appel LLM.
 
+### Coloration des métadonnées (volet local HYP-151)
+
+Extension VS Code 0.1.1 : scopes dédiés au nom `language` et aux clés de
+configuration, contexte équilibré pour records imbriqués, chaînes/commentaires
+protégés et absence de débordement sur les records ordinaires. Un tokenizer
+TextMate commun sert aux tests Node et à l'Extension Host ; ce dernier lit
+la grammaire de la contribution réellement chargée, vérifie association
+`.hyp`, activation, scopes du bloc utilisateur et diagnostics LSP.
+Guide de rechargement et inspection des scopes dans `editors/vscode/README.md`.
+Le parseur et les programmes sont inchangés ; l'arbitrage syntaxique de
+HYP-151 demeure humain, distinct de cette correction d'outillage.
+
 ## Observabilité (HYP-015)
 
 `src/hypomnesis/observability/trace.py` : la classe `Tracer` est une façade au-dessus du SDK

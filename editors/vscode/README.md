@@ -34,6 +34,42 @@ VSCODE_EXECUTABLE="/Applications/Visual Studio Code.app/Contents/MacOS/Code" npm
 rend la main avant la fin des tests. `HYPOMNESIS_PYTHON` permet de remplacer le Python du
 dépôt utilisé pour ce test. Un fichier témoin confirme que les assertions ont bien été exécutées.
 
+## Déclarations `language` et diagnostic de coloration
+
+Depuis 0.1.1, le nom de langage et les clés de métadonnées ont des scopes
+dédiés, en plus du mot-clé, des chaînes, opérateurs et délimiteurs :
+
+```hyp
+language arithmetique = {
+  version = "1.0.0";
+  description = "Arithmétique entière réutilisable, sans entrée/sortie."
+}
+```
+
+Le nom reçoit `entity.name.type.language.hypomnesis`, les clés
+`variable.other.property.hypomnesis`, uniquement dans ce contexte.
+Les records de configuration imbriqués et les retours à la ligne sont
+pris en charge ; les accolades dans commentaires/chaînes ne ferment pas
+la déclaration. Aucun changement de syntaxe du compilateur.
+
+Si tout paraît sans couleur :
+
+1. Vérifier **Hypomnesis** dans le sélecteur de langage en bas à droite ;
+   une association utilisateur `files.associations` peut remplacer `.hyp`.
+2. Vérifier que `hypomnesis.hypomnesis` est activée dans ce profil/espace
+   de travail : `code --list-extensions --show-versions`.
+3. Reconstruire et installer le VSIX ci-dessus, puis **Developer: Reload
+   Window**. Le numéro 0.1.0 ne distingue pas les anciens builds locaux ;
+   0.1.1 inclut les scopes de métadonnées.
+4. **Developer: Inspect Editor Tokens and Scopes** montre les scopes
+   effectifs ; leur couleur exacte dépend du thème.
+
+Les tests TextMate couvrent le bloc exact. Le test Extension Host ouvre
+réellement ce fichier `.hyp`, vérifie association et activation, tokenise
+avec la grammaire de la contribution chargée, et conserve les tests de
+diagnostic/correction non enregistrée. Ce n'est pas une assertion sur les
+couleurs RGB de tous les thèmes ni sur une autre fenêtre/profil déjà ouvert.
+
 ## Réglages
 
 - `hypomnesis.pythonPath` : Python avec l'extra `lsp` ; par défaut le `.venv` du dossier
