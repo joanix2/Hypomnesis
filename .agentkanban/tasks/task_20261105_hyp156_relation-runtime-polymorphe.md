@@ -103,4 +103,8 @@ Commit et push du lot validé demandé.
 
 Validation rapide réussie. `origin/main` a été actualisé : la branche locale contient 27 commits d'avance et aucun commit en retard. Le fichier mécanique sélectionné n'a aucune modification ; le lot versionné porte sur P50/HYP-156, la documentation Lean et le découpage Kanban des tickets de suivi.
 
+### agent
+
+Commit créé : `113a05e` (`Prouver la sûreté runtime du polymorphisme`). Push réussi vers `origin/main`; le HEAD local et `origin/main` pointent sur `113a05e42f283c148900562241530e7db72f92da`. Worktree propre après publication.
+
 ### user
