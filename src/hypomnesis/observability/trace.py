@@ -17,20 +17,23 @@ import logging
 import math
 import os
 from collections.abc import Iterator, Mapping, Sequence
-from contextlib import AbstractContextManager, contextmanager, nullcontext
+from contextlib import AbstractContextManager, ExitStack, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlsplit
 
 from opentelemetry import trace as otel
 from opentelemetry.context import Context
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.sdk.trace.id_generator import IdGenerator, RandomIdGenerator
 from opentelemetry.trace import NoOpTracerProvider, Span, SpanContext, Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+from hypomnesis.observability.metrics import Metrics, OperationMetrics
+from hypomnesis.observability.otlp import local_session, validate_endpoint
 
 _SCOPE = "hypomnesis"
 _OTEL_TYPES = (str, bool, int, float)
@@ -43,6 +46,7 @@ class TraceConfig:
     enabled: bool = True
     otlp_endpoint: str | None = None
     timeout_seconds: float = 3.0
+    otlp_metrics_endpoint: str | None = None
 
     def __post_init__(self) -> None:
         if type(self.enabled) is not bool:
@@ -53,18 +57,9 @@ class TraceConfig:
             or self.timeout_seconds <= 0
         ):
             raise ValueError("telemetry timeout must be positive and finite")
-        if self.otlp_endpoint is not None:
-            url = urlsplit(self.otlp_endpoint)
-            _ = url.port
-            if (
-                url.scheme not in ("http", "https")
-                or url.hostname not in ("localhost", "127.0.0.1", "::1")
-                or url.username is not None
-                or url.password is not None
-                or url.query
-                or url.fragment
-            ):
-                raise ValueError("OTLP endpoint must be an explicit local HTTP(S) URL")
+        for endpoint in (self.otlp_endpoint, self.otlp_metrics_endpoint):
+            if endpoint is not None:
+                validate_endpoint(endpoint)
 
     @classmethod
     def from_environment(cls) -> TraceConfig:
@@ -75,6 +70,7 @@ class TraceConfig:
             enabled=enabled == "1",
             otlp_endpoint=os.environ.get("HYPOMNESIS_OTLP_TRACES_ENDPOINT"),
             timeout_seconds=float(os.environ.get("HYPOMNESIS_TELEMETRY_TIMEOUT", "3")),
+            otlp_metrics_endpoint=os.environ.get("HYPOMNESIS_OTLP_METRICS_ENDPOINT"),
         )
 
 
@@ -131,55 +127,53 @@ class Tracer:
         self._exporter = InMemorySpanExporter()
         provider: otel.TracerProvider
         self._provider: TracerProvider | None = None
-        if self.enabled:
-            sdk_provider = TracerProvider(id_generator=_FixedTraceId(trace_id))
-            sdk_provider.add_span_processor(SimpleSpanProcessor(self._exporter))
-            if config.otlp_endpoint is not None:
-                try:
-                    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-                        OTLPSpanExporter,
-                    )
-                    from requests import HTTPError, Session
-                except ImportError as exc:
-                    sdk_provider.shutdown()
-                    raise ValueError("OTLP export requires the 'telemetry' extra") from exc
-
-                class LocalSession(Session):
-                    def request(self, *args: Any, **kwargs: Any) -> Any:
-                        kwargs["allow_redirects"] = False
-                        response = super().request(*args, **kwargs)
-                        if 300 <= response.status_code < 400:
-                            raise HTTPError(
-                                f"OTLP collector redirect refused (HTTP {response.status_code})",
-                                response=response,
+        with ExitStack() as cleanup:
+            self.metrics = Metrics(
+                enabled=self.enabled,
+                endpoint=config.otlp_metrics_endpoint,
+                timeout_seconds=config.timeout_seconds,
+            )
+            cleanup.callback(self.metrics.close)
+            if self.enabled:
+                sdk_provider = TracerProvider(
+                    id_generator=_FixedTraceId(trace_id),
+                    resource=Resource({"service.name": "hypomnesis"}),
+                )
+                cleanup.callback(sdk_provider.shutdown)
+                sdk_provider.add_span_processor(OperationMetrics(self.metrics))
+                sdk_provider.add_span_processor(SimpleSpanProcessor(self._exporter))
+                if config.otlp_endpoint is not None:
+                    try:
+                        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                            OTLPSpanExporter,
+                        )
+                    except ImportError as exc:
+                        raise ValueError("OTLP export requires the 'telemetry' extra") from exc
+                    sdk_provider.add_span_processor(
+                        SimpleSpanProcessor(
+                            OTLPSpanExporter(
+                                endpoint=config.otlp_endpoint,
+                                timeout=config.timeout_seconds,
+                                session=local_session(),
                             )
-                        return response
-
-                session = LocalSession()
-                session.trust_env = False
-                sdk_provider.add_span_processor(
-                    SimpleSpanProcessor(
-                        OTLPSpanExporter(
-                            endpoint=config.otlp_endpoint,
-                            timeout=config.timeout_seconds,
-                            session=session,
                         )
                     )
-                )
-            provider = sdk_provider
-            self._provider = sdk_provider
-        else:
-            provider = NoOpTracerProvider()
-        self._tracer = provider.get_tracer(_SCOPE)
-        self._stack: ContextVar[tuple[tuple[str, Span], ...]] = ContextVar(
-            "hypomnesis_spans", default=()
-        )
+                provider = sdk_provider
+                self._provider = sdk_provider
+            else:
+                provider = NoOpTracerProvider()
+            self._tracer = provider.get_tracer(_SCOPE)
+            self._stack: ContextVar[tuple[tuple[str, Span], ...]] = ContextVar(
+                "hypomnesis_spans", default=()
+            )
+            cleanup.pop_all()
 
     def close(self) -> None:
         if not self._closed:
             self._closed = True
             if self._provider is not None:
                 self._provider.shutdown()
+            self.metrics.close()
 
     def __enter__(self) -> Tracer:
         return self

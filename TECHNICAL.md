@@ -692,6 +692,58 @@ refus/redirection du collecteur, arbre du MVP sauvegardé, concurrence,
 propagation/rejeu et résultat identique avec ou sans export. Aucun service
 tiers n'est contacté par ces tests.
 
+### Métriques (HYP-071)
+
+`observability/metrics.py` utilise un `MeterProvider` privé par `Tracer`,
+sans fournisseur global. `tracer.metrics.snapshot()` expose les données du
+lecteur mémoire SDK ; elles restent consultables après `close()`. Le format
+historique de `rapport.json` est inchangé. Les ressources OTLP portent
+`service.name=hypomnesis`, sans identifiant individuel comme dimension.
+
+```bash
+HYPOMNESIS_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318/v1/traces \
+  HYPOMNESIS_OTLP_METRICS_ENDPOINT=http://127.0.0.1:4318/v1/metrics \
+  hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_120x80.hyp
+```
+
+Le second endpoint est indépendant du premier, également validé en API
+(`TraceConfig.otlp_metrics_endpoint`). Même extra `telemetry`, même
+restriction locale et même session sans proxy/redirection. Exporteur
+officiel périodique (5 s), export final et arrêt du lecteur à la fermeture.
+Un échec de construction du traceur ferme les fournisseurs déjà créés.
+`HYPOMNESIS_TELEMETRY=0` désactive aussi les métriques et leurs exports.
+
+Les dix métriques non conditionnelles du §12.4 sont produites par les
+opérations auxquelles elles s'appliquent, sans incrément factice :
+
+- Fin de `hypomnesis.run` : compteur des exécutions et durée.
+- Appels réels de capteur/actionneur/estimateur/solveur/validateur/transcripteur :
+  compteur et histogramme par catégorie, pas par identifiant de plugin.
+- Validation JSON : compteur `accepted`, `rejected` ou `error`.
+- Solveur : histogramme ; estimateur : compteur.
+- Refus effectif d'un `LanguageValidator` ou du checker d'assignation :
+  rejet de validateur. Une erreur logicielle du checker n'est pas une
+  réfutation ; elle reste une erreur d'appel.
+- Commande : compteur à l'état final, dédupliqué par le Dispatcher.
+  `Failed`, `TimedOut` et `UnknownOutcome` comptent aussi comme échecs ;
+  refus d'autorisation, dry-run et simulation ne sont pas des échecs d'envoi.
+
+Durées en secondes avec buckets adaptés de 1 ms à 60 s. Les seuls labels
+admis sont `status`, `kind`, `mode`, `state`, `direction`, chacun avec une
+énumération fermée. Toute autre clé ou valeur est refusée, même un
+identifiant passé comme `status`. Aucun message, trace, connaissance,
+schéma, résultat, exception ni nom libre de plugin dans les labels.
+
+`hypomnesis_llm_tokens_total` n'est enregistré que si une mesure existe :
+`tracer.metrics.record("hypomnesis_llm_tokens_total", n, direction="input")`
+(ou `output`), avec entier non négatif. Aucun appel LLM ni consommation
+inventée : la fixture enregistrée du MVP n'émet pas ce compteur.
+Les tests MVP vérifient succès, refus de permission et vraie exception
+d'écriture ; les tests de validateur couvrent séparément les réfutations.
+Une exécution réussie n'émet pas artificiellement un rejet ou un échec.
+`test_metrics.py` vérifie également SDK, protobuf OTLP reçu localement,
+isolement, désactivation, fermeture et erreurs/refus/redirections d'export.
+
 ## Vérification formelle
 
 `formal/` (Lean 4.35, sans dépendance) : fragment de la Core IR, typage, évaluateur à budget,

@@ -281,6 +281,7 @@ def run_mvp(
         report["error"] = str(exc)
         raise
     finally:
+        tracer.close()
         report["trace"] = tracer.export()
         report["provenance_graph"] = kb.provenance_graph()
         report["knowledge"] = {

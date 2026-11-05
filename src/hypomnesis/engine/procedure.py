@@ -257,8 +257,13 @@ def _run_procedure(
             with tracer.span("solver.solve", solver=z3_solver.NAME, contraintes=len(p.constraints)):
                 solution = z3_solver.solve(p)
             try:
-                with tracer.span("validator.check", checker="solver.assignment"):
-                    checked = solution_value(p, solution)
+                with tracer.span("validator.check", checker="solver.assignment") as span:
+                    try:
+                        checked = solution_value(p, solution)
+                    except BridgeError:
+                        span.set_attribute("validation.result", "rejected")
+                        raise
+                    span.set_attribute("validation.result", "accepted")
             except BridgeError as exc:
                 raise EvaluationError(f"solution refusée par la vérification : {exc}") from exc
             if op == "SolveTyped":

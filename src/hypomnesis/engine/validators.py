@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from opentelemetry.trace import Status, StatusCode
+
 from hypomnesis.capabilities.result import Certificate, Diagnostic, Result, failure, success
 from hypomnesis.contracts.codec import CodecError, TypeCodec
 from hypomnesis.language.errors import EvaluationError
+from hypomnesis.observability.trace import operation
 from hypomnesis.runtime.values import Value, iter_list
 from hypomnesis.session import Session
 
@@ -28,6 +31,22 @@ class LanguageValidator:
         return violations
 
     def validate(self, proposal: Value, /) -> Result[Value]:
+        with operation("validator.check", plugin=self.function) as span:
+            result = self._validate(proposal)
+            if span is not None:
+                status = (
+                    "accepted"
+                    if result.ok
+                    else "rejected"
+                    if result.diagnostics[0].code == "validator.rejected"
+                    else "error"
+                )
+                span.set_attribute("validation.result", status)
+                if status == "error":
+                    span.set_status(Status(StatusCode.ERROR))
+            return result
+
+    def _validate(self, proposal: Value) -> Result[Value]:
         try:
             payload = self.codec.encode(proposal)
             snapshot = self.codec.decode(payload)

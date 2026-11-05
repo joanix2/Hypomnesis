@@ -41,7 +41,7 @@ from hypomnesis.effects.commands import (
 )
 from hypomnesis.effects.permissions import PermissionPolicy
 from hypomnesis.language.errors import EvaluationError
-from hypomnesis.observability.trace import operation
+from hypomnesis.observability.trace import current_tracer, operation
 from hypomnesis.runtime.json import data_to_json
 
 MODES = ("simulate", "dry-run", "production")
@@ -150,6 +150,7 @@ class Dispatcher:
 
     def dispatch(self, command: Command) -> Outcome:
         """Run a command through the automaton; a known ``command_id`` is never run again."""
+        fresh = command.id not in self._outcomes
         with operation("actuator.authorize", plugin=command.actuator, mode=self.mode):
             outcome, actuator = self._authorize(command)
         if actuator is not None:
@@ -165,6 +166,9 @@ class Dispatcher:
                 "production": self._production,
             }[self.mode]
             handler(actuator, outcome, move)
+        tracer = current_tracer()
+        if fresh and tracer is not None:
+            tracer.metrics.command(outcome.state, self.mode)
         return outcome
 
     def _authorize(self, command: Command) -> tuple[Outcome, Actuator | None]:
