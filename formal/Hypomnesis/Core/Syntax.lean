@@ -33,11 +33,20 @@ elles héritent de la sûreté et de la correction/complétude du vérificateur.
 Le décodeur traduit les motifs records en motifs de constructeur et de produit,
 en préservant les variables de l'ordre source.
 
-Annotations (HYP-024). Les types portés ici par la syntaxe viennent des
-annotations que le vérificateur Python ajoute à sa Core IR : `lam dom` ↔
-`Lambda.param_types`, `fix dom cod` ↔ `LetRec.types` / `DefRec.types`. Les
-annotations Python liées au polymorphisme (`forall_vars`, `type_args`) n'ont
-pas encore d'équivalent : elles seront formalisées avec HYP-023.
+Annotations (HYP-024/HYP-023). Les types portés ici par la syntaxe viennent
+des annotations que le vérificateur Python ajoute à sa Core IR : `lam dom` ↔
+`Lambda.param_types`, `fix dom cod` ↔ `LetRec.types` / `DefRec.types`. La
+syntaxe parallèle `Poly.Expr` représente `type_args` aux variables et le
+schéma `forall_vars` au `let`; `Poly.Expr.erase` les efface avant le véritable
+`Core.eval`. En particulier, `Poly.Expr.erase` efface les annotations lambda
+à `unit`, ce qui préserve l'invariance de substitution. Pour le fragment
+runtime monomorphe, `Poly.Expr.eraseMono` conserve les annotations lambda ;
+`PolySoundness.Expr.eval_eraseMono_eq_erase` prouve l'égalité d'évaluation au
+véritable `Core.eval` quand le corps des fermetures a le même effacement.
+Le pont de sûreté couvre les variables à arguments de types vides, les `let`
+monomorphes et les lambdas/applications monomorphes ; les fonctions récursives,
+les données paramétriques et les termes polymorphes multi-instanciés restent
+hors preuve.
 
 Scalaires (HYP-150). Float est binary64 (modèle logique Lean 4.35), String est
 Unicode. BinOp fixe domaines et résultats ; raise produit une erreur explicite.

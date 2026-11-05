@@ -18,6 +18,8 @@ def mapScheme : Scheme :=
 
 def mapEnv : TyEnv := [mapScheme]
 
+def outerEnv : TyEnv := [Scheme.mk 1 (.prod (.var 0) (.var 1))]
+
 theorem list_signature_valid : listSig.wellFormed = true := by
   simp [listSig, Signature.wellFormed, Signature.arities, Ty.wellScoped]
 
@@ -56,6 +58,22 @@ theorem environment_instantiation_commutes_with_substitution
     (mapEnv.subst σ).instantiate 0 ([.int, .bool].map (Ty.subst σ)) =
       (mapEnv.instantiate 0 [.int, .bool]).map (Ty.subst σ) :=
   TyEnv.instantiate_subst mapEnv 0 [.int, .bool] σ
+
+theorem environment_weakening_preserves_scope :
+    outerEnv.wellScoped listSig.arities 1 = true ∧
+      (outerEnv.weaken 2).wellScoped listSig.arities 3 = true := by
+  constructor
+  · simp [outerEnv, TyEnv.wellScoped, Scheme.wellScoped, Ty.wellScoped,
+      listSig, Signature.arities]
+  · exact TyEnv.weaken_scoped (by
+      simp [outerEnv, TyEnv.wellScoped, Scheme.wellScoped, Ty.wellScoped,
+        listSig, Signature.arities])
+
+theorem environment_weakening_retains_outer_variables :
+    TyEnv.instantiate (outerEnv.weaken 2) 0 [.var 1] =
+      some (.prod (.var 1) (.var 2)) := by
+  simp [outerEnv, TyEnv.instantiate, TyEnv.weaken, Scheme.weaken, Scheme.subst,
+      Scheme.instantiate, Ty.subst, Ty.rename, lift, instantiateSubst]
 
 theorem unbound_variable_rejected : (Ty.var 1).wellScoped listSig.arities 1 = false := by
   simp [Ty.wellScoped]

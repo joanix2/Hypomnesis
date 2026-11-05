@@ -1,6 +1,11 @@
 import Hypomnesis.Core.Syntax
 import Hypomnesis.Core.PolyTypes
 import Hypomnesis.Core.PolyTypeExamples
+import Hypomnesis.Core.PolySyntax
+import Hypomnesis.Core.PolySyntaxExamples
+import Hypomnesis.Core.PolyTyping
+import Hypomnesis.Core.PolySoundness
+import Hypomnesis.Core.PolyTypingExamples
 import Hypomnesis.Core.Typing
 import Hypomnesis.Core.Eval
 import Hypomnesis.Core.Soundness

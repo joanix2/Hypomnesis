@@ -61,6 +61,12 @@ la manière dont on peut en établir la validité.
 | P38 | `Poly.Signature.constructorType_scoped` | dans une signature paramétrique bien formée, instancier un constructeur avec des arguments bien scopés produit un type bien scopé | §4 ; pas encore une preuve de sûreté des valeurs de données paramétriques |
 | P39 | `Poly.Ty.ofCore_subst`, `closed_subst` | la substitution ne change ni les types du fragment historique inclus ni les types paramétriques clos bien scopés | §4 ; inclusion des types seulement, pas un pont des programmes |
 | P40 | `Poly.TyEnv.subst_scoped`, `instantiate_scoped`, `instantiate_subst` | les environnements de schémas conservent leurs portées sous substitution ; l'instanciation d'une liaison conserve la portée et commute avec la substitution des types extérieurs | §4 ; brique d'environnement HYP-023, sans jugement de typage des termes ni nouvelle garantie CLI |
+| P41 | `Poly.Ty.beq_iff_eq`, `typeOf_sound`, `typeOf_complete`, `hasType_iff_typeOf` | l'égalité booléenne des types reflète l'égalité structurelle ; sous une signature bien formée et un environnement bien scopé, le checker décide exactement le jugement déclaratif polymorphe | §4 ; termes annotés explicitement et let-polymorphe, sans préservation opérationnelle ni branchement CLI |
+| P42 | `Poly.PatTy.subst`, `Poly.HasType.subst` | une dérivation polymorphe reste valable après substitution des variables de type dans les types, termes et environnements, si la signature est bien formée et les images de substitution sont bien scopées ; cas, constructeurs et let-polymorphe compris | §4 ; préservation statique HYP-023, sans sûreté de l'évaluateur ni branchement CLI |
+| P43 | `Poly.Expr.erase_subst`, `eval_erase_subst`, `eval_erase_subst_ne_stuck` | l'effacement vers le Core est invariant par substitution de types ; par conséquent, une propriété de sûreté déjà établie sur l'exécution Core est conservée après toute substitution | §4 ; invariant opérationnel utile au pont HYP-023, ne prouve pas à lui seul la sûreté d'un terme polymorphe |
+| P44 | `Poly.HasType.erase_runtimeFragment`, `eval_safe_runtimeFragment`, `eval_safe_monoLetRuntimeFragment`, `eval_safe_capturedIntLambdaApp` | les constantes, variables mono-instanciées, conditions, produits, projections, opérations binaires, `let` monomorphes et certaines lambdas/applications monomorphes s'effacent en termes Core typés, dont l'évaluation est sûre à tout fuel | §4 ; relation d'environnement limitée aux schémas d'arité zéro ; pour les fermetures, l'effacement du corps doit coïncider ; constructeurs paramétriques, motifs, récursion et `let` polymorphes multi-instanciés restent hors preuve |
+| P45 | `Poly.TypingExamples.identity_polymorphic_let_is_safe_at_fuel_20` | l'exemple concret du `let` identité utilisé aux types `int` et `bool` donne à fuel 20 une paire Core dont les deux composantes satisfont leur relation de valeurs | §4 ; régression d'exécution à fuel fixé, pas une preuve générale de sûreté des schémas polymorphes |
+| P46 | `Poly.TypingExamples.generic_map_has_type`, `generic_map_runs_with_two_instances` | un encodage récursif polymorphe de `List.map` reçoit son type exact et s'exécute dans le même programme aux instanciations `int → bool` et `bool → int` | §4 ; exemple Lean autonome sur la signature paramétrique de liste, pas encore le décodeur du certificat ni le corps exact du prélude Python |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -92,12 +98,16 @@ Ne sont **pas encore** couverts : réels mathématiques et primitives hors catal
 d'exhaustivité par la CLI et polymorphisme (F2).
 
 **Fondations HYP-023 (en cours).** P36–P40 portent sur l'algèbre des types
-et les environnements de schémas dans `Core/PolyTypes.lean`, importés et audités. Les régressions
-`PolyTypeExamples.lean` contrôlent arités, variables libres, substitutions
-sans capture, représentation du schéma de map et instanciation polymorphe
-depuis un environnement, y compris les variables extérieures. Le corps de `List.map`,
-les termes polymorphes, leur sûreté et le checker CLI ne sont **pas encore**
-couverts par ces nouveaux lemmes. Le CLI historique continue à monomorphiser.
+et les environnements de schémas dans `Core/PolyTypes.lean`. P41 prouve la
+correction et la complétude du vérificateur de termes de `Core/PolyTyping.lean`
+par rapport à son jugement déclaratif, sous les préconditions de portée explicites.
+P42 prouve la préservation statique par substitution de types, y compris les
+liaisons `let` polymorphes, les constructeurs et les contextes de motifs. Les
+régressions couvrent un `let` identité instancié à int et bool, un couple de
+variables de type ouvertes spécialisées en int/bool, ainsi que des refus d'arité
+et de valeur incompatibles. Le pont vers l'évaluateur, le décodeur/CLI et le vrai
+corps de `List.map` restent à prouver ou à brancher. Le CLI historique continue
+à monomorphiser.
 
 **Exhaustivité (HYP-022, F1c).** P34 prouve le calcul positif par matrices ;
 P35 ajoute un jugement `Certified` qui exige la couverture et certifie tous

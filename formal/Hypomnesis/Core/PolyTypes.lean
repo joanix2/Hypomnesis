@@ -40,6 +40,129 @@ inductive Ty where
       · exact ha
       · exact hargs x hx) t
 
+mutual
+  def Ty.beq : Ty → Ty → Bool
+    | .var i, .var j => i == j
+    | .int, .int | .bool, .bool | .float, .float | .string, .string | .unit, .unit => true
+    | .arrow a b, .arrow c d => Ty.beq a c && Ty.beq b d
+    | .prod a b, .prod c d => Ty.beq a c && Ty.beq b d
+    | .data i args, .data j other => i == j && Ty.beqList args other
+    | _, _ => false
+  termination_by a b => sizeOf a + sizeOf b
+  decreasing_by all_goals simp_wf <;> omega
+
+  def Ty.beqList : List Ty → List Ty → Bool
+    | [], [] => true
+    | first :: rest, otherFirst :: otherRest =>
+      Ty.beq first otherFirst && Ty.beqList rest otherRest
+    | _, _ => false
+  termination_by a b => sizeOf a + sizeOf b
+  decreasing_by all_goals simp_wf <;> omega
+end
+
+instance : BEq Ty := ⟨Ty.beq⟩
+
+private theorem beqList_eq_of_beqList_eq_true (types other : List Ty)
+    (ih : ∀ type ∈ types, ∀ candidate, Ty.beq type candidate = true → type = candidate)
+    (h : Ty.beqList types other = true) : types = other := by
+  induction types generalizing other with
+  | nil =>
+    cases other <;> simp [Ty.beqList] at h ⊢
+  | cons type rest ihRest =>
+    cases other with
+    | nil => simp [Ty.beqList] at h
+    | cons candidate candidates =>
+      simp only [Ty.beqList, Bool.and_eq_true] at h
+      rcases h with ⟨headEq, tailEq⟩
+      have head : type = candidate := ih type (by simp) candidate headEq
+      subst candidate
+      have tailIH : ∀ item ∈ rest, ∀ next, Ty.beq item next = true → item = next := by
+        intro item member next itemEq
+        exact ih item (by simp [member]) next itemEq
+      have tail := ihRest candidates tailIH tailEq
+      simp [tail]
+
+theorem Ty.beq_eq_true {type other : Ty} (h : Ty.beq type other = true) : type = other := by
+  induction type using Ty.induct generalizing other with
+  | var index =>
+    cases other with
+    | var otherIndex =>
+      have indices : index = otherIndex := by simpa [Ty.beq] using h
+      subst otherIndex
+      rfl
+    | _ => simp [Ty.beq] at h
+  | int =>
+    cases other <;> simp [Ty.beq] at h ⊢
+  | bool =>
+    cases other <;> simp [Ty.beq] at h ⊢
+  | float =>
+    cases other <;> simp [Ty.beq] at h ⊢
+  | string =>
+    cases other <;> simp [Ty.beq] at h ⊢
+  | unit =>
+    cases other <;> simp [Ty.beq] at h ⊢
+  | arrow domain codomain ihDomain ihCodomain =>
+    cases other with
+    | arrow otherDomain otherCodomain =>
+      simp only [Ty.beq, Bool.and_eq_true] at h
+      rcases h with ⟨domainEq, codomainEq⟩
+      have domain := ihDomain domainEq
+      have codomain := ihCodomain codomainEq
+      simp [domain, codomain]
+    | _ => simp [Ty.beq] at h
+  | prod first second ihFirst ihSecond =>
+    cases other with
+    | prod otherFirst otherSecond =>
+      simp only [Ty.beq, Bool.and_eq_true] at h
+      rcases h with ⟨firstEq, secondEq⟩
+      have first := ihFirst firstEq
+      have second := ihSecond secondEq
+      simp [first, second]
+    | _ => simp [Ty.beq] at h
+  | data index args ih =>
+    cases other with
+    | data otherIndex otherArgs =>
+      simp only [Ty.beq, Bool.and_eq_true] at h
+      rcases h with ⟨indexEq, argsEq⟩
+      have index : index = otherIndex := by simpa using indexEq
+      subst otherIndex
+      have args := beqList_eq_of_beqList_eq_true args otherArgs ih argsEq
+      simp [args]
+    | _ => simp [Ty.beq] at h
+
+private theorem beqList_refl (types : List Ty)
+    (ih : ∀ type ∈ types, Ty.beq type type = true) : Ty.beqList types types = true := by
+  induction types with
+  | nil => simp [Ty.beqList]
+  | cons type rest ihRest =>
+    simp only [Ty.beqList, Bool.and_eq_true]
+    constructor
+    · exact ih type (by simp)
+    · exact ihRest (fun item member => ih item (by simp [member]))
+
+theorem Ty.beq_refl (type : Ty) : Ty.beq type type = true := by
+  induction type using Ty.induct with
+  | var => simp [Ty.beq]
+  | int | bool | float | string | unit => simp [Ty.beq]
+  | arrow _ _ ihDomain ihCodomain | prod _ _ ihDomain ihCodomain =>
+    simp [Ty.beq, ihDomain, ihCodomain]
+  | data index args ih =>
+    simp only [Ty.beq, beq_self_eq_true]
+    exact beqList_refl args ih
+
+theorem Ty.beq_iff_eq (type other : Ty) : Ty.beq type other = true ↔ type = other :=
+  ⟨Ty.beq_eq_true, fun h => by cases h; exact Ty.beq_refl type⟩
+
+instance : LawfulBEq Ty where
+  rfl := by
+    intro type
+    change Ty.beq type type = true
+    exact Ty.beq_refl type
+  eq_of_beq := by
+    intro type other h
+    change Ty.beq type other = true at h
+    exact Ty.beq_eq_true h
+
 def Ty.subst (σ : Nat → Ty) : Ty → Ty
   | .var i => σ i
   | .int => .int
@@ -180,6 +303,35 @@ theorem lift_comp (count : Nat) (σ τ : Nat → Ty) (i : Nat) :
     funext j
     exact lift_free count τ j
 
+private theorem lift_shift_subst_free_point (binders count : Nat) (σ : Nat → Ty)
+    (index : Nat) :
+    (lift binders (fun i => .var (i + count)) (index + binders)).subst
+        (lift binders (lift count σ)) =
+      (lift binders σ (index + binders)).subst
+        (lift binders (fun i => .var (i + count))) := by
+  simp only [lift_free, Ty.subst_rename]
+  have h3 : ¬ index + count < count := by omega
+  simp [lift, h3, Ty.rename, Ty.subst, Nat.add_assoc]
+  change ((σ index).rename (fun i => i + count)).rename
+      (fun i => i + binders) =
+    (σ index).rename (fun i => i + (count + binders))
+  rw [Ty.rename_comp]
+  congr 1
+  funext i
+  omega
+
+private theorem lift_shift_subst_point (binders count : Nat) (σ : Nat → Ty)
+    (index : Nat) :
+    (lift binders (fun i => .var (i + count)) index).subst
+        (lift binders (lift count σ)) =
+      (lift binders σ index).subst
+        (lift binders (fun i => .var (i + count))) := by
+  by_cases h : index < binders
+  · simp [lift, h, Ty.subst]
+  · have hdecomp : index = index - binders + binders := by omega
+    rw [hdecomp]
+    exact lift_shift_subst_free_point binders count σ (index - binders)
+
 theorem lift_scoped {arities : Arities} {count depth target : Nat}
     (σ : Nat → Ty)
     (hσ : ∀ i, i < depth → (σ i).wellScoped arities target = true)
@@ -204,6 +356,9 @@ def Scheme.wellScoped (arities : Arities) (depth : Nat) (s : Scheme) : Bool :=
 def Scheme.subst (σ : Nat → Ty) (s : Scheme) : Scheme :=
   ⟨s.arity, s.body.subst (lift s.arity σ)⟩
 
+def Scheme.weaken (count : Nat) (s : Scheme) : Scheme :=
+  s.subst fun i => .var (i + count)
+
 @[simp] theorem Scheme.subst_var (s : Scheme) : s.subst Ty.var = s := by
   cases s
   simp [subst]
@@ -215,11 +370,51 @@ theorem Scheme.subst_comp (s : Scheme) (σ τ : Nat → Ty) :
   funext i
   exact lift_comp s.arity σ τ i
 
+theorem Scheme.weaken_subst (s : Scheme) (count : Nat) (σ : Nat → Ty) :
+    (s.weaken count).subst (lift count σ) = (s.subst σ).weaken count := by
+  cases s with
+  | mk arity body =>
+    change (⟨arity,
+      (body.subst (lift arity (fun i => .var (i + count)))).subst
+        (lift arity (lift count σ))⟩ : Scheme) =
+      ⟨arity,
+        (body.subst (lift arity σ)).subst
+          (lift arity (fun i => .var (i + count)))⟩
+    congr 1
+    rw [Ty.subst_comp, Ty.subst_comp]
+    congr 1
+    funext i
+    exact lift_shift_subst_point arity count σ i
+
+theorem Scheme.subst_closed {arities : Arities} {s : Scheme}
+    (hs : s.wellScoped arities 0 = true) (σ : Nat → Ty) :
+    s.subst σ = s := by
+  cases s with
+  | mk arity body =>
+    change (⟨arity, body.subst (lift arity σ)⟩ : Scheme) = ⟨arity, body⟩
+    congr 1
+    have hbody : body.wellScoped arities arity = true := by
+      simpa [Scheme.wellScoped] using hs
+    calc
+      body.subst (lift arity σ) = body.subst Ty.var :=
+        Ty.subst_congr hbody (lift arity σ) Ty.var (by
+          intro index hindex
+          simp [lift_bound, hindex])
+      _ = body := Ty.subst_var body
+
 theorem Scheme.subst_scoped {arities : Arities} {depth target : Nat}
     {s : Scheme} (hs : s.wellScoped arities depth = true) (σ : Nat → Ty)
     (hσ : ∀ i, i < depth → (σ i).wellScoped arities target = true) :
     (s.subst σ).wellScoped arities target = true :=
   Ty.subst_scoped hs (lift s.arity σ) (fun _ hi => lift_scoped σ hσ hi)
+
+theorem Scheme.weaken_scoped {arities : Arities} {depth count : Nat}
+    {s : Scheme} (hs : s.wellScoped arities depth = true) :
+    (s.weaken count).wellScoped arities (depth + count) = true := by
+  apply Scheme.subst_scoped hs
+  intro i hi
+  simp only [Ty.wellScoped]
+  exact decide_eq_true (by omega)
 
 /-- Instancier retire les variables liées ; les arguments sont dans le
 contexte extérieur et ne sont donc pas affaiblis. -/
@@ -299,6 +494,16 @@ def TyEnv.wellScoped (arities : Arities) (depth : Nat) (env : TyEnv) : Bool :=
 def TyEnv.subst (σ : Nat → Ty) (env : TyEnv) : TyEnv :=
   env.map (Scheme.subst σ)
 
+def TyEnv.weaken (count : Nat) (env : TyEnv) : TyEnv :=
+  env.map (Scheme.weaken count)
+
+theorem TyEnv.weaken_subst (env : TyEnv) (count : Nat) (σ : Nat → Ty) :
+    (env.weaken count).subst (lift count σ) = (env.subst σ).weaken count := by
+  induction env with
+  | nil => rfl
+  | cons scheme env ih =>
+    simp [TyEnv.weaken, TyEnv.subst, Scheme.weaken_subst]
+
 def TyEnv.instantiate (env : TyEnv) (index : Nat) (args : List Ty) : Option Ty :=
   (env[index]?).bind fun scheme => scheme.instantiate args
 
@@ -309,6 +514,13 @@ theorem TyEnv.subst_scoped {arities : Arities} {depth target : Nat}
   simp only [TyEnv.wellScoped, TyEnv.subst, List.all_map, List.all_eq_true] at *
   intro scheme hscheme
   exact Scheme.subst_scoped (henv scheme hscheme) σ hσ
+
+theorem TyEnv.weaken_scoped {arities : Arities} {depth count : Nat}
+    {env : TyEnv} (henv : env.wellScoped arities depth = true) :
+    (env.weaken count).wellScoped arities (depth + count) = true := by
+  simp only [TyEnv.wellScoped, TyEnv.weaken, List.all_map, List.all_eq_true] at *
+  intro scheme hscheme
+  exact Scheme.weaken_scoped (henv scheme hscheme)
 
 theorem TyEnv.instantiate_scoped {arities : Arities} {depth : Nat}
     {env : TyEnv} (henv : env.wellScoped arities depth = true)
@@ -362,6 +574,42 @@ def Signature.constructorType (sig : Signature) (d c : Nat) (args : List Ty) : O
   let payload ← decl.constructors[c]?
   (Scheme.mk decl.parameters payload).instantiate args
 
+theorem Signature.constructorType_subst {sig : Signature}
+    (hsig : sig.wellFormed = true) (d c : Nat) (args : List Ty) (σ : Nat → Ty) :
+    (sig.constructorType d c args).map (Ty.subst σ) =
+      sig.constructorType d c (args.map (Ty.subst σ)) := by
+  unfold Signature.constructorType
+  change Option.map (Ty.subst σ)
+      (sig[d]?.bind fun decl =>
+        decl.constructors[c]?.bind fun payload =>
+          (Scheme.mk decl.parameters payload).instantiate args) =
+    sig[d]?.bind fun decl =>
+      decl.constructors[c]?.bind fun payload =>
+        (Scheme.mk decl.parameters payload).instantiate (args.map (Ty.subst σ))
+  rw [Option.map_bind]
+  apply Option.bind_congr
+  intro decl hdeclLookup
+  change Option.map (Ty.subst σ)
+      (decl.constructors[c]?.bind fun payload =>
+        (Scheme.mk decl.parameters payload).instantiate args) =
+    decl.constructors[c]?.bind fun payload =>
+      (Scheme.mk decl.parameters payload).instantiate (args.map (Ty.subst σ))
+  rw [Option.map_bind]
+  apply Option.bind_congr
+  intro payload hpayloadLookup
+  have hsig' : ∀ declaration ∈ sig,
+      (declaration.constructors.map
+        (Ty.wellScoped sig.arities declaration.parameters)).all id = true := by
+    simpa [Signature.wellFormed] using hsig
+  have hdecl := hsig' decl (List.mem_of_getElem? hdeclLookup)
+  have hp := (List.all_eq_true.mp hdecl) (payload.wellScoped sig.arities decl.parameters)
+    (List.mem_map.mpr ⟨payload, List.mem_of_getElem? hpayloadLookup, rfl⟩)
+  have hscheme : (Scheme.mk decl.parameters payload).wellScoped sig.arities 0 = true := by
+    change payload.wellScoped sig.arities (decl.parameters + 0) = true
+    simpa using hp
+  rw [← Scheme.subst_closed hscheme σ]
+  exact (Scheme.instantiate_subst ⟨decl.parameters, payload⟩ args σ).symm
+
 theorem Signature.constructorType_scoped {sig : Signature}
     (hs : sig.wellFormed = true) {depth d c : Nat} {args : List Ty}
     (ha : ∀ a ∈ args, a.wellScoped sig.arities depth = true)
@@ -396,6 +644,20 @@ def Ty.ofCore : Core.Ty → Ty
   | .arrow a b => .arrow (ofCore a) (ofCore b)
   | .prod a b => .prod (ofCore a) (ofCore b)
   | .data d => .data d []
+
+def Ty.erase : Ty → Core.Ty
+  | .var _ => .unit
+  | .int => .int
+  | .bool => .bool
+  | .float => .float
+  | .string => .string
+  | .unit => .unit
+  | .arrow a b => .arrow a.erase b.erase
+  | .prod a b => .prod a.erase b.erase
+  | .data d _ => .data d
+
+@[simp] theorem Ty.erase_ofCore (t : Core.Ty) : (Ty.ofCore t).erase = t := by
+  induction t <;> simp [Ty.ofCore, Ty.erase, *]
 
 theorem Ty.ofCore_subst (t : Core.Ty) (σ : Nat → Ty) :
     (ofCore t).subst σ = ofCore t := by

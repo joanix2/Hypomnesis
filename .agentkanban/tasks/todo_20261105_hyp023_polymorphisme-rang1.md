@@ -13,7 +13,7 @@ tags: [certification, lean, metalangage]
 - [x] Fixer le périmètre : rang 1, arguments et récursion monomorphes, pas de preuve de W.
 - [x] Inventorier le vrai List.map, ses dépendances et la monomorphisation actuelle.
 - [x] Types ouverts et données paramétriques ; substitutions sans capture et portées prouvées.
-- [ ] Généralisation, instanciation et typage des termes et environnements.
+- [x] Généralisation, instanciation et typage des termes et environnements.
 - [ ] Préservation par substitution, sûreté, correction/complétude de typeOf.
 - [ ] Conserver les preuves records, couverture/Certified, motifs et fuel.
 - [ ] Brancher le décodeur de certificats et le vrai CLI, compatibilité 1.0/1.1.
@@ -39,3 +39,33 @@ tags: [certification, lean, metalangage]
 - [ ] Étendre les termes et le jugement de typage polymorphe ; brancher cette vérification au noyau.
 - [x] Valider le jalon : Lean/audit, 500 différentiels, validation rapide et graphe.
 - [x] Committer le jalon localement, sans push (9bc234e).
+
+## Itération 4 — termes et checker déclaratif
+
+- [x] Ajouter les termes à instanciation explicite et les liaisons let-polymorphes.
+- [x] Implémenter le checker exécutable et le jugement déclaratif, avec les portées vérifiées.
+- [x] Prouver l'équivalence correction/complétude sous une signature bien formée et un environnement bien scopé.
+- [x] Prouver que l'égalité booléenne des types reflète l'égalité structurelle.
+- [x] Ajouter les régressions positives/négatives, l'audit d'axiomes et la documentation P41.
+- [x] Prouver la préservation du typage par substitution des types dans les termes et environnements.
+- [ ] Relier la sûreté au véritable évaluateur en préservant les preuves de motifs, records, couverture et fuel.
+- [ ] Brancher le décodeur/CLI et vérifier le véritable `List.map` avec plusieurs instanciations.
+- [x] Valider le jalon avec Lean/audit, cohérence Kanban et mise à jour Graphify ; garder HYP-023 en `doing`.
+
+## Itération 5 — sûreté du runtime polymorphe
+
+- [x] Analyser le modèle Core de sûreté et confirmer qu'un effacement monomorphe direct ne couvre pas plusieurs instanciations d'un même schéma ou d'une donnée paramétrique.
+- [x] Ajouter une régression combinant le type vérifié et l'évaluation Core d'un `let` identité utilisé à `int` et `bool` dans le même programme.
+- [x] Prouver que l'effacement et l'évaluation Core commutent avec la substitution de types, et transporter conditionnellement l'absence de `stuck`.
+- [x] Établir un pont de sûreté vérifié pour le fragment sans fonction ni liaison (constantes, conditions, produits, projections, opérations binaires).
+- [x] Étendre le pont aux `let` monomorphes inutilisés, avant d'ajouter la lecture de variables, et prouver la sûreté du véritable évaluateur à tout fuel.
+- [x] Étendre le fragment aux lectures de variables sous schémas d'arité zéro et ajouter une régression d'un `let` mono utilisé.
+- [x] Étendre le fragment aux lambdas et applications monomorphes, préserver l'évaluation des fermetures et prouver un cas de capture lexicale.
+- [x] Vérifier la sûreté de la valeur concrète produite par le `let` identité utilisé à `int` et `bool` à fuel fixé, sans la présenter comme un théorème général.
+- [x] Ajouter un terme récursif `List.map`-équivalent vérifié puis exécuté avec deux instanciations dans un programme Lean.
+- [x] Définir la relation `RuntimeEnvRel` entre valeurs Core et environnements de schémas monomorphes d'arité zéro.
+- [x] Prouver la sûreté à fuel arbitraire pour le véritable `Core.eval` sur le fragment runtime monomorphe borné, en préservant timeout/erreur/matchFail.
+- [ ] Définir une relation polymorphe de valeurs et d'environnements qui interprète les schémas sous toutes leurs instanciations, y compris les fermetures polymorphes.
+- [ ] Étendre la sûreté à fuel arbitraire au fragment polymorphe général, sans réduire la sûreté des motifs, records, couverture certifiée ou fuel.
+- [ ] Réutiliser ou généraliser les preuves de motifs (`matchPat_sound`), records, `Coverage.Certified` et fermeture récursive sans affaiblir leurs garanties.
+- [ ] Ajouter l'audit d'axiomes, les régressions de let-polymorphe multi-instancié et de données paramétriques, puis documenter le pont prouvé.

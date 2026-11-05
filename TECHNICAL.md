@@ -12,14 +12,62 @@ garantie Lean au runtime existant.
 
 ## Pipeline du langage
 
-HYP-023 est en cours : `formal/Hypomnesis/Core/PolyTypes.lean` prépare
-les types paramétriques et schémas de rang 1 (ADR 0020). Substitutions
-sans capture, lois d'identité/composition, bonne portée, instanciation des
-constructeurs et des environnements de schémas sont prouvées et auditées ;
-les régressions sont dans `PolyTypeExamples.lean`. Ces fondations ne sont pas encore branchées
-sur les termes, `Core.typeOf` ou le CLI. La certification existante
-continue à monomorphiser ; aucune nouvelle garantie de sûreté du
-polymorphisme ou du vrai `List.map` n'est revendiquée à ce stade.
+HYP-023 est en cours : `formal/Hypomnesis/Core/PolyTypes.lean` formalise
+les types paramétriques et schémas de rang 1 (ADR 0020), avec substitutions
+sans capture, lois d'identité/composition, bonne portée et instanciation des
+constructeurs/environnements. `PolySyntax.lean` ajoute l'instanciation de
+types explicite et le let-polymorphe ; `PolyTyping.lean` définit son checker
+et son jugement déclaratif. P41 prouve leur équivalence sous les préconditions
+de signature et d'environnement bien formés. P42 prouve la préservation du
+jugement par substitution des types, y compris les substitutions relevées au
+let polymorphe, les constructeurs paramétriques et les contextes de motifs.
+Les régressions vérifient le let identité à int/bool, la spécialisation de
+variables de type ouvertes et des refus négatifs.
+
+Le pont vers l'évaluateur, le décodeur/CLI et le vrai corps de `List.map`
+ne sont pas encore prouvés ou branchés. La certification existante continue
+à monomorphiser ; aucune garantie de sûreté opérationnelle polymorphe n'est
+revendiquée.
+
+La sûreté polymorphe ne se déduit pas d'un simple effacement vers le noyau
+actuel : `Core.Ctx` attribue un seul type à chaque valeur d'environnement et
+`Core.Sig` fixe un payload monomorphe par déclaration, tandis qu'un même
+schéma `let` et une donnée paramétrique peuvent être instanciés à plusieurs
+types dans le même programme. Le pont doit donc interpréter les schémas et
+signatures polymorphes dans la relation de valeurs/environnements (ou fournir
+une spécialisation avec une preuve de préservation de l'évaluation), puis
+prouver la sûreté du véritable `Core.eval`. `Core.eval_safe` et ses preuves
+de motifs/fuel restent la référence à préserver ; leur réutilisation par
+une conversion monomorphe non démontrée ne suffit pas.
+Une régression vérifie conjointement le type polymorphe et l'exécution par
+`Core.eval` du même `let` identité à `int` et `bool` ; ce cas concret n'est
+pas un théorème général de sûreté.
+P43 prouve l'invariance de l'effacement et du résultat de `Core.eval` par
+substitution de types, ainsi que le transport de l'absence de `stuck` quand
+cette propriété est déjà établie. Il reste à établir ce cas de base pour
+toutes les dérivations polymorphes. P44 établit désormais un cas de base
+vérifié : les constantes, conditions, paires, projections, opérations
+binaires, `let` monomorphes et certaines lambdas/applications monomorphes
+s'effacent en termes Core typés, puis `Core.eval_safe` garantit leur sûreté à
+tout budget. Pour les fermetures, le fragment impose l'égalité entre les
+effacements spécialisé et polymorphe du corps, afin que l'évaluateur réel
+stocke exactement le corps justifié par le typage. Une relation
+`RuntimeEnvRel` relie aussi les environnements de schémas monomorphes aux
+valeurs Core pour ce fragment ; les variables à arguments de types vides sont
+donc prises en charge lorsque leur schéma est monomorphe, y compris dans le
+corps d'un `let` et les fermetures monomorphes peuvent capturer ces valeurs.
+La récursion, les motifs, les constructeurs paramétriques et les liaisons
+polymorphes multi-instanciées restent hors de ce pont ; P44 ne constitue pas
+encore la sûreté générale du polymorphisme de rang 1.
+Indépendamment de cette preuve de fragment, P45 établit pour l'exemple concret
+du `let` identité partagé entre `int` et `bool` que l'exécution à fuel 20 rend
+une paire dans la relation Core `ValTy`. Cette régression n'est pas une
+garantie générale pour le fragment polymorphe.
+P46 ajoute un terme récursif polymorphe `List.map`-équivalent, vérifié par le
+checker et évalué à deux instanciations dans un même programme (`int → bool`
+et `bool → int`). C'est un exemple Lean autonome : il ne décode pas le corps
+exact de `List.map` depuis le certificat Python et ne ferme donc pas le pont
+CLI.
 
 | Étape | Fichier | Rôle |
 |---|---|---|
