@@ -504,7 +504,30 @@ contrats capteurs/actionneurs existants n'exposaient pas d'option.
 Tests : `tests/unit/test_json_codec.py`, `tests/unit/test_contract_compatibility.py`,
 `tests/unit/test_effects.py`, `tests/integration/test_languages.py`. Propriétés Hypothesis
 sur types composés et récursifs, sérialisation JSON réelle et accord des ponts ; manifestes
-incompatibles refusés sans importer un backend piégé. Ces tests ne remplacent pas HYP-043.
+incompatibles refusés sans importer un backend piégé.
+
+HYP-043 : `formal/Hypomnesis/Contracts/Json.lean` modélise une frontière
+structurelle distincte de la Core IR. Sous `ValTy`, `decode_encode` (P32)
+reconstruit la valeur exactement et `encode_conforms` (P33) établit sa
+conformité au schéma indépendant. Fragment : int arbitraire, bool, string,
+unit, listes, paires, options étiquetées et records nominaux imbriqués.
+Les nombres JSON sont rationnels exacts ; integer signifie dénominateur 1.
+Les objets exigent toutes les propriétés déclarées, aucune autre et aucun
+doublon, indépendamment de leur ordre. Le décodeur retire chaque propriété
+consommée et rejette les propriétés restantes ; le nom du record vient du type.
+
+`tests/integration/test_json_contract_model.py` confronte 96 compositions
+réelles au modèle : encodage après texte JSON, aller-retour, schémas Draft
+2020-12 identiques après résolution non récursive des `$ref`, décodages
+valides/invalides, permutations, champs absents/supplémentaires et longueurs
+de tableaux. Alias et paramètres concrets testés. Gate Lean obligatoire
+en CI et dans `validate.sh lean|complet`.
+
+Limites : pas de preuve du parseur texte ni de raffinement du codec Python.
+Le modèle option est une abréviation des deux objets fermés oneOf disjoints.
+Binary64, variants généraux, tuples autres que paires et références récursives
+restent couverts par les tests HYP-042, pas par P32–P33 ; aucune régression de
+leur prise en charge Python n'est introduite.
 
 ## Observabilité (HYP-015)
 

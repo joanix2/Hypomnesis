@@ -7,6 +7,7 @@ import Hypomnesis.Core.Fuel
 import Hypomnesis.Epistemics.Provenance
 import Hypomnesis.Epistemics.Revision
 import Hypomnesis.Epistemics.Conflicts
+import Hypomnesis.Contracts.Json
 import Hypomnesis.Effects.Dispatch
 import Hypomnesis.Effects.Commands
 import Hypomnesis.Effects.Handlers

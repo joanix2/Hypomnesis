@@ -52,6 +52,8 @@ la manière dont on peut en établir la validité.
 | P29 | `Revision.candidate_complete`, `invalidated_eq_full`, `revise_incr_eq_full` | l'index inverse augmenté des provenances contenant zéro couvre toute invalidation ; la révision incrémentale donne le même état que l'évaluation exhaustive | §7.3 ; HYP-036, valeurs/contexte génériques inchangés, correspondance Python testée |
 | P30 | `Revision.journal_prefix` | toute révision acceptée prolonge exactement le journal précédent sans modifier aucune entrée | §7.3 ; modèle HYP-036, pas une preuve de durabilité SQLite |
 | P31 | `Conflicts.no_false_conflict` | tout rapport produit rend incompatibles les assertions actives et les contraintes fonctionnelles/invariants déclarés | §7.1 ; HYP-037, valeurs à égalité décidable et prédicats purs génériques ; pont Python testé |
+| P32 | `Contracts.decode_encode` | toute valeur ValTy du fragment structurel fermé est reconstruite exactement après encodage, nom du record et distinction None/Some unit compris | §9.4, §13.4 ; HYP-043, int/bool/string/unit, listes, paires, options et records imbriqués |
+| P33 | `Contracts.encode_conforms` | l'encodage d'une valeur ValTy satisfait le schéma produit : types, propriétés requises, aucun champ supplémentaire | §9.4, §13.4 ; HYP-043, objets à champs distincts, ordre des propriétés indifférent |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -85,9 +87,22 @@ motifs alternatifs imbriqués et alias, exhaustivité
 **Frontière JSON (HYP-042, ADR 0010).** La primitive Python `core.to_json`, les conversions
 `Json.t` et les codecs/contrats JSON ne font pas partie du catalogue de primitives du fragment
 prouvé. `Json.Int` est un constructeur de bibliothèque, pas une forme IR supplémentaire.
-La migration des options étiquetées et des entiers exacts est couverte par les tests
-Hypothesis et d'intégration, sans nouvelle garantie Lean revendiquée. Les preuves JSON
-dédiées restent HYP-043.
+HYP-043 ajoute un modèle de frontière **séparé**, `Contracts/Json.lean` :
+P32–P33 pour int/bool/string/unit, listes, paires, options étiquetées et
+records nominaux imbriqués. Les nombres JSON sont rationnels exacts ;
+un nombre intégral tel que `1.0` est admissible pour int, jamais un booléen.
+Les schémas représentent tableaux et objets fermés ; l'option abrège les
+deux branches oneOf disjointes à tags None/Some. Aucun ordre d'objet n'est exigé
+par la conformité et le décodeur restitue les champs dans l'ordre déclaré.
+
+96 compositions concrètes comparent le vrai TypeCodec au modèle : encodage,
+résultat du décodage, schéma après résolution des références non récursives
+et sondes valides/invalides, avec traversée du véritable texte JSON.
+La résolution des alias et paramètres concrets est testée, pas prouvée.
+Flottants binary64 (dont les zéros signés et bornes finies), variants généraux,
+tuples d'arité autre que deux et `$ref` récursifs restent testés par HYP-042,
+**hors P32–P33**. Ni parseur texte, ni raffinement Python complet, ni inclusion
+de contrats JSON Schema arbitraires ne sont prouvés.
 
 ---
 
@@ -153,7 +168,7 @@ C'est la partie où la preuve a le plus de valeur, car les erreurs y sont physiq
 | états des commandes (§9.7) | l'automate n'autorise que les transitions spécifiées ; les états terminaux sont absorbants | ✅ P20 ; transitions Lean/Python comparées exhaustivement |
 | doubles commandes (§9.7, §19) | **au plus un handoff local** non idempotent, relances, pertes de réponse et doublons d'entrée compris, avec journal conservé | ✅ P19 dans le modèle HYP-066 ; tests des gardes et Hypothesis côté Python ; pas de garantie physique après duplication aval ou redémarrage |
 | simulation, dry-run, production (§10.3) | les trois modes exécutent **le même terme** ; le dry-run n'émet aucun `dispatch` | ✅ P25–P26 dans le modèle à continuations typées ; correspondance Python testée |
-| contrats JSON (§9.4, §13.4) | **aller-retour** : `decode (encode v) = v` ; et `encode v` est conforme à `schemaOf t` dès que `v : t` | 🎯 F5 |
+| contrats JSON (§9.4, §13.4) | **aller-retour** : `decode (encode v) = some v` ; et `encode v` est conforme à `schemaOf t` dès que `v : t` | ✅ P32–P33 pour le fragment structurel fermé ; reste du codec 🧪 |
 | sécurité physique d'une commande | — | ⛔ explicitement hors du champ du JSON Schema (§9.4) ; relève de contraintes métier et de capteurs |
 
 **HYP-065** : portée exacte, hypothèses de confiance et correspondance Python
@@ -200,7 +215,7 @@ P19 ne revendique pas cette garantie.
 | H3 composition hybride | 🎯 F7 |
 | H4 révision | ✅ P9–P11 |
 | H5 séparation des effets | 🎯 F5 |
-| H6 interopérabilité | 🎯 F5 (aller-retour JSON) et F7 (modèles de théories) |
+| H6 interopérabilité | ✅ P32–P33 (fragment JSON), 🎯 F7 (modèles de théories) |
 | H7 traçabilité | ⛔ pour l'explicabilité ; 🎯 pour la non-interférence |
 
 ---
