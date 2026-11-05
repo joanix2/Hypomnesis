@@ -37,3 +37,21 @@ tags: [compilateur, dsl, metalangage, moteur-symbolique, python]
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-056 reste ouvert en `todo` comme ticket de suivi ; ses critères initiaux,
+dont l'ADR, les refus/acceptations dimensionnels et l'exemple `units.hyp`,
+sont conservés. Le travail est réparti ainsi :
+
+- HYP-160 : ADR de représentation et stratégie d'unification, sans modifier
+  les sémantiques demandées.
+- HYP-161 : types dimensionnels et unification AG avec les régressions
+  d'inférence.
+- HYP-162 : bibliothèque `Units`, conversions et exemple mécanique, après
+  HYP-161.
+
+La checklist parent suit les trois livrables et la validation globale ; aucune
+lane ni critère d'acceptation n'est modifié.
+
+### user

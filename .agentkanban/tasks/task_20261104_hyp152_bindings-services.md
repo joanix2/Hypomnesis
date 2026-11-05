@@ -12,6 +12,25 @@ tags: [metalangage, moteur-symbolique, contrats, effets]
 
 ### user
 
+### agent
+
+HYP-152 reste en `todo` comme ticket de suivi ; toutes ses exigences
+d'échange, d'erreurs, de permissions et de vérification statique sont
+maintenues. Les sous-tickets sont ordonnés pour éviter de fixer une syntaxe
+ou un transport qui n'a pas été arbitré :
+
+- HYP-165 : contrat typé des capacités et erreurs.
+- HYP-166 : bindings configurés par l'hôte et substitution de deux fournisseurs
+  compatibles, après HYP-165.
+- HYP-167 : séparation imports/bindings et vérifications statiques/permissions,
+  après HYP-165 et HYP-166.
+
+Les contrats et tests d'échange sont répartis entre ces livrables ; les choix
+de syntaxe et de transport demeurent ouverts et ne sont pas présupposés. La
+checklist parent agrège les critères sans déplacer la lane.
+
+### user
+
 **Ticket** HYP-152 · **Priorité** P1 · **Taille** L · **Epic** Exécution multi-services · **Dépend de** HYP-060, HYP-062, HYP-063, HYP-147 · **Labels** metalangage, contrats
 
 « Mon langage doit pouvoir avoir des bindings avec différents services.

@@ -78,3 +78,20 @@ tags: [certification, lean, metalangage]
 - [x] Prouver l'instanciation d'un constructeur de déclaration mono sans paramètre et valider un exemple Core sûr à tout fuel.
 - [ ] Intégrer constructeurs et motifs nominaux au fragment de sûreté avec hypothèses explicites de compatibilité des signatures.
 - [ ] Étendre de la déclaration mono aux données paramétriques avec une relation de valeurs qui interprète les arguments de type.
+
+## Itération 7 — motif constructeur mono borné
+
+- [x] Prouver l'effacement d'un motif constructeur pour une déclaration sans paramètres, en réutilisant le fragment de motifs runtime existant pour le payload.
+- [x] Ajouter une régression typée et une preuve de sûreté à tout fuel via le véritable `Core.eval`.
+- [x] Vérifier le résultat concret de l'évaluation du cas monoBox et auditer les nouveaux théorèmes.
+- [x] Documenter précisément cette portée limitée dans le catalogue et `TECHNICAL.md`.
+- [ ] Intégrer les motifs de constructeur au `RuntimeFragment` général avec compatibilité de signature explicite ; étendre ensuite aux données paramétriques, records et `Coverage.Certified`.
+
+## Itération 8 — suivi par sous-tickets
+
+- [ ] HYP-156 : prouver la relation runtime polymorphe et la sûreté à tout fuel, y compris les schémas multi-instanciés.
+- [ ] HYP-157 (après HYP-156) : intégrer constructeurs/motifs paramétriques, records et `Coverage.Certified`.
+- [ ] HYP-158 (après HYP-156 et HYP-157) : vérifier le véritable `List.map` du prélude et ses dépendances dans le fragment.
+- [ ] HYP-159 (après HYP-156 à HYP-158) : brancher décodeur/CLI et tester certificats valides, altérés et refusés.
+- [ ] Conserver les critères d'acceptation initiaux de HYP-023 et consolider preuves, audit, documentation et régressions.
+- [ ] Exécuter `./scripts/validate.sh complet` et les validations Lean/Graphify ; garder le parent ouvert jusqu'à vérification utilisateur.

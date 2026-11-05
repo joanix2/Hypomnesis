@@ -35,3 +35,18 @@ Paramétricité des unités (Kennedy, POPL 1997) : une fonction polymorphe en di
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+HYP-057 reste en `todo` et conserve ses critères initiaux. Le travail formel
+est divisé en deux résultats séquentiels :
+
+- HYP-163 formalise les types/dimensions et établit la sûreté du fragment,
+  après HYP-156 (relation polymorphe runtime) et HYP-161 (sémantique
+  dimensionnelle exécutable).
+- HYP-164 prouve l'invariance par changement d'échelle à partir de HYP-163.
+
+La checklist parent conserve l'exigence de preuves sans `sorry` et leur
+inscription à l'audit. Le parent ne dépend pas circulairement de ses enfants.
+
+### user

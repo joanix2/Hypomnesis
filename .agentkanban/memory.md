@@ -21,6 +21,15 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
 - **M0** `demo/sortie/` : résultats (non versionné).
 - Les dépendances ne vont que vers le niveau supérieur. Jamais de logique métier en Python.
 
+## Sémantique par plugins
+
+- Le cœur garde les valeurs et le contrôle génériques, sans sémantique métier.
+  Le DSL compose des appels de capacités/fonctions typés et décrit les étapes
+  métier, y compris les validations ; les plugins fournissent les implémentations.
+- L'hôte lie explicitement les plugins autorisés. OCR, Z3, solveurs et
+  validateurs sont des plugins, pas des backends intégrés au moteur. Le
+  chargement des providers ne se fait pas pendant `check` ou le LSP.
+
 ## Couches symboliques (ADR 0013/0016, HYP-147/151)
 
 - Déclaration native `language nom = struct let version = "1" let imports = ["../base"] end` dans
@@ -107,6 +116,25 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
   un validateur (`noqa`, `type: ignore`, test désactivé, `sorry`).
 - Les tâches portent un identifiant `HYP-NNN` dans leur titre ; priorité, taille, epic et
   dépendances sont en tête du premier message `### user` de chaque tâche.
+
+  Clarification d'architecture : le noyau reste générique ; le DSL compose des
+  fonctions/capacités typées et décrit les validations, tandis que les plugins
+  en fournissent le sens métier et que l'hôte lie les plugins autorisés.
+  L'OCR, Z3 et les validateurs sont des plugins. Le plan global P1 a été
+  approuvé ; reprendre HYP-023 en premier, sans benchmark LLM/GPU ni clôture
+  automatique des tickets en QA.
+
+  ### agent
+
+  Le plan P1 actualisé et le suivi de session sont prêts. `./scripts/validate.sh
+  lean` réussit sur les 31 modules avec l'audit d'axiomes. En revanche,
+  `graphify update .` confirme que les fichiers `.lean` ne sont pas classifiés
+  par l'extracteur Graphify (69 fichiers non pris en charge) ; les requêtes ne
+  peuvent donc pas fournir les lignes des preuves HYP-023. Aucun fichier Lean
+  n'a été lu ou modifié. Pour respecter le contrôle de lecture demandé, je
+  suspends l'inspection formelle jusqu'à confirmation de la marche à suivre.
+
+  ### user` de chaque tâche.
 - Les métadonnées YAML des tickets et de leurs checklists portent aussi `priority: P0|P1|P2|P3`
   (même priorité que dans le premier message) et `tags: [...]`. Les tags thématiques sont en
   minuscules ASCII avec tirets : `moteur-symbolique`, `metalangage`, `epistemique`, `contrats`,

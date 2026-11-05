@@ -12,6 +12,24 @@ tags: [moteur-symbolique, metalangage, effets, epistemique]
 
 ### user
 
+### agent
+
+HYP-153 reste en `todo` comme ticket de suivi. Ses critères (pipeline réelle,
+branche non exécutée, continuité symbolique, erreurs/annulation et traces)
+sont répartis sans imposer d'ordonnanceur distribué :
+
+- HYP-168 : exécution des étapes liées aux capacités et branchement paresseux,
+  après les bindings HYP-166/HYP-167.
+- HYP-169 : conservation des valeurs typées, faits, provenance, hypothèses et
+  résultats de validation, après HYP-168.
+- HYP-170 : budgets, délais, annulation, propagation/relance et traces,
+  après HYP-168 et HYP-169.
+
+La checklist parent agrège les critères d'acceptation et les validations ;
+aucune dépendance existante ni lane n'est modifiée.
+
+### user
+
 **Ticket** HYP-153 · **Priorité** P1 · **Taille** L · **Epic** Exécution multi-services · **Dépend de** HYP-152 · **Labels** moteur-symbolique, effets
 
 « On peut exécuter le programme entre ces différents services [...]

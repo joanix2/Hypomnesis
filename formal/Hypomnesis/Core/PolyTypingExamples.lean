@@ -2,6 +2,7 @@ import Hypomnesis.Core.PolyTyping
 import Hypomnesis.Core.PolySyntaxExamples
 import Hypomnesis.Core.Soundness
 import Hypomnesis.Core.PolyTypeExamples
+import Hypomnesis.Core.Fuel
 
 /-! # Régressions du vérificateur de termes polymorphes (HYP-023) -/
 
@@ -54,6 +55,29 @@ theorem identity_polymorphic_let_is_safe_at_fuel_20 :
   rw [SyntaxExamples.erased_identity_uses_the_core_evaluator]
   change Core.ValTy [] (.pair (.int 7) (.bool true)) (.prod .int .bool)
   exact .pair .int .bool
+
+theorem identity_polymorphic_let_is_safe_at_any_fuel (fuel : Nat) :
+    Core.Safe [] (Core.eval fuel [] SyntaxExamples.identityAtIntAndBool.erase)
+      (.prod .int .bool) := by
+  have evalAtTwenty :
+      Core.eval 20 [] SyntaxExamples.identityAtIntAndBool.erase =
+        .ok (.pair (.int 7) (.bool true)) :=
+    SyntaxExamples.erased_identity_uses_the_core_evaluator
+  by_cases fuelLeTwenty : fuel ≤ 20
+  · by_cases timedOut : Core.eval fuel [] SyntaxExamples.identityAtIntAndBool.erase = .timeout
+    · simp [Core.Safe, timedOut]
+    · have stable := Core.eval_fuel_mono fuelLeTwenty timedOut
+      rw [← stable, evalAtTwenty]
+      exact .pair .int .bool
+  · have twentyLeFuel : 20 ≤ fuel := Nat.le_of_not_ge fuelLeTwenty
+    have evalAtTwentyNotTimeout :
+        Core.eval 20 [] SyntaxExamples.identityAtIntAndBool.erase ≠ .timeout := by
+      rw [evalAtTwenty]
+      simp
+    have stable :=
+      Core.eval_fuel_mono twentyLeFuel evalAtTwentyNotTimeout
+    rw [stable, evalAtTwenty]
+    exact .pair .int .bool
 
 open Examples in
 def genericMapValue : Expr :=

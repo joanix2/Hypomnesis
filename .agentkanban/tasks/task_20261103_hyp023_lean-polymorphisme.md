@@ -373,3 +373,148 @@ standards), `validate.sh rapide`, `validate.sh graphe`, `kanban.py check`
 effectué.
 
 ### user
+
+Clarification d'architecture : le noyau reste générique ; le DSL compose des
+fonctions/capacités typées et décrit les validations, tandis que les plugins
+en fournissent le sens métier et que l'hôte lie les plugins autorisés.
+L'OCR, Z3 et les validateurs sont des plugins. Le plan global P1 a été
+approuvé ; reprendre HYP-023 en premier, sans benchmark LLM/GPU ni clôture
+automatique des tickets en QA.
+
+### agent
+
+Le plan P1 est actualisé et le suivi de session synchronisé. `./scripts/validate.sh
+lean` réussit sur les 31 modules avec l'audit d'axiomes. `graphify update .`
+confirme que les fichiers `.lean` ne sont pas classifiés par l'extracteur
+(69 fichiers non pris en charge) ; les requêtes ne peuvent donc pas fournir
+les lignes des preuves HYP-023. Aucun fichier Lean n'a été lu ou modifié.
+Pour respecter le contrôle de lecture demandé, l'inspection formelle est en
+pause jusqu'à confirmation de la marche à suivre.
+
+### user
+
+### agent
+
+Ajout de `PatTy.erase_monoCtorPattern` : un motif de constructeur d'une
+déclaration sans paramètres est transporté vers `Core.PatTy` si son motif
+payload appartient au fragment runtime déjà prouvé. La régression
+`monoBoxPatternCase` est typée et sa sûreté à fuel arbitraire passe par le vrai
+`Core.eval` ; un théorème confirme aussi le résultat concret à fuel 20.
+L'audit d'axiomes et les documents P48 décrivent ce résultat comme un jalon
+borné, pas comme l'intégration générale des motifs nominaux ni comme une preuve
+pour les données paramétriques.
+
+Le module ciblé compile avec `cd formal && PATH="$HOME/.elan/bin:$PATH" lake build Hypomnesis.Core.PolySoundness`.
+`./scripts/validate.sh lean` réussit : 31 modules compilent, l'audit d'axiomes
+accepte les nouvelles preuves et les tests du vérificateur de certificats
+passent. `./.venv/bin/python scripts/kanban.py check` valide 109 tâches ;
+`graphify update .` et `git diff --check` réussissent.
+
+### user
+
+Mettre à jour le Kanban avec le jalon de preuve Lean sur les motifs de constructeurs.
+
+### agent
+
+Kanban synchronisé avec le jalon P48 : l'itération 7 de la checklist documente
+la preuve d'effacement du motif mono, la régression exécutée par `Core.eval`,
+l'audit, la documentation et les validations ; ces éléments sont cochés.
+HYP-023 reste en `doing` : l'intégration générale au `RuntimeFragment`, les
+données paramétriques, les records et `Coverage.Certified` restent ouverts.
+Je ne déplace pas la lane, qui relève de la décision utilisateur.
+
+Validation constatée : `./scripts/validate.sh lean`, `./.venv/bin/python
+scripts/kanban.py check` (109 tâches), Graphify et `git diff --check`.
+
+### user
+
+Pourquoi le travail bloque-t-il et que manque-t-il pour terminer les tickets ?
+
+### agent
+
+Diagnostic : il n'y a pas de blocage d'environnement ni de dépendance externe
+pour HYP-023. Lean compile et l'audit passe ; HYP-020, sa dépendance, est déjà
+en QA. J'ai toutefois laissé HYP-023 occuper tout l'avancement, jalon isolé
+après jalon, au lieu de basculer aussi vers les P1 indépendants déjà prêtes.
+C'est un problème de découpage et de pilotage de ma part, pas un obstacle sur
+le Mac.
+
+Ce qui manque à HYP-023 :
+
+- P48 ne couvre qu'un exemple `monoBox` à déclaration sans paramètre. Il ne
+  transporte pas encore les motifs nominaux dans `RuntimeFragment`.
+- `Core.Ctx` donne un type unique par valeur runtime et `Core.Sig` efface les
+  arguments des types de données. Le pont actuel ne permet donc pas de déduire
+  la sûreté d'une même fermeture ou donnée paramétrique utilisée à plusieurs
+  types ; il faut une relation runtime qui interprète les schémas/arguments de
+  type, ou une spécialisation dont la préservation est prouvée.
+- Le `List.map` présent est un exemple Lean autonome, pas le `List.map` réel du
+  prélude et ses dépendances (`rev`, `fold_left`). Il faut vérifier ce dernier
+  dans le fragment visé. Le branchement décodeur/CLI et les régressions de
+  certificats sont des exigences supplémentaires de la checklist actuelle.
+- Les records, motifs nominaux généraux et `Coverage.Certified` doivent rester
+  préservés ; la checklist ne permet pas de les ignorer au nom de P48.
+
+Le tableau Kanban indique aussi 11 tâches prêtes, dont HYP-152 (bindings de
+services), et 71 en QA qui attendent une revue humaine. Les tickets en QA ne
+sont pas « bloqués » techniquement, mais seul l'utilisateur les passe en
+`done`. Les neuf tickets réellement bloqués attendent leurs dépendances
+listées par Kanban. HYP-023 ne devrait donc pas empêcher HYP-152 ni les autres
+travaux indépendants d'avancer.
+
+Pour débloquer le flux, il faut découper HYP-023 en prochains jalons vérifiables
+(intégration des constructeurs au fragment, relation polymorphe/runtime,
+véritable `List.map` du prélude, puis branchement certificats/CLI et validation
+complète) et travailler en parallèle sur les P1 prêtes au lieu d'attendre la
+preuve générale avant tout autre ticket. Ne pas passer HYP-023 en QA tant que
+ses critères et la validation complète ne sont pas satisfaits.
+
+### user
+
+### agent
+
+HYP-023 reste le ticket de suivi en `doing` ; ses critères initiaux sont
+conservés. Les livrables restants sont répartis en quatre sous-tickets, avec
+leurs dépendances explicites :
+
+- HYP-156 : relation runtime polymorphe et sûreté du véritable évaluateur.
+- HYP-157 : constructeurs paramétriques, motifs, records et couverture certifiée.
+- HYP-158 : véritable `List.map` du prélude et ses dépendances.
+- HYP-159 : branchement décodeur/CLI et régressions de certificats.
+
+HYP-157 suit HYP-156 ; HYP-158 suit HYP-156 et HYP-157 ; HYP-159 suit les
+trois. La checklist parent conserve les validations globales et suit ces
+livrables sans déclarer de travail terminé ni changer de lane.
+
+### user
+
+Redécouper les tickets trop gros en sous-tickets.
+
+### agent
+
+Découpage des tickets de taille L encore actionnables (`todo`, `doing` ou
+`blocked`) en enfants vérifiables, sans déplacer de lane ni marquer de travail
+terminé :
+
+- HYP-023 → HYP-156 relation runtime polymorphe, HYP-157 constructeurs/motifs
+  paramétriques et preuves liées, HYP-158 véritable `List.map` du prélude,
+  HYP-159 branchement décodeur/CLI.
+- HYP-056 → HYP-160 ADR, HYP-161 types et inférence dimensionnels,
+  HYP-162 bibliothèque Units et exemple mécanique.
+- HYP-057 → HYP-163 formalisation et sûreté, HYP-164 invariance d'échelle.
+- HYP-152 → HYP-165 contrats typés, HYP-166 bindings hôte,
+  HYP-167 vérifications statiques et permissions.
+- HYP-153 → HYP-168 exécution/branches paresseuses, HYP-169 continuité de
+  l'état symbolique, HYP-170 budgets, erreurs, annulation et traces.
+
+Les tickets parents conservent leurs critères et restent des tickets de suivi.
+HYP-154 et HYP-155 ne sont pas découpés : les choix de cycle de vie/arrêt des
+services, de fournisseurs et de démonstrateur nécessitent un arbitrage qui
+n'est pas fixé par leurs descriptions actuelles. Les tickets en QA et les
+hypothèses sont hors du périmètre de ce découpage.
+
+Vérifications : `kanban.py check` valide 124 tâches ; `./scripts/validate.sh
+graphe` a reconstruit Graphify et réinjecté 212 nœuds/2395 relations Kanban.
+Les tickets parents restent ouverts et aucun commit/push n'a été effectué.
+
+### user

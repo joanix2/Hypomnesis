@@ -58,9 +58,12 @@ valeurs Core pour ce fragment ; les variables à arguments de types vides sont
 donc prises en charge lorsque leur schéma est monomorphe, y compris dans le
 corps d'un `let` et les fermetures monomorphes peuvent capturer ces valeurs.
 La récursion et les motifs scalaires/de paires sont couverts dans ce fragment ;
-les motifs de constructeurs, les données paramétriques et les liaisons
-polymorphes multi-instanciées restent hors preuve. P44 ne constitue pas encore
-la sûreté générale du polymorphisme de rang 1.
+les motifs de constructeurs ne sont pas encore intégrés au fragment général.
+P48 prouve toutefois leur effacement pour une déclaration sans paramètres
+lorsque le motif payload appartient au fragment établi, et vérifie à tout fuel
+une branche de cas avec le véritable `Core.eval`. Les données paramétriques et
+les liaisons polymorphes multi-instanciées restent hors preuve. P44 ne constitue
+pas encore la sûreté générale du polymorphisme de rang 1.
 P47 établit une première correspondance de table de constructeurs mono :
 `Signature.eraseMono` projette les payloads vers la signature Core, et
 `monoBoxValue_type_and_runtime_safe` relie un constructeur polymorphe sans
@@ -68,15 +71,54 @@ paramètre à une exécution Core sûre à tout fuel. Ce lemme/régression de
 signature n'intègre pas encore les constructeurs ou motifs nominaux dans le
 fragment de sûreté général ; les signatures paramétriques restent non
 interprétées par `Core.Sig`.
+P48 ajoute `PatTy.erase_monoCtorPattern`, qui transporte un motif de
+constructeur mono typé vers `Core.PatTy` sous la signature effacée, puis
+`eval_safe_monoBoxPatternCase` vérifie la sûreté à fuel arbitraire de la
+branche correspondante. `eval_monoBoxPatternCase` confirme son résultat concret.
+Cette preuve bornée ne couvre pas encore les motifs de constructeurs imbriqués,
+leur intégration à `RuntimeFragment`, les données paramétriques, records ou
+`Coverage.Certified`.
 Indépendamment de cette preuve de fragment, P45 établit pour l'exemple concret
 du `let` identité partagé entre `int` et `bool` que l'exécution à fuel 20 rend
 une paire dans la relation Core `ValTy`. Cette régression n'est pas une
-garantie générale pour le fragment polymorphe.
+garantie générale pour le fragment polymorphe. P49 étend ce même exemple à
+tout fuel : par monotonie, les exécutions après le seuil connu donnent la même
+paire, tandis qu'un fuel insuffisant peut toujours produire `timeout`. Ce
+résultat ne fournit toujours pas une relation logique générale pour les
+schémas ou fermetures polymorphes.
 P46 ajoute un terme récursif polymorphe `List.map`-équivalent, vérifié par le
 checker et évalué à deux instanciations dans un même programme (`int → bool`
 et `bool → int`). C'est un exemple Lean autonome : il ne décode pas le corps
 exact de `List.map` depuis le certificat Python et ne ferme donc pas le pont
 CLI.
+
+P50 ajoute dans `PolySoundness.lean` une relation relationnelle distincte de
+`Core.ValTy`. Les variables de type sont interprétées par des relations
+arbitraires sur les valeurs runtime ; les schémas quantifient universellement
+sur leurs relations liées ; les environnements conservent cette propriété aux
+lectures avec instanciation. La relation des flèches décrit le comportement
+du corps réel de la fermeture via `Core.eval`, en excluant `stuck` et en
+autorisant explicitement `timeout`, `matchFail` et les erreurs explicites.
+`PolyValueRel.subst` relie l'instanciation des types à leur interprétation
+relationnelle.
+
+`HasType.eval_polyRuntimeFragment` est le théorème fondamental pour le fragment
+source précis : variables à arguments de types explicites, constantes
+primitives, lambdas non récursives, applications et paires, évalués dans un
+environnement relationnel polymorphe. Les applications préservent la relation
+de sortie grâce à la sémantique opérationnelle de la fermeture. Pour les
+résultats primitifs/produits, `closure_application_coreSafe` traduit cela en
+`Core.Safe` du véritable `Core.eval` à tout fuel, sans invoquer un effacement
+monomorphe. Le `let` identité partagé complet est typé séparément, sa valeur
+est évaluée puis reliée à l'environnement de schémas, et son corps est prouvé
+sûr aux deux instanciations `int` et `bool` ; le wrapper compose ces preuves
+pour tous les budgets. P49 reste l'ancienne régression concrète indépendante.
+
+La garantie n'est pas encore le théorème fondamental sur toute la grammaire
+`HasType` : `fix`, les constructeurs/motifs nominaux et plusieurs formes de
+contrôle ou d'effet ne sont pas dans `PolyRuntimeFragment`. Les constructeurs
+paramétriques et le `List.map` du prélude sont suivis par HYP-157/HYP-158 ;
+HYP-023 conserve les critères plus larges.
 
 | Étape | Fichier | Rôle |
 |---|---|---|

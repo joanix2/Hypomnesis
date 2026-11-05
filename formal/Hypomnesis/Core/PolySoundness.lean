@@ -1,5 +1,6 @@
 import Hypomnesis.Core.Soundness
 import Hypomnesis.Core.PolyTyping
+import Hypomnesis.Core.PolySyntaxExamples
 
 /-! # Pont de sûreté polymorphe pour des fragments runtime contrôlés -/
 
@@ -121,10 +122,13 @@ theorem monoBoxValue_type_and_runtime_safe (fuel : Nat) :
       (Core.eval fuel [] monoBoxValue.erase) (.data 0) :=
   ⟨monoBoxValue_has_poly_type, eval_safe_monoBoxValue fuel⟩
 
-theorem PatTy.erase_runtimePat {sig : Signature} {pattern : Pat} {type : Ty}
-    {bindings : List Ty} (runtimePat : RuntimePat pattern)
+def monoBoxPatternCase : Expr :=
+  .case monoBoxValue (.ctor 0 .var) (.var 0 []) (.int 0)
+
+theorem PatTy.erase_runtimePat {sig : Signature} {coreSig : Core.Sig}
+    {pattern : Pat} {type : Ty} {bindings : List Ty} (runtimePat : RuntimePat pattern)
     (typed : PatTy sig pattern type = some bindings) :
-    Core.PatTy [] pattern type.erase (bindings.map Ty.erase) := by
+    Core.PatTy coreSig pattern type.erase (bindings.map Ty.erase) := by
   induction runtimePat generalizing type bindings with
   | wild =>
     simp only [PatTy] at typed
@@ -177,6 +181,70 @@ theorem PatTy.erase_runtimePat {sig : Signature} {pattern : Pat} {type : Ty}
           simpa [List.map_append, Ty.erase] using
             Core.PatTy.pair (ihFirst hFirst) (ihSecond hSecond)
     | _ => simp [PatTy] at typed
+
+/-- Un motif de constructeur d'une déclaration sans paramètres s'efface vers
+le motif Core correspondant, lorsque son motif d'argument appartient au
+fragment runtime déjà vérifié. -/
+theorem PatTy.erase_monoCtorPattern {sig : Signature} {data ctor : Nat}
+    {declaration : DataDecl} {payload : Ty} {pattern : Pat} {bindings : List Ty}
+    (declLookup : sig[data]? = some declaration)
+    (arity : declaration.parameters = 0)
+    (ctorLookup : declaration.constructors[ctor]? = some payload)
+    (runtimePat : RuntimePat pattern)
+    (innerTyped : PatTy sig pattern payload = some bindings) :
+    PatTy sig (.ctor ctor pattern) (.data data []) = some bindings ∧
+      Core.PatTy sig.eraseMono (.ctor ctor pattern) (.data data)
+        (bindings.map Ty.erase) := by
+  have constructorType :=
+    Signature.constructorType_zeroArity declLookup arity ctorLookup
+  have polyPattern :
+      PatTy sig (.ctor ctor pattern) (.data data []) = some bindings := by
+    simp [PatTy, constructorType, innerTyped]
+  obtain ⟨constructors, dataLookup, payloadLookup⟩ :=
+    Signature.eraseMono_constructorLookup declLookup ctorLookup
+  have corePattern : Core.PatTy sig.eraseMono (.ctor ctor pattern)
+      (.data data) (bindings.map Ty.erase) :=
+    Core.PatTy.ctor dataLookup payloadLookup
+      (PatTy.erase_runtimePat runtimePat innerTyped)
+  exact ⟨polyPattern, corePattern⟩
+
+theorem monoBoxPatternCase_has_poly_type :
+    HasType monoBoxSignature 0 [] monoBoxPatternCase .int := by
+  have patternInfo :
+      PatTy monoBoxSignature (.ctor 0 .var) (.data 0 []) = some [.int] ∧
+        Core.PatTy monoBoxSignature.eraseMono (.ctor 0 .var) (.data 0) [.int] :=
+    PatTy.erase_monoCtorPattern (data := 0) (ctor := 0)
+      (declaration := monoBoxDeclaration) (payload := .int)
+      (by rfl) (by rfl) (by rfl) RuntimePat.var (by rfl)
+  have matchTyped :
+      HasType monoBoxSignature 0 [mono .int] (.var 0 []) .int := by
+    exact .var rfl (by simp [mono, Scheme.instantiate, Ty.subst]) (by simp)
+  apply HasType.case (scrutineeType := .data 0 []) (bindings := [.int])
+  · exact monoBoxValue_has_poly_type
+  · exact patternInfo.1
+  · simp [TyEnv.wellScoped, Scheme.wellScoped, Ty.wellScoped,
+      Signature.arities, mono, monoBoxSignature]
+  · exact matchTyped
+  · exact .int
+
+theorem eval_safe_monoBoxPatternCase (fuel : Nat) :
+    Core.Safe monoBoxSignature.eraseMono
+      (Core.eval fuel [] monoBoxPatternCase.erase) .int := by
+  have patternInfo :
+      PatTy monoBoxSignature (.ctor 0 .var) (.data 0 []) = some [.int] ∧
+        Core.PatTy monoBoxSignature.eraseMono (.ctor 0 .var) (.data 0) [.int] :=
+    PatTy.erase_monoCtorPattern (data := 0) (ctor := 0)
+      (declaration := monoBoxDeclaration) (payload := .int)
+      (by rfl) (by rfl) (by rfl) RuntimePat.var (by rfl)
+  have coreTyped : Core.HasType monoBoxSignature.eraseMono [] monoBoxPatternCase.erase .int := by
+    simpa [monoBoxPatternCase, Expr.erase] using
+      (Core.HasType.case monoBoxValue_erases_to_core_typed patternInfo.2
+        (Core.HasType.var rfl) Core.HasType.int)
+  exact Core.eval_safe fuel Core.EnvTy.nil coreTyped
+
+theorem eval_monoBoxPatternCase :
+    Core.eval 20 [] monoBoxPatternCase.erase = .ok (.int 5) := by
+  rfl
 
 /-- Sous-fragment fermé par les formes de contrôle et les `let` monomorphes ;
 les variables sans arguments de type, les fonctions monomorphes, les `fix`
@@ -269,8 +337,649 @@ inductive RuntimeEnvRel : List Core.Val → TyEnv → Prop where
       RuntimeEnvRel values env →
       RuntimeEnvRel (value :: values) (scheme :: env)
 
+/-- Interprétation relationnelle d'un type. Les variables de type sont
+interprétées par des relations arbitraires sur les valeurs Core ; une
+fermeture est interprétée par le comportement de son corps à chaque budget.
+Les fermetures récursives et les valeurs de constructeurs sont hors fragment. -/
+def PolyValueRel : Ty → (Nat → Core.Val → Prop) → Core.Val → Prop
+  | .var index, relations, value => relations index value
+  | .int, _, .int _ => True
+  | .bool, _, .bool _ => True
+  | .float, _, .float _ => True
+  | .string, _, .string _ => True
+  | .unit, _, .unit => True
+  | .arrow domain codomain, relations, .clo env body =>
+      ∀ argument, PolyValueRel domain relations argument →
+        ∀ fuel,
+          match Core.eval fuel (argument :: env) body with
+          | .ok result => PolyValueRel codomain relations result
+          | .stuck => False
+          | .timeout | .matchFail | .error _ => True
+  | .prod first second, relations, .pair firstValue secondValue =>
+      PolyValueRel first relations firstValue ∧
+        PolyValueRel second relations secondValue
+  | _, _, _ => False
+termination_by type _ _ => sizeOf type
+decreasing_by all_goals simp_wf <;> omega
+
+/-- Relation d'un résultat d'évaluation : seuls timeout, échec de motif et
+erreur explicite sont admis sans valeur ; `stuck` reste exclu. -/
+def PolyResultRel (type : Ty) (relations : Nat → Core.Val → Prop) :
+    Core.Res → Prop
+  | .ok value => PolyValueRel type relations value
+  | .stuck => False
+  | .timeout | .matchFail | .error _ => True
+
+/-- Fragment source du pont polymorphe : variables instanciées, valeurs
+primitives, fermetures non récursives, applications et paires. -/
+inductive PolyRuntimeFragment : Expr → Prop where
+  | var (index : Nat) (args : List Ty) : PolyRuntimeFragment (.var index args)
+  | int (value : Int) : PolyRuntimeFragment (.int value)
+  | bool (value : Bool) : PolyRuntimeFragment (.bool value)
+  | float (value : Float) : PolyRuntimeFragment (.float value)
+  | string (value : String) : PolyRuntimeFragment (.string value)
+  | unit : PolyRuntimeFragment .unit
+  | lam {domain body} :
+      PolyRuntimeFragment body → PolyRuntimeFragment (.lam domain body)
+  | app {fn arg} :
+      PolyRuntimeFragment fn → PolyRuntimeFragment arg →
+      PolyRuntimeFragment (.app fn arg)
+  | pair {first second} :
+      PolyRuntimeFragment first → PolyRuntimeFragment second →
+      PolyRuntimeFragment (.pair first second)
+
+/-- Le lien `Res.bind` conserve la relation de résultat. -/
+theorem PolyResultRel.bind {input output : Ty}
+    {relations : Nat → Core.Val → Prop} {result : Core.Res}
+    {continuation : Core.Val → Core.Res}
+    (resultRel : PolyResultRel input relations result)
+    (continuationRel : ∀ value, PolyValueRel input relations value →
+      PolyResultRel output relations (continuation value)) :
+    PolyResultRel output relations (Core.Res.bind result continuation) := by
+  cases result with
+  | ok value => exact continuationRel value resultRel
+  | stuck => exact False.elim resultRel
+  | timeout | matchFail | error _ => trivial
+
+/-- Substituer des types dans la syntaxe correspond à interpréter chaque
+variable par la relation du type qui la remplace. -/
+theorem PolyValueRel.subst (type : Ty) (substitution : Nat → Ty)
+    (relations : Nat → Core.Val → Prop) (value : Core.Val) :
+    PolyValueRel (type.subst substitution) relations value ↔
+      PolyValueRel type
+        (fun index => PolyValueRel (substitution index) relations) value := by
+  induction type using Ty.induct generalizing relations value with
+  | var index =>
+    simp [Ty.subst, PolyValueRel]
+  | int | bool | float | string | unit =>
+    cases value <;> simp [Ty.subst, PolyValueRel]
+  | arrow domain codomain ihDomain ihCodomain =>
+    cases value with
+    | clo env body =>
+      simp only [Ty.subst, PolyValueRel]
+      constructor
+      · intro h argument argumentRel fuel
+        have argumentRel' :=
+          (ihDomain relations argument).mpr argumentRel
+        have resultRel := h argument argumentRel' fuel
+        cases hEval : Core.eval fuel (argument :: env) body with
+        | ok result =>
+          exact (ihCodomain relations result).mp (by simpa [hEval] using resultRel)
+        | stuck => simp [hEval] at resultRel
+        | timeout | matchFail | error _ => trivial
+      · intro h argument argumentRel fuel
+        have argumentRel' :=
+          (ihDomain relations argument).mp argumentRel
+        have resultRel := h argument argumentRel' fuel
+        cases hEval : Core.eval fuel (argument :: env) body with
+        | ok result =>
+          exact (ihCodomain relations result).mpr (by simpa [hEval] using resultRel)
+        | stuck => simp [hEval] at resultRel
+        | timeout | matchFail | error _ => trivial
+    | _ => simp [Ty.subst, PolyValueRel]
+  | prod first second ihFirst ihSecond =>
+    cases value with
+    | pair firstValue secondValue =>
+      simp only [Ty.subst, PolyValueRel]
+      exact and_congr (ihFirst relations firstValue) (ihSecond relations secondValue)
+    | _ => simp [Ty.subst, PolyValueRel]
+  | data index args ih =>
+    simp [Ty.subst, PolyValueRel]
+
+/-- Relation d'une valeur Core avec un schéma : les relations liées par le
+schéma sont universelles, tandis que les variables extérieures gardent leur
+interprétation. -/
+def PolySchemeRel (scheme : Scheme) (outer : Nat → Core.Val → Prop)
+    (value : Core.Val) : Prop :=
+  ∀ (bound : Nat → Core.Val → Prop),
+    PolyValueRel scheme.body
+      (fun index =>
+        if index < scheme.arity then bound index
+        else outer (index - scheme.arity))
+      value
+
+/-- Types sans variables ni constructeurs de données, pour lesquels la
+relation des valeurs implique le typage Core ordinaire. -/
+inductive FirstOrderRuntimeTy : Ty → Prop where
+  | int : FirstOrderRuntimeTy .int
+  | bool : FirstOrderRuntimeTy .bool
+  | float : FirstOrderRuntimeTy .float
+  | string : FirstOrderRuntimeTy .string
+  | unit : FirstOrderRuntimeTy .unit
+  | prod {first second} :
+      FirstOrderRuntimeTy first → FirstOrderRuntimeTy second →
+      FirstOrderRuntimeTy (.prod first second)
+
+theorem PolyValueRel.toCoreValTy {type : Ty}
+    (firstOrder : FirstOrderRuntimeTy type) (relations : Nat → Core.Val → Prop)
+    {value : Core.Val} (related : PolyValueRel type relations value) :
+    Core.ValTy [] value type.erase := by
+  induction firstOrder generalizing relations value with
+  | int =>
+    cases value with
+    | int n => exact Core.ValTy.int
+    | _ => simp [PolyValueRel] at related
+  | bool =>
+    cases value with
+    | bool b => exact Core.ValTy.bool
+    | _ => simp [PolyValueRel] at related
+  | float =>
+    cases value with
+    | float f => exact Core.ValTy.float
+    | _ => simp [PolyValueRel] at related
+  | string =>
+    cases value with
+    | string s => exact Core.ValTy.string
+    | _ => simp [PolyValueRel] at related
+  | unit =>
+    cases value with
+    | unit => exact Core.ValTy.unit
+    | _ => simp [PolyValueRel] at related
+  | prod firstOrderFirst firstOrderSecond ihFirst ihSecond =>
+    cases value with
+    | pair firstValue secondValue =>
+      simp only [PolyValueRel] at related
+      exact Core.ValTy.pair
+        (ihFirst relations related.1)
+        (ihSecond relations related.2)
+    | _ => simp [PolyValueRel] at related
+
+/-- La relation des résultats induit `Core.Safe` pour les types de sortie
+d'ordre zéro. -/
+theorem PolyResultRel.toCoreSafe {type : Ty}
+    (firstOrder : FirstOrderRuntimeTy type)
+    (relations : Nat → Core.Val → Prop) {result : Core.Res}
+    (related : PolyResultRel type relations result) :
+    Core.Safe [] result type.erase := by
+  cases result with
+  | ok value =>
+    simpa [PolyResultRel, Core.Safe] using
+      PolyValueRel.toCoreValTy firstOrder relations related
+  | stuck => exact False.elim related
+  | timeout | matchFail | error _ => trivial
+
+/-- Environnement d'exécution associé à un environnement de schémas de rang 1. -/
+inductive PolyRuntimeEnvRel (outer : Nat → Core.Val → Prop) :
+    List Core.Val → TyEnv → Prop where
+  | nil : PolyRuntimeEnvRel outer [] []
+  | cons {value scheme values env} :
+      PolySchemeRel scheme outer value →
+      PolyRuntimeEnvRel outer values env →
+      PolyRuntimeEnvRel outer (value :: values) (scheme :: env)
+
+/-- Une relation de schéma fournit la relation de toute instanciation valide. -/
+theorem PolySchemeRel.instantiate {scheme : Scheme} {outer : Nat → Core.Val → Prop}
+    {value : Core.Val} {args : List Ty}
+    (related : PolySchemeRel scheme outer value)
+    (arity : args.length = scheme.arity) :
+    PolyValueRel (scheme.body.subst (instantiateSubst args)) outer value := by
+  let bound : Nat → Core.Val → Prop :=
+    fun index value => PolyValueRel (instantiateSubst args index) outer value
+  have relatedBound := related bound
+  have relationEnv :
+      (fun index =>
+        if index < scheme.arity then bound index
+        else outer (index - scheme.arity)) =
+      (fun index => PolyValueRel (instantiateSubst args index) outer) := by
+    funext index
+    funext runtimeValue
+    by_cases inRange : index < scheme.arity
+    · simp [bound, instantiateSubst, inRange, arity]
+    · simp [bound, instantiateSubst, arity, inRange, PolyValueRel]
+  rw [PolyValueRel.subst]
+  rw [← relationEnv]
+  exact relatedBound
+
+/-- Une liaison déclarée dans un environnement relié possède une valeur Core
+dont la relation de schéma est préservée. -/
+theorem PolyRuntimeEnvRel.lookup_exists {outer : Nat → Core.Val → Prop}
+    {values : List Core.Val} {env : TyEnv}
+    (related : PolyRuntimeEnvRel outer values env) :
+    ∀ {index : Nat} {scheme : Scheme},
+      env[index]? = some scheme →
+      ∃ value, values[index]? = some value ∧ PolySchemeRel scheme outer value := by
+  induction related with
+  | nil =>
+    intro index scheme envLookup
+    simp at envLookup
+  | @cons value scheme values env schemeRel _ ih =>
+    intro index candidate envLookup
+    cases index with
+    | zero =>
+      simp only [List.getElem?_cons_zero] at envLookup
+      cases envLookup
+      exact ⟨value, rfl, schemeRel⟩
+    | succ index =>
+      exact ih envLookup
+
+/-- Théorème fondamental opérationnel pour le fragment polymorphe de base.
+Une dérivation et un environnement relationnel donnent un résultat Core
+relationnel à tout fuel, en distinguant `stuck` des autres issues. -/
+theorem HasType.eval_polyRuntimeFragment {sig : Signature} {depth : Nat}
+    {env : TyEnv} {values : List Core.Val} {expr : Expr} {type : Ty}
+    {relations : Nat → Core.Val → Prop}
+    (typed : HasType sig depth env expr type)
+    (fragment : PolyRuntimeFragment expr)
+    (envRel : PolyRuntimeEnvRel relations values env) :
+    ∀ fuel, PolyResultRel type relations
+      (Core.eval fuel values expr.erase) := by
+  induction typed generalizing values relations with
+  | var envLookup instantiated argsScoped =>
+    rename_i env' depth' index args scheme resultType
+    cases fragment with
+    | var _ _ =>
+      have arity : args.length = scheme.arity := by
+        by_cases lengthEq : args.length = scheme.arity
+        · exact lengthEq
+        · simp [Scheme.instantiate, lengthEq] at instantiated
+      have typeEq : resultType = scheme.body.subst (instantiateSubst args) := by
+        have h := instantiated
+        simp [Scheme.instantiate, arity] at h
+        exact h.symm
+      obtain ⟨value, valueLookup, schemeRel⟩ :=
+        envRel.lookup_exists envLookup
+      have valueRel := PolySchemeRel.instantiate schemeRel arity
+      intro fuel
+      cases fuel with
+      | zero => simp [Core.eval, PolyResultRel]
+      | succ fuel =>
+        simp [Core.eval, Expr.erase, valueLookup, PolyResultRel, typeEq, valueRel]
+  | int =>
+    cases fragment with
+    | int _ =>
+      intro fuel
+      cases fuel <;> simp [Core.eval, Expr.erase, PolyResultRel, PolyValueRel]
+  | bool =>
+    cases fragment with
+    | bool _ =>
+      intro fuel
+      cases fuel <;> simp [Core.eval, Expr.erase, PolyResultRel, PolyValueRel]
+  | float =>
+    cases fragment with
+    | float _ =>
+      intro fuel
+      cases fuel <;> simp [Core.eval, Expr.erase, PolyResultRel, PolyValueRel]
+  | string =>
+    cases fragment with
+    | string _ =>
+      intro fuel
+      cases fuel <;> simp [Core.eval, Expr.erase, PolyResultRel, PolyValueRel]
+  | unit =>
+    cases fragment with
+    | unit =>
+      intro fuel
+      cases fuel <;> simp [Core.eval, Expr.erase, PolyResultRel, PolyValueRel]
+  | lam domainScoped bodyTyped ih =>
+    rename_i domain body codomain
+    cases fragment with
+    | lam bodyFragment =>
+      intro fuel
+      cases fuel with
+      | zero => simp [Core.eval, PolyResultRel]
+      | succ fuel =>
+        simp only [Core.eval, Expr.erase, PolyResultRel]
+        simp only [PolyValueRel]
+        intro argument argumentRel bodyFuel
+        have argumentSchemeRel : PolySchemeRel (mono domain) relations argument := by
+          intro bound
+          simpa [PolySchemeRel, mono] using argumentRel
+        exact ih bodyFragment
+          (PolyRuntimeEnvRel.cons argumentSchemeRel envRel) bodyFuel
+  | app fnTyped argTyped ihFn ihArg =>
+    rename_i fn arg domain codomain
+    cases fragment with
+    | app fnFragment argFragment =>
+      intro fuel
+      cases fuel with
+      | zero => simp [Core.eval, PolyResultRel]
+      | succ fuel =>
+        change PolyResultRel codomain relations
+          ((Core.eval fuel values fn.erase).bind fun fnValue =>
+            (Core.eval fuel values arg.erase).bind fun argValue =>
+              match fnValue with
+              | .clo closureEnv body => Core.eval fuel (argValue :: closureEnv) body
+              | .rclo closureEnv body =>
+                  Core.eval fuel (argValue :: fnValue :: closureEnv) body
+              | _ => .stuck)
+        apply PolyResultRel.bind (ihFn fnFragment envRel fuel)
+        intro fnValue fnValueRel
+        apply PolyResultRel.bind (ihArg argFragment envRel fuel)
+        intro argValue argValueRel
+        have fnPolyRel : PolyValueRel (.arrow domain codomain) relations fnValue :=
+          fnValueRel
+        cases fnValue with
+        | clo closureEnv body =>
+          have closureApplyRel :
+              ∀ argument, PolyValueRel domain relations argument → ∀ fuel,
+                match Core.eval fuel (argument :: closureEnv) body with
+                | .ok result => PolyValueRel codomain relations result
+                | .stuck => False
+                | .timeout | .matchFail | .error _ => True := by
+            simpa only [PolyValueRel] using fnPolyRel
+          simpa only [PolyResultRel] using
+            closureApplyRel argValue argValueRel fuel
+        | rclo _ _ => simp [PolyValueRel] at fnPolyRel
+        | int _ => simp [PolyValueRel] at fnPolyRel
+        | bool _ => simp [PolyValueRel] at fnPolyRel
+        | float _ => simp [PolyValueRel] at fnPolyRel
+        | string _ => simp [PolyValueRel] at fnPolyRel
+        | unit => simp [PolyValueRel] at fnPolyRel
+        | pair _ _ => simp [PolyValueRel] at fnPolyRel
+        | con _ _ => simp [PolyValueRel] at fnPolyRel
+  | pair firstTyped secondTyped ihFirst ihSecond =>
+    rename_i first second firstType secondType
+    cases fragment with
+    | pair firstFragment secondFragment =>
+      intro fuel
+      cases fuel with
+      | zero => simp [Core.eval, PolyResultRel]
+      | succ fuel =>
+        change PolyResultRel (.prod firstType secondType) relations
+          ((Core.eval fuel values first.erase).bind fun firstValue =>
+            (Core.eval fuel values second.erase).bind fun secondValue =>
+              .ok (.pair firstValue secondValue))
+        apply PolyResultRel.bind (ihFirst firstFragment envRel fuel)
+        intro firstValue firstRel
+        apply PolyResultRel.bind (ihSecond secondFragment envRel fuel)
+        intro secondValue secondRel
+        simp [PolyResultRel, PolyValueRel, firstRel, secondRel]
+  | fix => cases fragment
+  | letE => cases fragment
+  | ite => cases fragment
+  | fst => cases fragment
+  | snd => cases fragment
+  | binop => cases fragment
+  | construct => cases fragment
+  | case => cases fragment
+  | fail => cases fragment
+  | raise => cases fragment
+
+/-- Une fermeture relationnelle appliquée à une valeur liée ne se bloque
+jamais ; tout résultat produit conserve la relation de sortie. -/
+theorem PolyValueRel.closure_application_safe
+    {domain codomain : Ty} {relations : Nat → Core.Val → Prop}
+    {env : List Core.Val} {body : Core.Expr} {argument : Core.Val}
+    (closureRel : PolyValueRel (.arrow domain codomain) relations (.clo env body))
+    (argumentRel : PolyValueRel domain relations argument) (fuel : Nat) :
+    Core.eval fuel (argument :: env) body ≠ .stuck ∧
+      ∀ result, Core.eval fuel (argument :: env) body = .ok result →
+        PolyValueRel codomain relations result := by
+  have applyRel : ∀ argument, PolyValueRel domain relations argument → ∀ fuel,
+      match Core.eval fuel (argument :: env) body with
+      | .ok result => PolyValueRel codomain relations result
+      | .stuck => False
+      | .timeout | .matchFail | .error _ => True := by
+    simpa only [PolyValueRel] using closureRel
+  have related := applyRel argument argumentRel fuel
+  cases hEval : Core.eval fuel (argument :: env) body with
+  | ok result =>
+    simp only [hEval] at related
+    exact ⟨by simp, fun value valueEq => by
+      cases valueEq
+      exact related⟩
+  | stuck =>
+    simp [hEval] at related
+  | timeout | matchFail | error _ =>
+    exact ⟨by simp, by intro result resultEq; simp at resultEq⟩
+
+/-- Le résultat relationnel d'une fermeture polymorphe dans un type d'ordre
+zéro fournit la sûreté du véritable évaluateur Core à tout fuel. -/
+theorem PolyValueRel.closure_application_coreSafe
+    {domain codomain : Ty} {relations : Nat → Core.Val → Prop}
+    {env : List Core.Val} {body : Core.Expr} {argument : Core.Val}
+    (codomainFirstOrder : FirstOrderRuntimeTy codomain)
+    (closureRel : PolyValueRel (.arrow domain codomain) relations (.clo env body))
+    (argumentRel : PolyValueRel domain relations argument) (fuel : Nat) :
+    Core.Safe [] (Core.eval fuel (argument :: env) body) codomain.erase := by
+  have application := PolyValueRel.closure_application_safe
+    closureRel argumentRel fuel
+  cases hEval : Core.eval fuel (argument :: env) body with
+  | ok result =>
+    have resultRel : PolyValueRel codomain relations result := by
+      exact (application.2 result hEval)
+    simpa [Core.Safe] using
+      PolyValueRel.toCoreValTy codomainFirstOrder relations resultRel
+  | stuck => exact False.elim (application.1 hEval)
+  | timeout | matchFail | error _ => trivial
+
+/-- Toute lecture d'un environnement relié conserve la relation de son schéma
+après instanciation des variables quantifiées. -/
+theorem PolyRuntimeEnvRel.lookup {outer : Nat → Core.Val → Prop}
+    {values : List Core.Val} {env : TyEnv}
+    (related : PolyRuntimeEnvRel outer values env) :
+    ∀ {index : Nat} {scheme : Scheme} {value : Core.Val} {args : List Ty},
+      env[index]? = some scheme → values[index]? = some value →
+      args.length = scheme.arity →
+      PolyValueRel (scheme.body.subst (instantiateSubst args)) outer value := by
+  induction related with
+  | nil =>
+    intro index scheme value args envLookup _ _
+    simp at envLookup
+  | @cons value scheme values env schemeRel _ ih =>
+    intro index candidate runtimeValue args envLookup valueLookup arity
+    cases index with
+    | zero =>
+      simp only [List.getElem?_cons_zero] at envLookup valueLookup
+      cases envLookup
+      cases valueLookup
+      exact PolySchemeRel.instantiate schemeRel arity
+    | succ index =>
+      exact ih envLookup valueLookup arity
+
+/-- Schéma du let identité utilisé par les régressions polymorphes. -/
+def identityPolyScheme : Scheme :=
+  ⟨1, .arrow (.var 0) (.var 0)⟩
+
+/-- Valeur source du let identité dans le contexte de sa variable de type. -/
+def identityPolyValueExpr : Expr :=
+  .lam (.var 0) (.var 0 [])
+
+def identityPolyBody : Expr :=
+  .pair
+    (.app (.var 0 [.int]) (.int 7))
+    (.app (.var 0 [.bool]) (.bool true))
+
+def identityPolyProgram : Expr :=
+  .letE identityPolyScheme identityPolyValueExpr identityPolyBody
+
+theorem identityPolyValueExpr_has_scheme_body :
+    HasType [] 1 [] identityPolyValueExpr identityPolyScheme.body := by
+  apply HasType.lam
+  · simp [Ty.wellScoped]
+  · change HasType [] 1 [mono (.var 0)] (.var 0 []) (.var 0)
+    apply HasType.var
+    · rfl
+    · simp [mono, Scheme.instantiate, instantiateSubst, Ty.subst]
+    · rfl
+
+theorem identityPolyBody_has_type :
+    HasType [] 0 [identityPolyScheme] identityPolyBody (.prod .int .bool) := by
+  apply HasType.pair
+  · apply HasType.app
+    · show HasType [] 0 [identityPolyScheme] (.var 0 [.int])
+        (.arrow .int .int)
+      exact .var (by rfl)
+        (by simp [identityPolyScheme, Scheme.instantiate, instantiateSubst, Ty.subst])
+        (by simp [Ty.wellScoped])
+    · exact .int
+  · apply HasType.app
+    · show HasType [] 0 [identityPolyScheme] (.var 0 [.bool])
+        (.arrow .bool .bool)
+      exact .var (by rfl)
+        (by simp [identityPolyScheme, Scheme.instantiate, instantiateSubst, Ty.subst])
+        (by simp [Ty.wellScoped])
+    · exact .bool
+
+theorem identityPolyProgram_has_type :
+    HasType [] 0 [] identityPolyProgram (.prod .int .bool) := by
+  apply HasType.letE (scheme := identityPolyScheme)
+  · simp [identityPolyScheme, Scheme.wellScoped, Ty.wellScoped]
+  · simpa [identityPolyValueExpr, identityPolyScheme, TyEnv.weaken] using
+      identityPolyValueExpr_has_scheme_body
+  · simpa [identityPolyBody, identityPolyScheme] using identityPolyBody_has_type
+
+theorem identityPolyProgram_eq_syntaxExample :
+    identityPolyProgram = SyntaxExamples.identityAtIntAndBool := rfl
+
+/-- L'effacement polymorphe produit bien la fermeture runtime représentée par
+la relation ; l'annotation `unit` n'est pas utilisée comme preuve de type. -/
+theorem identityPolyValueExpr_evaluates_to_closure (fuel : Nat) :
+    Core.eval (fuel + 1) [] identityPolyValueExpr.erase =
+      .ok (.clo [] (.var 0)) := by
+  rfl
+
+/-- L'identité effacée est une fermeture relationnelle identité à tout type,
+pour toute interprétation des variables de type. -/
+theorem identity_closure_polyValueRel (type : Ty)
+    (relations : Nat → Core.Val → Prop) :
+    PolyValueRel (.arrow type type) relations (.clo [] (.var 0)) := by
+  simp only [PolyValueRel]
+  intro argument argumentRel fuel
+  cases fuel <;> simp [Core.eval, argumentRel]
+
+/-- Une même fermeture identité satisfait le schéma `forall a. a -> a`.
+La preuve quantifie sur toutes les relations possibles de `a`, et non sur
+deux types choisis à l'avance. -/
+theorem identity_closure_polySchemeRel
+    (outer : Nat → Core.Val → Prop) :
+    PolySchemeRel identityPolyScheme outer
+      (.clo [] (.var 0)) := by
+  intro bound
+  exact identity_closure_polyValueRel (.var 0)
+    (fun index =>
+      if index < 1 then bound index
+      else outer (index - 1))
+
+/-- Le résultat du véritable évaluateur après effacement de la valeur source
+est bien relié au schéma polymorphe déclaré. -/
+theorem identityPolyValueExpr_evaluates_to_polySchemeRel
+    (outer : Nat → Core.Val → Prop) :
+    ∃ value, Core.eval 1 [] identityPolyValueExpr.erase = .ok value ∧
+      PolySchemeRel identityPolyScheme outer value := by
+  exact ⟨.clo [] (.var 0), rfl, identity_closure_polySchemeRel outer⟩
+
+/-- Une fermeture liée par un schéma identité reste une identité à chaque
+instanciation, y compris aux types primitifs distincts. -/
+theorem identity_polySchemeRel_int_bool_instances
+    (outer : Nat → Core.Val → Prop) :
+    PolyValueRel (.arrow .int .int) outer (.clo [] (.var 0)) ∧
+      PolyValueRel (.arrow .bool .bool) outer (.clo [] (.var 0)) := by
+  have related := identity_closure_polySchemeRel outer
+  constructor
+  · have instanceRel :=
+      PolySchemeRel.instantiate (scheme := identityPolyScheme) (args := [.int])
+        related (by simp [identityPolyScheme])
+    simpa [identityPolyScheme, instantiateSubst, Ty.subst] using instanceRel
+  · have instanceRel :=
+      PolySchemeRel.instantiate (scheme := identityPolyScheme) (args := [.bool])
+        related (by simp [identityPolyScheme])
+    simpa [identityPolyScheme, instantiateSubst, Ty.subst] using instanceRel
+
+/-- Le même objet runtime est lié au schéma partagé, sans spécialiser sa
+fermeture dans l'environnement. -/
+theorem identity_polyRuntimeEnvRel (outer : Nat → Core.Val → Prop) :
+  PolyRuntimeEnvRel outer
+    [.clo [] (.var 0)] [identityPolyScheme] :=
+  .cons (identity_closure_polySchemeRel outer) .nil
+
+/-- La sûreté du corps polymorphe partagé découle maintenant du théorème
+fondamental sur le fragment source, et non d'une preuve par exemple. -/
+theorem identity_polyBody_is_safe_at_any_fuel
+    (outer : Nat → Core.Val → Prop) (fuel : Nat) :
+    Core.Safe [] (Core.eval fuel [.clo [] (.var 0)] identityPolyBody.erase)
+      (.prod .int .bool) := by
+  have fragment : PolyRuntimeFragment identityPolyBody := by
+    exact .pair
+      (.app (.var 0 [.int]) (.int 7))
+      (.app (.var 0 [.bool]) (.bool true))
+  have resultRel := HasType.eval_polyRuntimeFragment
+    identityPolyBody_has_type fragment (identity_polyRuntimeEnvRel outer) fuel
+  exact PolyResultRel.toCoreSafe (.prod .int .bool) outer resultRel
+
+/-- Le `let` source identité partagé entre `int` et `bool` est sûr à tout
+fuel par le pont relationnel ; les budgets insuffisants restent des timeouts. -/
+theorem identity_polyProgram_is_safe_at_any_fuel
+    (outer : Nat → Core.Val → Prop) (fuel : Nat) :
+    Core.Safe [] (Core.eval fuel [] identityPolyProgram.erase)
+    (.prod .int .bool) := by
+  cases fuel with
+  | zero => simp [Core.eval, Core.Safe]
+  | succ fuel =>
+    cases fuel with
+    | zero =>
+    simp [Core.eval, Expr.erase, Core.Res.bind, Core.Safe, identityPolyProgram]
+    | succ fuel =>
+    change Core.Safe [] ((Core.eval (fuel + 1) [] identityPolyValueExpr.erase).bind
+      fun value => Core.eval (fuel + 1) [value] identityPolyBody.erase)
+      (.prod .int .bool)
+    rw [identityPolyValueExpr_evaluates_to_closure fuel]
+    simp only [Core.Res.bind]
+    exact identity_polyBody_is_safe_at_any_fuel outer (fuel + 1)
+
+/-- Application d'une fermeture identité liée par le schéma polymorphe à un
+entier : sûreté du `Core.eval` réel, y compris au budget épuisé. -/
+theorem identity_polyClosure_int_application_safe
+  (outer : Nat → Core.Val → Prop) (value : Int) (fuel : Nat) :
+  Core.Safe [] (Core.eval (fuel + 1) [.clo [] (.var 0)]
+    (.app (.var 0) (.int value))) .int := by
+  cases fuel with
+  | zero => simp [Core.eval, Core.Res.bind, Core.Safe]
+  | succ fuel =>
+  have closureRel := (identity_polySchemeRel_int_bool_instances outer).1
+  have argumentRel : PolyValueRel .int outer (.int value) := by
+    simp [PolyValueRel]
+  have evalEq :
+      Core.eval (fuel + 2) [.clo [] (.var 0)]
+        (.app (.var 0) (.int value)) =
+      Core.eval (fuel + 1) [.int value] (.var 0) := by
+    simp [Core.eval, Core.Res.bind]
+  rw [evalEq]
+  exact PolyValueRel.closure_application_coreSafe .int closureRel argumentRel
+    (fuel + 1)
+
+/-- Même régression d'application pour une instanciation booléenne de la
+même fermeture polymorphe. -/
+theorem identity_polyClosure_bool_application_safe
+  (outer : Nat → Core.Val → Prop) (value : Bool) (fuel : Nat) :
+  Core.Safe [] (Core.eval (fuel + 1) [.clo [] (.var 0)]
+    (.app (.var 0) (.bool value))) .bool := by
+  cases fuel with
+  | zero => simp [Core.eval, Core.Res.bind, Core.Safe]
+  | succ fuel =>
+  have closureRel := (identity_polySchemeRel_int_bool_instances outer).2
+  have argumentRel : PolyValueRel .bool outer (.bool value) := by
+    simp [PolyValueRel]
+  have evalEq :
+      Core.eval (fuel + 2) [.clo [] (.var 0)]
+        (.app (.var 0) (.bool value)) =
+      Core.eval (fuel + 1) [.bool value] (.var 0) := by
+    simp [Core.eval, Core.Res.bind]
+  rw [evalEq]
+  exact PolyValueRel.closure_application_coreSafe .bool closureRel argumentRel
+    (fuel + 1)
+
 theorem RuntimeEnvRel.coreEnvTy {values : List Core.Val} {env : TyEnv}
-    (related : RuntimeEnvRel values env) :
+  (related : RuntimeEnvRel values env) :
     Core.EnvTy [] values (env.map fun scheme => scheme.body.erase) := by
   induction related with
   | nil => exact Core.EnvTy.nil
@@ -396,7 +1105,8 @@ theorem HasType.erase_runtimeFragment {sig : Signature} {depth : Nat}
     cases fragment with
     | case scrutineeFragment patternFragment matchFragment failFragment =>
       have scrutineeCore := ihScrutinee scrutineeFragment monoEnv
-      have patternCore := PatTy.erase_runtimePat patternFragment patternTyped
+      have patternCore :=
+        PatTy.erase_runtimePat (coreSig := []) patternFragment patternTyped
       have branchMono : MonoTyEnv (bindings.map mono ++ env') := by
         intro scheme member
         simp only [List.mem_append] at member
