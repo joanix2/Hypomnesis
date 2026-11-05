@@ -13,5 +13,10 @@ language mecanique = struct
     "adaptateurs/transcription.py"
   ]
   let examples = "exemples.json"
+  let tracing = [
+    { function = "Plaque.estimer_regle"; operation = "estimator.predict" };
+    { function = "Plaque.estimer_abaque"; operation = "estimator.predict" };
+    { function = "Plaque.verifier"; operation = "validator.check" }
+  ]
   let procedure = { kind = "program"; entry = "procedure" }
 end

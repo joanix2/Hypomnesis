@@ -41,6 +41,7 @@ from hypomnesis.effects.commands import (
 )
 from hypomnesis.effects.permissions import PermissionPolicy
 from hypomnesis.language.errors import EvaluationError
+from hypomnesis.observability.trace import operation
 from hypomnesis.runtime.json import data_to_json
 
 MODES = ("simulate", "dry-run", "production")
@@ -149,11 +150,29 @@ class Dispatcher:
 
     def dispatch(self, command: Command) -> Outcome:
         """Run a command through the automaton; a known ``command_id`` is never run again."""
+        with operation("actuator.authorize", plugin=command.actuator, mode=self.mode):
+            outcome, actuator = self._authorize(command)
+        if actuator is not None:
+
+            def move(state: State, detail: str = "") -> None:
+                outcome.record.move(state, detail)
+                if self._on_transition:
+                    self._on_transition(command, state.value, detail)
+
+            handler = {
+                "dry-run": self._dry_run,
+                "simulate": self._simulate,
+                "production": self._production,
+            }[self.mode]
+            handler(actuator, outcome, move)
+        return outcome
+
+    def _authorize(self, command: Command) -> tuple[Outcome, Actuator | None]:
         known = self._outcomes.get(command.id)
         if known is not None:
             if known.command != command:
                 raise DuplicateCommand(f"{command.id} désigne déjà une autre commande")
-            return known
+            return known, None
         actuator = self.actuators.get(command.actuator)
         deadline = None
         if actuator is not None and actuator.timeout is not None:
@@ -188,14 +207,14 @@ class Dispatcher:
             self._on_transition(command, State.CREATED.value, "")
         if actuator is None:
             move(State.REJECTED, f"actionneur inconnu {command.actuator}")
-            return outcome
+            return outcome, None
         try:
             json.dumps(dict(command.payload), allow_nan=False)
             data_to_json(dict(command.payload))
         except (TypeError, ValueError, EvaluationError) as exc:
             outcome.checks.append(PipelineCheck("structure", False, str(exc)))
             move(State.REJECTED, f"structure JSON : {exc}")
-            return outcome
+            return outcome, None
         outcome.checks.append(PipelineCheck("structure", True))
         if (
             actuator.command_schema not in self.registry
@@ -203,16 +222,16 @@ class Dispatcher:
         ):
             outcome.checks.append(PipelineCheck("contract", False, "contrat inconnu"))
             move(State.REJECTED, "contrat inconnu")
-            return outcome
+            return outcome, None
         issues = self.registry.issues(actuator.command_schema, dict(command.payload))
         if "command_id" in command.payload and command.payload["command_id"] != command.id:
             outcome.checks.append(PipelineCheck("contract", False, "command_id incompatible"))
             move(State.REJECTED, "command_id incompatible")
-            return outcome
+            return outcome, None
         outcome.checks.append(PipelineCheck("contract", not issues, "; ".join(map(str, issues))))
         if issues:
             move(State.REJECTED, "contrat : " + "; ".join(map(str, issues)))
-            return outcome
+            return outcome, None
         move(State.VALIDATED, actuator.command_schema)
         permitted = (
             self.policy.permits(actuator.permission)
@@ -222,11 +241,11 @@ class Dispatcher:
         outcome.checks.append(PipelineCheck("permission", permitted, actuator.permission))
         if not permitted:
             move(State.REJECTED, f"permission refusée : {actuator.permission}")
-            return outcome
+            return outcome, None
         if not gate("business", lambda: actuator.constraints(deepcopy(dict(command.payload)))):
-            return outcome
+            return outcome, None
         if not gate("safety", lambda: actuator.safety(deepcopy(dict(command.payload)))):
-            return outcome
+            return outcome, None
         if actuator.requires_human:
 
             def approval() -> list[str]:
@@ -240,15 +259,9 @@ class Dispatcher:
                 return [] if approved else ["validation humaine requise ou refusée"]
 
             if not gate("approval", approval):
-                return outcome
+                return outcome, None
         move(State.AUTHORIZED, actuator.permission)
-        handler = {
-            "dry-run": self._dry_run,
-            "simulate": self._simulate,
-            "production": self._production,
-        }[self.mode]
-        handler(actuator, outcome, move)
-        return outcome
+        return outcome, actuator
 
     def _dry_run(
         self, actuator: Actuator, outcome: Outcome, move: Callable[[State, str], None]
@@ -300,7 +313,8 @@ class Dispatcher:
         outcome.checks.append(PipelineCheck("execute", True, "adaptateur appelé"))
         while True:
             try:
-                result = actuator.execute(outcome.command.payload)
+                with operation("actuator.execute", plugin=actuator.id):
+                    result = actuator.execute(outcome.command.payload)
             except TransportError as exc:
                 if record.expired(self._clock()):
                     move(State.TIMED_OUT, f"échéance dépassée ; issue inconnue ({exc})")
@@ -337,9 +351,10 @@ class Dispatcher:
         outcome.checks.append(PipelineCheck("result", True, "résultat enregistré"))
         if actuator.observe_effects is not None:
             try:
-                violations = actuator.observe_effects(
-                    deepcopy(dict(outcome.command.payload)), deepcopy(result)
-                )
+                with operation("observer.verify", plugin=actuator.id):
+                    violations = actuator.observe_effects(
+                        deepcopy(dict(outcome.command.payload)), deepcopy(result)
+                    )
                 if type(violations) is not list or any(type(v) is not str for v in violations):
                     raise ValueError("observation must return a list of violations")
             except Exception as exc:

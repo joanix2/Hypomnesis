@@ -44,6 +44,9 @@ hypomnesis lancer demo/languages/ventilation demo/programs/ventilation/salle_ser
 
 Les procédures sont écrites en Hypomnesis : ce sont des valeurs `'a Effect.t` (observer, agir,
 résoudre, enregistrer, retirer) que seul le moteur exécute, à travers contrats et permissions.
+Le rapport contient l'arbre de traces. `HYPOMNESIS_TELEMETRY=0` désactive
+l'instrumentation ; l'extra `telemetry` permet un export OTLP vers un collecteur
+local explicitement configuré. Voir [la configuration](TECHNICAL.md#observabilité-hyp-015070).
 Exemple, extrait de `demo/languages/mecanique/plaque.hyp` :
 
 ```ocaml

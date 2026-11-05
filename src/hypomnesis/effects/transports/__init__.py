@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from hypomnesis.contracts.registry import SchemaRegistry
+from hypomnesis.observability.trace import traced_message
 from hypomnesis.runtime.json import data_to_json
 
 
@@ -19,7 +20,7 @@ class Transport(Protocol):
 
 
 def _encode(registry: SchemaRegistry, message: Mapping[str, Any]) -> str:
-    data = dict(message)
+    data = traced_message(message)
     encoded = json.dumps(data, ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     data_to_json(data)
     registry.validate_message(data)

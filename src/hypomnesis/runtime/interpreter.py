@@ -8,6 +8,7 @@ unwinds, so tail-recursive Hypomnesis functions run in constant stack.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from contextlib import AbstractContextManager, ExitStack
 
 from hypomnesis.ir import core as ir
 from hypomnesis.language.errors import EvaluationError
@@ -47,6 +48,7 @@ class Interpreter:
     def __init__(self, natives: NativeRegistry | None = None) -> None:
         self.natives = natives or default_registry()
         self.globals: dict[str, Value] = {}
+        self.call_context: Callable[[Function], AbstractContextManager] | None = None
 
     # ------------------------------------------------------------ public
 
@@ -58,6 +60,12 @@ class Interpreter:
         return self.compile(expr)(None)
 
     def apply(self, fn: Value, args: list[Value]) -> Value:
+        if self.call_context is None:
+            return self._apply(fn, args, None)
+        with ExitStack() as scopes:
+            return self._apply(fn, args, scopes)
+
+    def _apply(self, fn: Value, args: list[Value], scopes: ExitStack | None) -> Value:
         while True:
             if not isinstance(fn, Function):
                 raise EvaluationError("attempt to apply a non-function value")
@@ -67,6 +75,8 @@ class Interpreter:
             if len(args) > arity:
                 fn, args = self.apply(fn, args[:arity]), args[arity:]
                 continue
+            if scopes is not None and self.call_context is not None and not isinstance(fn, Partial):
+                scopes.enter_context(self.call_context(fn))
             if isinstance(fn, Closure):
                 result = fn.body(Env(dict(zip(fn.params, args, strict=True)), fn.env))
                 if isinstance(result, _TailCall):

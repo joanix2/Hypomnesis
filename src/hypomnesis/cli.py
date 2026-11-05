@@ -267,12 +267,17 @@ def _lancer(
 ) -> int:
     from hypomnesis.engine.language import LanguageError, load_language
     from hypomnesis.engine.procedure import render, run_procedure
+    from hypomnesis.observability.trace import Tracer
 
     as_json = output_format is CheckFormat.JSON
     try:
         missing_program = False
         report = None
-        with redirect_stdout(sys.stderr) if as_json else nullcontext():
+        with (
+            redirect_stdout(sys.stderr) if as_json else nullcontext(),
+            Tracer() as tracer,
+            tracer.span("hypomnesis.run", mode=mode.value),
+        ):
             language = load_language(langage)
             if programme is not None:
                 program = programme.read_text(encoding="utf-8")
@@ -290,6 +295,7 @@ def _lancer(
                     permissions=frozenset() if sans_permission else None,
                     generated=generated or (programme is None and demande is not None),
                     filename=str(programme) if programme is not None else None,
+                    tracer=tracer,
                 )
         if missing_program:
             message = "un programme M1 ou une --demande transcriptible est requis"
@@ -303,6 +309,7 @@ def _lancer(
                 print(message, file=sys.stderr)
             return 64
         assert report is not None
+        report.write(sortie)
         if as_json:
             diagnostics = [w.to_diagnostic() for w in language.session.warnings]
             if report.stopped:

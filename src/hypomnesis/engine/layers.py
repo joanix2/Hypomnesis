@@ -14,6 +14,7 @@ from hypomnesis.language import ast as A
 from hypomnesis.language.docs import missing_descriptions
 from hypomnesis.language.errors import HypomnesisError
 from hypomnesis.language.parser import parse_program
+from hypomnesis.language.typesystem.types import ARROW, TCon, prune
 from hypomnesis.session import Session
 
 ENTRY = "langage.hyp"
@@ -267,6 +268,10 @@ def check_layers(
                         owners[key] = entry
                 if target == root and source.path == stop_at:
                     return session
+        for binding in plan.layers[target].configuration.get("tracing", []):
+            function_type = prune(session.checker.lookup_value(binding["function"]).scheme.body)
+            if not isinstance(function_type, TCon) or function_type.name != ARROW:
+                raise LanguageError(f"fonction à tracer requise : {binding['function']}")
         result = session
     assert result is not None
     return result

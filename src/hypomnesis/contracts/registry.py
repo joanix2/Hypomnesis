@@ -19,6 +19,8 @@ from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
+from hypomnesis.observability.trace import operation
+
 ENVELOPE_ID = "https://schemas.example.org/hypomnesis/envelope/1.0.0"
 MANIFEST_ID = "https://schemas.example.org/hypomnesis/extension-manifest/1.0.0"
 
@@ -98,8 +100,11 @@ class SchemaRegistry:
         validator = Draft202012Validator(
             self._schemas[schema_id], registry=self._registry, format_checker=FormatChecker()
         )
-        errors = sorted(validator.iter_errors(instance), key=lambda e: list(e.absolute_path))
-        return [ValidationIssue(e.json_path, e.message) for e in errors]
+        with operation("schema.validate", schema_id=schema_id) as span:
+            errors = sorted(validator.iter_errors(instance), key=lambda e: list(e.absolute_path))
+            if span is not None:
+                span.set_attribute("validation.result", "rejected" if errors else "accepted")
+            return [ValidationIssue(e.json_path, e.message) for e in errors]
 
     def validate(self, schema_id: str, instance: Any) -> None:
         issues = self.issues(schema_id, instance)

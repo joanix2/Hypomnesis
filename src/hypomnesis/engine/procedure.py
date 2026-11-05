@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,7 @@ from hypomnesis.engine.bridge import BridgeError, solution_value, to_problem
 from hypomnesis.engine.language import Language, LanguageError
 from hypomnesis.epistemics.knowledge import KnowledgeBase
 from hypomnesis.language.errors import EvaluationError
-from hypomnesis.observability.trace import Tracer
+from hypomnesis.observability.trace import Tracer, current_tracer, traced_message
 from hypomnesis.runtime.json import data_to_json, json_to_data
 from hypomnesis.runtime.natives import to_json_value
 from hypomnesis.runtime.values import UNIT, Value, Variant, from_iterable, iter_list
@@ -63,6 +64,8 @@ def trace_actuator(action: Actuator, tracer: Tracer) -> Actuator:
     """Trace actual execution, not simulation, permission checks or pure continuations."""
 
     def execute(payload: Payload) -> dict[str, Any]:
+        if current_tracer() is tracer and tracer.current_operation == "actuator.execute":
+            return action.execute(payload)
         with tracer.span("actuator.execute", actionneur=action.id):
             return action.execute(payload)
 
@@ -116,6 +119,12 @@ class ProcedureReport:
             "trace": self.tracer.export(),
         }
 
+    def write(self, out_dir: Path) -> None:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "rapport.json").write_text(
+            json.dumps(self.to_json(), indent=2, ensure_ascii=False, default=str), encoding="utf-8"
+        )
+
 
 def run_procedure(
     language: Language,
@@ -130,16 +139,62 @@ def run_procedure(
     approve: Callable[[Command], bool] | None = None,
     generated: bool = False,
     filename: str | None = None,
+    tracer: Tracer | None = None,
+) -> ProcedureReport:
+    owned = tracer is None
+    tracer = tracer if tracer is not None else Tracer()
+    try:
+        with (
+            tracer.span("hypomnesis.run", langage=language.name, mode=mode)
+            if not tracer.current_context().is_valid
+            else nullcontext(),
+            language.trace_calls(tracer),
+        ):
+            report = _run_procedure(
+                language,
+                program,
+                mode=mode,
+                out_dir=out_dir,
+                environment=environment,
+                permissions=permissions,
+                max_steps=max_steps,
+                policy=policy,
+                approve=approve,
+                generated=generated,
+                filename=filename,
+                tracer=tracer,
+            )
+        if not tracer.current_context().is_valid:
+            report.write(out_dir)
+        return report
+    finally:
+        if owned:
+            tracer.close()
+
+
+def _run_procedure(
+    language: Language,
+    program: str,
+    *,
+    mode: str,
+    out_dir: Path,
+    environment: dict[str, Any] | None,
+    permissions: frozenset[str] | None,
+    max_steps: int,
+    policy: PermissionPolicy | None,
+    approve: Callable[[Command], bool] | None,
+    generated: bool,
+    filename: str | None,
+    tracer: Tracer,
 ) -> ProcedureReport:
     if type(generated) is not bool:
         raise ValueError("generated must be a boolean host decision")
     proc = language.procedure
     if proc["kind"] != "program":
         raise LanguageError(f"{language.name} n'utilise pas la procédure program")
-    kb, tracer = KnowledgeBase(), Tracer()
+    kb = KnowledgeBase()
     report = ProcedureReport(language.name, program, kb, tracer, generated=generated)
-    with tracer.span("language.typecheck"):
-        language.load_program(program, filename=filename)
+    language.load_program(program, filename=filename)
     entry = proc["entry"]
     if not language.session.type_of(entry).endswith("Effect.t"):
         raise LanguageError(f"`{entry}` doit être une procédure (type … Effect.t)")
@@ -159,7 +214,7 @@ def run_procedure(
         action = adapters.get("actuator", identifier)(env if env is not None else out_dir)
         if not isinstance(action, Actuator) or action.id != identifier:
             raise LanguageError(f"fabrique d'actionneur incompatible : {identifier}")
-        dispatcher.register(trace_actuator(action, tracer))
+        dispatcher.register(action)
     readings: dict[str, int] = {}
 
     def apply(callback: Value, arguments: list[Value]) -> Value:
@@ -167,85 +222,76 @@ def run_procedure(
             return language.session.interpreter.apply(callback, arguments)
 
     value: Value = language.session.value(entry)
-    with tracer.span("hypomnesis.run", langage=language.name, mode=mode):
-        while isinstance(value, Variant) and value.tag != "Done":
-            report.steps += 1
-            if report.steps > max_steps:
-                report.stopped = f"budget de {max_steps} étapes épuisé"
-                break
-            op, arg = value.tag, value.arg
-            if op == "Observe":
-                sensor, k = arg
-                sensors = adapters.identifiers("sensor")
-                if sensor not in sensors:
-                    raise LanguageError(
-                        f"capteur non déclaré par le langage : {sensor}. "
-                        f"Capteurs déclarés : {', '.join(sensors) or 'aucun'}."
-                    )
-                with tracer.span("observer.read", capteur=sensor):
-                    payload = language.schemas.validate_message(
-                        adapters.get("sensor", sensor)(env, sensor)
-                    )
-                readings[sensor] = readings.get(sensor, 0) + 1
-                key = f"{sensor}#{readings[sensor]}"
-                kb.observe(key, payload, f"capteur {sensor}")
-                value = apply(k, [(key, python_to_json(payload))])
-            elif op == "Act":
-                actuator, command, k = arg
-                with tracer.span("command.dispatch", actionneur=actuator, mode=mode):
-                    outcome = dispatcher.dispatch(
-                        dispatcher.command(actuator, json_to_python(command))
-                    )
-                report.commands.append(outcome)
-                value = apply(
-                    k, [python_to_json({"state": outcome.state, "result": outcome.result})]
+    while isinstance(value, Variant) and value.tag != "Done":
+        report.steps += 1
+        if report.steps > max_steps:
+            report.stopped = f"budget de {max_steps} étapes épuisé"
+            break
+        op, arg = value.tag, value.arg
+        if op == "Observe":
+            sensor, k = arg
+            sensors = adapters.identifiers("sensor")
+            if sensor not in sensors:
+                raise LanguageError(
+                    f"capteur non déclaré par le langage : {sensor}. "
+                    f"Capteurs déclarés : {', '.join(sensors) or 'aucun'}."
                 )
-            elif op in ("Solve", "SolveTyped"):
-                problem, k = arg
-                p = to_problem(problem)
-                with tracer.span(
-                    "solver.solve", solver=z3_solver.NAME, contraintes=len(p.constraints)
-                ):
-                    solution = z3_solver.solve(p)
-                try:
+            with tracer.span("observer.read", plugin=sensor) as span:
+                message = traced_message(adapters.get("sensor", sensor)(env, sensor))
+                payload = language.schemas.validate_message(message)
+                tracer.link_message(span, message)
+            readings[sensor] = readings.get(sensor, 0) + 1
+            key = f"{sensor}#{readings[sensor]}"
+            with tracer.span("knowledge.resolve", operation="observe"):
+                kb.observe(key, payload, f"capteur {sensor}")
+            value = apply(k, [(key, python_to_json(payload))])
+        elif op == "Act":
+            actuator, command, k = arg
+            with tracer.span("command.dispatch", actionneur=actuator, mode=mode):
+                outcome = dispatcher.dispatch(dispatcher.command(actuator, json_to_python(command)))
+            report.commands.append(outcome)
+            value = apply(k, [python_to_json({"state": outcome.state, "result": outcome.result})])
+        elif op in ("Solve", "SolveTyped"):
+            problem, k = arg
+            p = to_problem(problem)
+            with tracer.span("solver.solve", solver=z3_solver.NAME, contraintes=len(p.constraints)):
+                solution = z3_solver.solve(p)
+            try:
+                with tracer.span("validator.check", checker="solver.assignment"):
                     checked = solution_value(p, solution)
-                except BridgeError as exc:
-                    raise EvaluationError(f"solution refusée par la vérification : {exc}") from exc
-                if op == "SolveTyped":
-                    value = apply(k, [checked])
-                    continue
-                answer: Value = NONE
-                if solution.status == "sat":
-                    answer = _some(
-                        from_iterable((n, float(x)) for n, x in solution.assignment.items())
-                    )
-                value = apply(k, [answer])
-            elif op == "Record":
-                key, payload, method, support, k = arg
+            except BridgeError as exc:
+                raise EvaluationError(f"solution refusée par la vérification : {exc}") from exc
+            if op == "SolveTyped":
+                value = apply(k, [checked])
+                continue
+            answer: Value = NONE
+            if solution.status == "sat":
+                answer = _some(from_iterable((n, float(x)) for n, x in solution.assignment.items()))
+            value = apply(k, [answer])
+        elif op == "Record":
+            key, payload, method, support, k = arg
+            with tracer.span("knowledge.resolve", operation="record"):
                 _record(kb, key, json_to_python(payload), method, support, generated=generated)
-                value = apply(k, [UNIT])
-            elif op == "Retract":
-                key, why, k = arg
-                if key not in kb.facts:
-                    raise EvaluationError(
-                        f"retrait d'un fait inconnu : {key}. Un fait ne se retire que s'il a "
-                        "été enregistré plus tôt dans la même procédure ; cette étape suppose "
-                        f"qu'une étape précédente l'a produit. {_known(kb)}"
-                    )
+            value = apply(k, [UNIT])
+        elif op == "Retract":
+            key, why, k = arg
+            if key not in kb.facts:
+                raise EvaluationError(
+                    f"retrait d'un fait inconnu : {key}. Un fait ne se retire que s'il a "
+                    "été enregistré plus tôt dans la même procédure ; cette étape suppose "
+                    f"qu'une étape précédente l'a produit. {_known(kb)}"
+                )
+            with tracer.span("knowledge.resolve", operation="retract"):
                 invalidated = kb.retract_source(kb.source_id(key), why)
-                value = apply(k, [from_iterable(invalidated)])
-            elif op == "Note":
-                text, k = arg
-                report.notes.append(text)
-                value = apply(k, [UNIT])
-            else:
-                raise EvaluationError(f"opération d'effet inconnue : {op}")
+            value = apply(k, [from_iterable(invalidated)])
+        elif op == "Note":
+            text, k = arg
+            report.notes.append(text)
+            value = apply(k, [UNIT])
         else:
-            report.result = json_to_python(to_json_value(value.arg))
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "rapport.json").write_text(
-        json.dumps(report.to_json(), indent=2, ensure_ascii=False, default=str), encoding="utf-8"
-    )
+            raise EvaluationError(f"opération d'effet inconnue : {op}")
+    else:
+        report.result = json_to_python(to_json_value(value.arg))
     return report
 
 

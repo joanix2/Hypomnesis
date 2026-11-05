@@ -45,6 +45,20 @@
     },
     "procedure": {
       "$ref": "#/$defs/program"
+    },
+    "tracing": {
+      "description": "Pure M2 functions whose actual full applications produce operation spans; no arguments or results are recorded.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "properties": {
+          "function": {"type": "string", "minLength": 1},
+          "operation": {"enum": ["estimator.predict", "validator.check", "knowledge.resolve"]}
+        },
+        "required": ["function", "operation"],
+        "additionalProperties": false
+      }
     }
   },
   "required": [

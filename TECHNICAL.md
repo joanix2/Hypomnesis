@@ -622,7 +622,7 @@ Guide de rechargement et inspection des scopes dans `editors/vscode/README.md`.
 Le parseur et les programmes sont inchangés ; l'arbitrage syntaxique de
 HYP-151 demeure humain, distinct de cette correction d'outillage.
 
-## Observabilité (HYP-015)
+## Observabilité (HYP-015/070)
 
 `src/hypomnesis/observability/trace.py` : la classe `Tracer` est une façade au-dessus du SDK
 OpenTelemetry (`opentelemetry-sdk`). Chaque instance possède son propre `TracerProvider` (jamais
@@ -630,7 +630,9 @@ de `set_tracer_provider` global) avec un `SimpleSpanProcessor(InMemorySpanExport
 et `export()` (clé `trace` de `rapport.json`) sont reconstruits depuis les spans terminés, triés
 par début. API : `span(nom, **attributs)` (gestionnaire de contexte ; le parent est la pile
 propre au `Tracer`, pas le contexte ambiant), `trace_id`, `spans`, `tree()`, `export()`,
-`current_context()`. Les identifiants sont exportés en hexadécimal (trace 32 caractères, span 16) ;
+`current_context()`. Le contexte actif et la pile sont des `ContextVar` :
+threads et tâches asynchrones ne partagent pas une pile mutable.
+Les identifiants sont exportés en hexadécimal (trace 32 caractères, span 16) ;
 le `trace_id` est fixé à la création du `Tracer` (générateur d'identifiants dédié). Les valeurs
 d'attributs non scalaires sont rendues par `repr`. Une exception ouvre le statut `error`
 (`StatusCode.ERROR`) puis est relancée.
@@ -639,7 +641,56 @@ d'attributs non scalaires sont rendues par `repr`. Une exception ouvre le statut
 message (§9.6, schéma `envelope-1.0.0.json`) ; hors d'un span, l'identifiant de span est nul et
 le drapeau d'échantillonnage éteint. `Tracer(enabled=False)` utilise `NoOpTracerProvider` : aucun
 span, aucun effet sur les connaissances (ADR 0005, test `tests/unit/test_trace.py`).
-Export OTLP vers un collecteur : HYP-070 (non fait ici, aucun accès réseau).
+HYP-070 ajoute `TraceConfig`, `Tracer.close()` et le protocole de contexte
+pour fermer les providers, y compris après échec. La CLI place le chargement
+M2, le parsing/typage M1 et la procédure sous une seule racine `hypomnesis.run`.
+`run_procedure(..., tracer=...)` accepte un traceur hôte : celui-ci garde la
+responsabilité de le fermer. Si une racine hôte est encore ouverte, appeler
+`report.write(out_dir)` après sa fermeture pour inclure cette racine terminée.
+Sans racine hôte, le rapport final est écrit automatiquement.
+
+La configuration se fait par API ou par environnement, également en CLI :
+
+```bash
+HYPOMNESIS_TELEMETRY=0 hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_120x80.hyp
+HYPOMNESIS_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318/v1/traces \
+  HYPOMNESIS_TELEMETRY_TIMEOUT=3 \
+  hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_120x80.hyp
+```
+
+Seuls `0`/`1` sont admis pour l'activation ; délai positif fini en secondes.
+Sans endpoint, aucun export réseau. Installer `.[telemetry]` pour OTLP HTTP
+(inclus dans dev pour ses tests). L'exporteur officiel utilise une session
+sans proxy d'environnement ni redirection, avec endpoint limité à localhost/
+127.0.0.1/::1. Une panne/refus du collecteur est journalisé par OTel et
+n'altère pas les résultats symboliques. Le format mémoire du rapport reste
+inchangé. Le délai borne chaque requête, pas la durée totale du pipeline.
+
+`trace_context()` sans argument renvoie le contexte actif. Les transports
+mémoire/fichier et les lectures de capteurs ajoutent le contexte à une copie
+de l'enveloppe sortante si absent, jamais au payload ni à l'objet d'origine.
+Le rejeu conserve un contexte déjà enregistré. `Tracer(parent_context=...)`
+extrait strictement un parent W3C et propage aussi tracestate. Un capteur
+répondant avec son propre contexte distant est lié au span de lecture ;
+un contexte distant sémantiquement invalide est signalé puis ignoré, sans
+réinterpréter son payload. Le contexte est de l'observabilité, pas une preuve.
+
+Les appels purs M2 sont déclarés dans `language.tracing` (fonction/opération) :
+instrumentation par identité de valeur dans `Interpreter.apply`, conservant
+partiels, aliases, champs de records et appels terminaux. Aucun nom métier
+n'est codé dans le moteur. Seules les fonctions explicitement configurées
+produisent ces spans, sans arguments/résultats. Les appels inexistants ne
+produisent aucun span fictif ; le lot sans LLM n'émet pas `llm.transcribe`.
+L'autorisation est distincte de l'exécution réelle dans Dispatcher ; le
+dry-run ne produit donc pas `actuator.execute`, et une commande dédupliquée
+ne rejoue ni exécution ni observation. Les vérifications de schéma/solveur,
+enregistrement/révision de connaissances et observation post-action sont
+instrumentés aux frontières réelles.
+
+Tests `test_trace_pipeline.py` : vrai protobuf OTLP reçu sur HTTP local,
+refus/redirection du collecteur, arbre du MVP sauvegardé, concurrence,
+propagation/rejeu et résultat identique avec ou sans export. Aucun service
+tiers n'est contacté par ces tests.
 
 ## Vérification formelle
 

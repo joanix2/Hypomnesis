@@ -37,3 +37,19 @@ L'inférence HM produit des schémas `∀ᾱ.τ`. Pour que le certificat reste v
 
 - `docs/specification/cahier-des-charges-v0.2.md`
 - Conventions et définition de fini : `.agentkanban/memory.md`
+
+### agent
+
+Plan P1 approuvé. Inventaire initial : `Ty`, `Sig`, `HasType`, `typeOf`
+et les certificats sont actuellement monomorphes. Le véritable `List.map`
+du prélude dépend de `rev` et `fold_left` ; prouver seulement une autre
+fonction map isolée ne satisfait pas le jalon. L'extension doit traiter
+les signatures de données paramétriques et réparer les preuves de
+filtrage/records/fuel couplées ; aucun changement partiel du noyau effectué.
+
+L'ordre du lot est ajusté pour livrer d'abord la chaîne indépendante
+d'observabilité HYP-070–073, sans faire dépendre ces tickets de HYP-023.
+HYP-023 reste à implémenter ; aucune monomorphisation présentée comme
+preuve du polymorphisme, aucun passage en QA.
+
+### user

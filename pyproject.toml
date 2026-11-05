@@ -30,6 +30,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+telemetry = [
+  "opentelemetry-exporter-otlp-proto-http>=1.25",
+]
 sklearn = [
   "scikit-learn>=1.4",
 ]
@@ -37,6 +40,7 @@ lsp = [
   "pygls>=2.0,<3",
 ]
 dev = [
+  "opentelemetry-exporter-otlp-proto-http>=1.25",
   "pygls>=2.0,<3",
   "pyyaml>=6",
   "pytest>=8",

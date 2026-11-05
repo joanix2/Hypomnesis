@@ -262,7 +262,7 @@ end
 ```
 
 - `version` est obligatoire. `description`, `imports`, `sources`, `adapters`, `contracts`,
-  `examples` et `procedure` sont optionnels. Les champs inconnus ou dupliqués sont refusés.
+  `examples`, `procedure` et `tracing` sont optionnels. Les champs inconnus ou dupliqués sont refusés.
 - Les données de configuration sont statiques : chaînes, entiers, booléens, listes
   séparées par `;`, records de champs `cle = valeur` (clés chaînes possibles).
   Aucune expression, fonction, interpolation ou import Python n'est évalué pour les lire.
@@ -282,6 +282,24 @@ end
   chargés dans l'ordre. Ces fichiers ne redéclarent pas de couche et doivent rester
   dans le paquet, comme les contrats, exemples et modules d'adaptateurs.
 - Sans `procedure`, la couche est une bibliothèque importable, pas un programme exécutable.
+
+`tracing` associe des fonctions pures du langage à des opérations observables :
+
+```ocaml
+let tracing = [
+  { function = "Calcul.estimer"; operation = "estimator.predict" };
+  { function = "Calcul.verifier"; operation = "validator.check" }
+]
+```
+
+Cette liaison appartient au bloc `language ... = struct ... end`.
+Les opérations admises sont `estimator.predict`, `validator.check` et
+`knowledge.resolve`. La fonction est vérifiée statiquement ; le span n'est
+ouvert que lors de son application complète, y compris via un alias ou un
+champ de record. Arguments et valeurs de retour ne sont pas collectés.
+Cette métadonnée ne donne aucune permission et ne lance aucun adaptateur.
+Les frontières d'effet (capteurs, solveur, actionneurs) sont instrumentées
+directement par le moteur, sans déclaration de fonction.
   Les configurations d'entrées/sorties ne sont pas héritées implicitement des imports.
 
 La forme extérieure à accolades est remplacée, sans compatibilité
