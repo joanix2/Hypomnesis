@@ -42,6 +42,7 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms Revision.invalidated_eq_full
 #print axioms Revision.revise_incr_eq_full
 #print axioms Revision.journal_prefix
+#print axioms Hypomnesis.Epistemics.Conflicts.no_false_conflict
 #print axioms Hypomnesis.Effects.dispatch_ordered
 #print axioms Hypomnesis.Effects.dispatch_permitted
 #print axioms Hypomnesis.Effects.no_dispatch_without_permission

@@ -51,6 +51,7 @@ la manière dont on peut en établir la validité.
 | P28 | `Problem.check_sound`, `check_complete` | une affectation est acceptée si et seulement si ses noms sont connus et si elle satisfait tous les domaines typés, bornes, choix et contraintes linéaires | §6 ; modèle HYP-053, correspondance Python testée ; ni optimalité ni unsat |
 | P29 | `Revision.candidate_complete`, `invalidated_eq_full`, `revise_incr_eq_full` | l'index inverse augmenté des provenances contenant zéro couvre toute invalidation ; la révision incrémentale donne le même état que l'évaluation exhaustive | §7.3 ; HYP-036, valeurs/contexte génériques inchangés, correspondance Python testée |
 | P30 | `Revision.journal_prefix` | toute révision acceptée prolonge exactement le journal précédent sans modifier aucune entrée | §7.3 ; modèle HYP-036, pas une preuve de durabilité SQLite |
+| P31 | `Conflicts.no_false_conflict` | tout rapport produit rend incompatibles les assertions actives et les contraintes fonctionnelles/invariants déclarés | §7.1 ; HYP-037, valeurs à égalité décidable et prédicats purs génériques ; pont Python testé |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -131,7 +132,7 @@ dédiées restent HYP-043.
 | | **révision incrémentale = recalcul complet** : invalider les candidats donne le même état qu'une évaluation exhaustive ; aucune règle n'est exécutée implicitement | ✅ P29 ; correspondance Python testée, pas de raffinement Python complet |
 | | conservation de l'historique : aucune révision ne détruit d'entrée du journal | ✅ P30 ; durabilité du stockage testée séparément |
 | statuts (§7.1) | monotonie du support | ✅ P12, P13 |
-| conflits | si le moteur signale `Conflict`, `⊥` est réellement dérivable (pas de faux conflit) | 🎯 F4 |
+| conflits | si le moteur signale `Conflict`, les assertions actives ne satisfont pas les contraintes déclarées (pas de faux conflit) | ✅ P31 pour le modèle ; pas de théorie logique universelle ni de raffinement Python complet |
 
 ### §8 — Procédural, déclaratif, transitions
 

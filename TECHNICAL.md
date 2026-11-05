@@ -186,6 +186,15 @@ retrait pour `ZERO + ONE`. Les termes non concernés sans zéro restent non
 160 cas réels Python/Lean comparent l'état et chaque champ du journal ;
 test obligatoire en CI des preuves et validation Lean/complète.
 
+HYP-037 : `formal/Hypomnesis/Epistemics/Conflicts.lean` prouve P31 :
+aucun rapport fonctionnel ou d'invariant sans incompatibilité avec les
+contraintes déclarées sur les assertions actives. Valeurs et prédicats
+génériques ; aucune confusion entre grade de support et cohérence.
+48 bases réelles × deux politiques comparent les rapports effacés au
+détecteur Lean ; égalité de snapshots explicitement projetée et vérifiée.
+La pureté/fidélité des prédicats hôte et de l'égalité Python reste une
+frontière, pas un théorème de théorie métier ou de raisonnement universel.
+
 HYP-032 : `epistemics/metavariables.py` ajoute `MetaVar` (TypeCodec fermé,
 contraintes nommées), `Proposal`, `propose`, `best`, `resolve` et `conflict`.
 Opérations persistantes ; toute nouvelle proposition rouvre la résolution.

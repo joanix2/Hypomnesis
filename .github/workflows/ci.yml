@@ -104,7 +104,7 @@ jobs:
       - name: Compare incremental revision and complete journals with Lean
         env:
           HYPOMNESIS_REQUIRE_LEAN: "1"
-        run: pytest ../tests/integration/test_revision_model.py
+        run: pytest ../tests/integration/test_revision_model.py ../tests/integration/test_conflicts_model.py
       - name: Reject sorry
         run: "! grep -rnwE 'sorry|admit' Hypomnesis"
       - name: Audit axioms

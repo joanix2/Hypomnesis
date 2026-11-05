@@ -369,6 +369,40 @@ faits, valeurs, provenances, inconnues, contexte et chaque champ du journal.
 Ce n'est pas une preuve du code Python, du stockage ou d'un moteur de
 recalcul de règles ; les règles doivent toujours être relancées explicitement.
 
+## Correction des rapports de conflits (HYP-037)
+
+Le modèle `formal/Hypomnesis/Epistemics/Conflicts.lean` réutilise les
+faits et la lecture booléenne de HYP-036. Il groupe les assertions actives
+des clés fonctionnelles et énumère les produits de faits requis par les
+invariants. Les rapports portent leurs véritables groupes ou tuples, pas
+un indicateur de confiance.
+
+La compatibilité est définie indépendamment du détecteur : toutes les
+assertions d'une clé déclarée fonctionnelle doivent avoir la même valeur ;
+chaque tuple d'assertions actives dont les clés correspondent à un invariant
+doit satisfaire ce prédicat. P31 prouve que **tout rapport calculé contredit
+cette compatibilité**. La preuve vérifie aussi l'appartenance des témoins et
+l'ordre des clés d'invariants ; une estimation faible ou une clé absente ne
+constitue pas une contradiction à elle seule.
+
+Les valeurs sont paramétrées par une projection et une égalité décidable,
+les invariants par des fonctions booléennes pures arbitraires. La preuve ne
+prétend pas établir la vérité d'une règle métier, la pureté d'un callback
+Python ou l'adéquation universelle de `Fact.same_value` à toute théorie
+d'égalité métier. Pour le pont exécutable, 48 bases réelles sont projetées
+sur les classes d'égalité de `Fact.same_value`, avec vérification de chaque
+paire, puis comparées sous les deux politiques : 96 comparaisons de rapports.
+Les instantanés et provenances restent distincts de cette projection de valeur.
+
+Le corpus couvre booléen/entier/flottant (dont les zéros signés), conteneurs,
+records nominaux, variants, observations successives, estimations, hypothèses,
+retraits, provenance alternative et ZERO/ONE. Les sources de provenance
+doivent toujours être déclarées dans l'API Python. Les champs de préférence,
+les contrôles incomplets et les libellés de sources ne sont pas un nouveau
+solveur dans le modèle : l'effacement comparé conserve type de conflit,
+règle et tous les faits témoins ; les citations sont testées dans HYP-035.
+Ni complétude d'un raisonneur universel ni preuve du code Python revendiquée.
+
 ## Chaînage avant et défauts (HYP-050)
 
 `engine.rules.Rule(name, target, premises, evaluate, default=False)` décrit
