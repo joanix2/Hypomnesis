@@ -48,8 +48,9 @@ cette propriété est déjà établie. Il reste à établir ce cas de base pour
 toutes les dérivations polymorphes. P44 établit désormais un cas de base
 vérifié : les constantes, conditions, paires, projections, opérations
 binaires, `let` monomorphes et certaines lambdas/applications monomorphes
-s'effacent en termes Core typés, puis `Core.eval_safe` garantit leur sûreté à
-tout budget. Pour les fermetures, le fragment impose l'égalité entre les
+s'effacent en termes Core typés ; les `fix` monomorphes et leurs fermetures
+récursives sont aussi couverts. `Core.eval_safe` garantit leur sûreté à tout
+budget. Pour les fermetures, le fragment impose l'égalité entre les
 effacements spécialisé et polymorphe du corps, afin que l'évaluateur réel
 stocke exactement le corps justifié par le typage. Une relation
 `RuntimeEnvRel` relie aussi les environnements de schémas monomorphes aux
@@ -57,8 +58,8 @@ valeurs Core pour ce fragment ; les variables à arguments de types vides sont
 donc prises en charge lorsque leur schéma est monomorphe, y compris dans le
 corps d'un `let` et les fermetures monomorphes peuvent capturer ces valeurs.
 La récursion, les motifs, les constructeurs paramétriques et les liaisons
-polymorphes multi-instanciées restent hors de ce pont ; P44 ne constitue pas
-encore la sûreté générale du polymorphisme de rang 1.
+polymorphes multi-instanciées ne sont couverts que hors ce cas monomorphe ;
+P44 ne constitue pas encore la sûreté générale du polymorphisme de rang 1.
 Indépendamment de cette preuve de fragment, P45 établit pour l'exemple concret
 du `let` identité partagé entre `int` et `bool` que l'exécution à fuel 20 rend
 une paire dans la relation Core `ValTy`. Cette régression n'est pas une

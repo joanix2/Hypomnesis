@@ -12,6 +12,25 @@ tags: [certification, lean, metalangage]
 
 ### user
 
+Poursuivre HYP-023 en étendant P44 à la récursion monomorphe.
+
+### agent
+
+`RuntimeFragment` accepte désormais les `fix` monomorphes lorsque le corps
+conserve le même effacement spécialisé et polymorphe. La preuve existante
+transfère le typage vers Core, puis réutilise `Core.eval_safe` sans modifier
+les garanties de fuel. La régression `eval_safe_recursiveCountdownApplication`
+prouve la sûreté à tout fuel d'une fonction récursive typée, et
+`eval_recursiveCountdownApplication` vérifie son résultat concret.
+
+Audit et catalogue P44, syntaxe et `TECHNICAL.md` sont synchronisés ; la
+checklist distingue cette récursion mono du pont polymorphe encore absent.
+La suite Lean ciblée compile. Les motifs/records/`Certified`, les schémas
+polymorphes multi-instanciés, le décodeur/CLI et le vrai `List.map` du prélude
+restent à faire. Aucun commit ni push pour cette étape.
+
+### user
+
 Poursuivre HYP-023 sur le pont de sûreté du runtime polymorphe.
 
 ### agent

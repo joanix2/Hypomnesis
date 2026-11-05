@@ -45,6 +45,9 @@ inductive RuntimeFragment : Expr → Prop where
   | lam {domain body} :
       RuntimeFragment body → body.eraseMono = body.erase →
       RuntimeFragment (.lam domain body)
+  | fix {domain codomain body} :
+      RuntimeFragment body → body.eraseMono = body.erase →
+      RuntimeFragment (.fix domain codomain body)
   | app {fn arg} : RuntimeFragment fn → RuntimeFragment arg → RuntimeFragment (.app fn arg)
   | ite {condition thenBranch elseBranch} :
       RuntimeFragment condition → RuntimeFragment thenBranch → RuntimeFragment elseBranch →
@@ -70,6 +73,8 @@ theorem Expr.eval_eraseMono_eq_erase (fuel : Nat) (env : List Core.Val)
   | var | int | bool | float | string | unit =>
     cases fuel <;> simp [Expr.eraseMono, Expr.erase, Core.eval]
   | lam bodyFragment bodyEraseEq =>
+    cases fuel <;> simp [Expr.eraseMono, Expr.erase, Core.eval, bodyEraseEq]
+  | fix bodyFragment bodyEraseEq =>
     cases fuel <;> simp [Expr.eraseMono, Expr.erase, Core.eval, bodyEraseEq]
   | app fnFragment argFragment ihFn ihArg =>
     cases fuel <;> simp [Expr.eraseMono, Expr.erase, Core.eval, ihFn, ihArg]
@@ -173,6 +178,20 @@ theorem HasType.erase_runtimeFragment {sig : Signature} {depth : Nat}
         · exact monoEnv scheme member
       have bodyTyped := ihBody bodyFragment monoBody
       simpa [Expr.eraseMono, mono, Ty.erase] using Core.HasType.lam bodyTyped
+  | fix hdomain hcodomain _body ihBody =>
+    rename_i depth' env' domain codomain body
+    cases fragment with
+    | fix bodyFragment _ =>
+      have monoBody :
+          MonoTyEnv (mono domain :: mono (.arrow domain codomain) :: env') := by
+        intro scheme member
+        simp only [List.mem_cons] at member
+        rcases member with rfl | rfl | member
+        · rfl
+        · rfl
+        · exact monoEnv scheme member
+      have bodyTyped := ihBody bodyFragment monoBody
+      simpa [Expr.eraseMono, mono, Ty.erase] using Core.HasType.fix bodyTyped
   | app _ _ ihFn ihArg =>
     cases fragment with
     | app fnFragment argFragment =>
@@ -218,7 +237,6 @@ theorem HasType.erase_runtimeFragment {sig : Signature} {depth : Nat}
         simpa [arity, TyEnv.weaken_zero] using h
       have bodyTyped := ihBody bodyFragment monoBody
       simpa [Expr.eraseMono] using Core.HasType.letE valueTyped bodyTyped
-  | fix => cases fragment
   | construct => cases fragment
   | case => cases fragment
   | fail => cases fragment
@@ -289,6 +307,53 @@ theorem eval_safe_capturedIntLambdaApp {sig : Signature} (fuel : Nat) :
 /-- Le corps appliqué retrouve bien la valeur capturée par la fermeture. -/
 theorem eval_capturedIntLambdaApp :
     Core.eval 20 [] capturedIntLambdaApp.erase = .ok (.int 11) := by
+  rfl
+
+/-- Récursion entière monomorphe utilisant le compteur et la fonction liée. -/
+def recursiveCountdown : Expr :=
+  .fix .int .int
+    (.ite (.binop .eq (.var 0 []) (.int 0))
+      (.int 0)
+      (.app (.var 1 []) (.binop .sub (.var 0 []) (.int 1))))
+
+def recursiveCountdownApplication : Expr :=
+  .app recursiveCountdown (.int 3)
+
+theorem eval_safe_recursiveCountdownApplication {sig : Signature} (fuel : Nat) :
+    Core.Safe [] (Core.eval fuel [] recursiveCountdownApplication.erase) .int := by
+  have typed : HasType sig 0 [] recursiveCountdownApplication .int := by
+    have hN :
+        HasType sig 0 [mono .int, mono (.arrow .int .int)] (.var 0 []) .int := by
+      exact .var rfl (by simp [mono, Scheme.instantiate, Ty.subst])
+        (by simp)
+    have hRecursive :
+        HasType sig 0 [mono .int, mono (.arrow .int .int)]
+          (.var 1 []) (.arrow .int .int) := by
+      exact .var (by rfl)
+        (by simp [mono, Scheme.instantiate, Ty.subst])
+        (by simp)
+    apply HasType.app
+    · apply HasType.fix
+      · simp [Ty.wellScoped]
+      · simp [Ty.wellScoped]
+      · apply HasType.ite
+        · exact HasType.binop (op := .eq) hN .int
+        · exact .int
+        · exact HasType.app hRecursive (HasType.binop (op := .sub) hN .int)
+    · exact .int
+  have fragment : RuntimeFragment recursiveCountdownApplication := by
+    apply RuntimeFragment.app
+    · apply RuntimeFragment.fix
+      · apply RuntimeFragment.ite
+        · exact .binop (.var 0) (.int 0)
+        · exact .int 0
+        · exact RuntimeFragment.app (.var 1) (.binop (.var 0) (.int 1))
+      · rfl
+    · exact .int 3
+  exact eval_safe_monoLetRuntimeFragment RuntimeEnvRel.nil typed fragment fuel
+
+theorem eval_recursiveCountdownApplication :
+    Core.eval 100 [] recursiveCountdownApplication.erase = .ok (.int 0) := by
   rfl
 
 /-- Le `let` monomorphe inutilisé reste également sûr à tout fuel. -/

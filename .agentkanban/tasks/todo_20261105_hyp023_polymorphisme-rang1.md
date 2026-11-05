@@ -61,11 +61,12 @@ tags: [certification, lean, metalangage]
 - [x] Étendre le pont aux `let` monomorphes inutilisés, avant d'ajouter la lecture de variables, et prouver la sûreté du véritable évaluateur à tout fuel.
 - [x] Étendre le fragment aux lectures de variables sous schémas d'arité zéro et ajouter une régression d'un `let` mono utilisé.
 - [x] Étendre le fragment aux lambdas et applications monomorphes, préserver l'évaluation des fermetures et prouver un cas de capture lexicale.
+- [x] Étendre le fragment aux fermetures récursives monomorphes et prouver la sûreté à tout fuel d'un compte à rebours typé.
 - [x] Vérifier la sûreté de la valeur concrète produite par le `let` identité utilisé à `int` et `bool` à fuel fixé, sans la présenter comme un théorème général.
 - [x] Ajouter un terme récursif `List.map`-équivalent vérifié puis exécuté avec deux instanciations dans un programme Lean.
 - [x] Définir la relation `RuntimeEnvRel` entre valeurs Core et environnements de schémas monomorphes d'arité zéro.
 - [x] Prouver la sûreté à fuel arbitraire pour le véritable `Core.eval` sur le fragment runtime monomorphe borné, en préservant timeout/erreur/matchFail.
 - [ ] Définir une relation polymorphe de valeurs et d'environnements qui interprète les schémas sous toutes leurs instanciations, y compris les fermetures polymorphes.
 - [ ] Étendre la sûreté à fuel arbitraire au fragment polymorphe général, sans réduire la sûreté des motifs, records, couverture certifiée ou fuel.
-- [ ] Réutiliser ou généraliser les preuves de motifs (`matchPat_sound`), records, `Coverage.Certified` et fermeture récursive sans affaiblir leurs garanties.
+- [ ] Étendre le pont aux motifs, records et `Coverage.Certified` sans affaiblir les garanties existantes.
 - [ ] Ajouter l'audit d'axiomes, les régressions de let-polymorphe multi-instancié et de données paramétriques, puis documenter le pont prouvé.

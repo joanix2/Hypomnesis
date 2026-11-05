@@ -44,9 +44,10 @@ runtime monomorphe, `Poly.Expr.eraseMono` conserve les annotations lambda ;
 `PolySoundness.Expr.eval_eraseMono_eq_erase` prouve l'égalité d'évaluation au
 véritable `Core.eval` quand le corps des fermetures a le même effacement.
 Le pont de sûreté couvre les variables à arguments de types vides, les `let`
-monomorphes et les lambdas/applications monomorphes ; les fonctions récursives,
-les données paramétriques et les termes polymorphes multi-instanciés restent
-hors preuve.
+monomorphes, les lambdas/applications monomorphes et les fermetures récursives
+monomorphes. Il reste limité aux schémas d'arité zéro et aux fragments dont les
+fermetures ont le même effacement ; les données paramétriques et les termes
+polymorphes multi-instanciés restent hors preuve.
 
 Scalaires (HYP-150). Float est binary64 (modèle logique Lean 4.35), String est
 Unicode. BinOp fixe domaines et résultats ; raise produit une erreur explicite.

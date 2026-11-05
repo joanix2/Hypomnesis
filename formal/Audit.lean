@@ -46,6 +46,8 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms Poly.eval_safe_discardedIntLet
 #print axioms Poly.eval_safe_capturedIntLambdaApp
 #print axioms Poly.eval_capturedIntLambdaApp
+#print axioms Poly.eval_safe_recursiveCountdownApplication
+#print axioms Poly.eval_recursiveCountdownApplication
 #print axioms Poly.typeOfAux_sound
 #print axioms Poly.typeOf_sound
 #print axioms Poly.typeOf_complete
