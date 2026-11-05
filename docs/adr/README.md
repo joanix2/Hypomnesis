@@ -20,3 +20,4 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0013](0013-couches-declarees-en-hypomnesis.md) | Couches déclarées en Hypomnesis, imports DAG et I/O décorées | Acceptée |
 | [0014](0014-backend-scientifique-optionnel.md) | Backend scientifique optionnel | Proposée pour revue (HYP-054 en QA) |
 | [0016](0016-declarations-language-struct.md) | Déclarations language avec struct / let / end | Acceptée ; remplace la syntaxe de 0013 |
+| [0017](0017-imports-locaux-python.md) | Imports locaux avec syntaxe Python | Acceptée |

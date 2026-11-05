@@ -63,6 +63,25 @@ exports.run = async () => {
   restore.replace(declaration.uri, new vscode.Range(0, 0, declaration.lineCount, 0), original);
   assert(await vscode.workspace.applyEdit(restore));
   await waitFor(() => vscode.languages.getDiagnostics(declaration.uri).length === 0);
-  console.log("Hypomnesis Extension Host: association, activation, grammar scopes, diagnostics, legacy rejection and correction OK");
+  const imports = new vscode.WorkspaceEdit();
+  imports.replace(uri, new vscode.Range(0, 0, document.lineCount, 0),
+    "import units\nlet answer = units.mm 41 + 1\n");
+  assert(await vscode.workspace.applyEdit(imports));
+  const dependency = await vscode.workspace.openTextDocument(
+    vscode.Uri.joinPath(folder.uri, "units.hyp"),
+  );
+  const changeDependency = new vscode.WorkspaceEdit();
+  changeDependency.replace(dependency.uri, new vscode.Range(0, 0, dependency.lineCount, 0),
+    "(** Boolean. *)\nlet mm x = true\n");
+  assert(await vscode.workspace.applyEdit(changeDependency));
+  await waitFor(() => vscode.languages.getDiagnostics(uri).some(
+    diagnostic => diagnostic.source === "hypomnesis" && diagnostic.code === "type",
+  ));
+  const useImported = new vscode.WorkspaceEdit();
+  useImported.replace(uri, new vscode.Range(0, 0, document.lineCount, 0),
+    "import units\nlet answer = units.mm 41 && true\n");
+  assert(await vscode.workspace.applyEdit(useImported));
+  await waitFor(() => vscode.languages.getDiagnostics(uri).length === 0);
+  console.log("Hypomnesis Extension Host: association, activation, scopes, legacy rejection, imports and unsaved dependency OK");
   fs.writeFileSync(process.env.HYPOMNESIS_TEST_RESULT, "passed");
 };

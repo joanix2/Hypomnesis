@@ -164,3 +164,28 @@ def test_library_and_top_level_values_are_publishable(tmp_path):
     assert "Bibliothèque sans procédure" in result.render()
     assert result.modules[0].values[0].path == "identite"
     assert result.modules[0].values[0].signature == "'a -> 'a"
+
+
+def test_imported_file_catalogue_uses_public_aliases_and_transitive_docs(tmp_path):
+    (tmp_path / "langage.hyp").write_text(
+        'language racine = struct let version = "1" end\n'
+        "import units as mesures\nfrom units import mm as millimetres"
+    )
+    (tmp_path / "base.hyp").write_text("(** Valeur de référence. *)\nlet valeur = 42")
+    (tmp_path / "units.hyp").write_text(
+        "import base\n(** Conversion en millimètres. *)\nlet mm x = x\n"
+        "(** Unité nominale. *)\ntype t =\n  (** Unité. *)\n  | U\n"
+        "(** Valeur nominale. *)\nlet valeur = U\n"
+        "(** Longueurs. *)\nmodule Length = struct\n"
+        "  (** Identité. *)\n  let identite x = x\nend"
+    )
+    language = load_language(tmp_path, execute=False)
+    result = catalogue(language)
+    values = {v.path: v for module in result.modules for v in module.values}
+    assert values["mesures.mm"].signature == "'a -> 'a"
+    assert values["millimetres"].signature == "'a -> 'a"
+    assert values["mesures.Length.identite"].signature == "'a -> 'a"
+    assert values["mesures.valeur"].signature == "mesures.t"
+    assert values["mesures.base.valeur"].signature == "int"
+    assert "référence" in values["mesures.base.valeur"].summary
+    result.to_json()

@@ -36,7 +36,7 @@ def registry() -> SchemaRegistry:
 def session_for(paths: list[Path]) -> Session:
     session = Session()
     for path in paths:
-        session.load(path.read_text())
+        session.load(path.read_text(), filename=str(path))
     return session
 
 

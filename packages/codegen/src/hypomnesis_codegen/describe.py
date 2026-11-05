@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import textwrap
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from jinja2 import Environment, PackageLoader
@@ -20,7 +20,13 @@ from jinja2 import Environment, PackageLoader
 from hypomnesis.contracts.registry import SchemaRegistry
 from hypomnesis.engine.language import Language
 from hypomnesis.engine.registry import ExtensionRegistry
-from hypomnesis.language.docs import Declaration, Doc, declarations, is_public, published
+from hypomnesis.language.docs import (
+    Declaration,
+    Doc,
+    declarations_with_imports,
+    is_public,
+    published,
+)
 
 # Display labels of the tag vocabulary; an unknown tag is shown under its own name.
 TAG_LABELS = {
@@ -123,8 +129,12 @@ def _parts(doc: Doc | None, member: bool = False) -> tuple[str, tuple[tuple[str,
 def catalogue(language: Language, *, plugins: ExtensionRegistry | None = None) -> Catalogue:
     """The documented, public face of a language."""
     found: list[Declaration] = []
+    imports = dict(language.session.imported_sources)
     for source in language.plan.source_files():
-        found += declarations(source.text)
+        if source.path in imports:
+            imports[source.path] = replace(imports[source.path], text=source.text)
+    for source in language.plan.source_files():
+        found += declarations_with_imports(source.text, source.path, imports)
 
     modules: list[ModuleDoc] = []
     shown = published(found)

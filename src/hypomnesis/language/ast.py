@@ -270,6 +270,13 @@ class Item(Node):
     pass
 
 
+@dataclass(frozen=True)
+class ImportItem(Item):
+    path: str
+    member: str | None = None
+    alias: str | None = None
+
+
 ConfigValue: TypeAlias = str | int | bool | list["ConfigValue"] | dict[str, "ConfigValue"]
 
 

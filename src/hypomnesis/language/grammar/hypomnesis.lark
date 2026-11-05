@@ -10,6 +10,8 @@ _item: let_item
      | open_item
      | external_item
      | language_item
+     | import_item
+     | from_import_item
 
 // ---------------------------------------------------------------- items
 
@@ -28,7 +30,12 @@ config_field: config_key "=" config_value
 let_item: "let" [REC] binding ("and" binding)*
 type_item: "type" type_def ("and" type_def)*
 module_item: "module" UPATH "=" "struct" _item* "end"
-open_item: "open" UPATH
+open_item: "open" module_path
+import_item: "import" import_path ["as" import_name]
+from_import_item: "from" import_path "import" import_name ["as" import_name]
+import_path: IMPORT_PATH
+import_name: LIDENT | UPATH
+module_path: UPATH | IMPORT_CTOR | IMPORT_PATH
 external_item: "external" value_name ":" type_expr "=" STRING
 
 value_name: LIDENT
@@ -110,6 +117,7 @@ arm: pattern ["when" expr] "->" expr
      | LIDENT                                             -> var
      | QLIDENT                                            -> var
      | UPATH                                              -> ctor
+     | IMPORT_CTOR                                        -> ctor
      | "(" operator ")"                                   -> op_var
      | "(" expr ")"
      | "(" expr ":" type_expr ")"                         -> annot
@@ -120,6 +128,7 @@ arm: pattern ["when" expr] "->" expr
 
 field_assign: field_name "=" expr
 field_name: LIDENT | QLIDENT
+          | IMPORT_FIELD
 
 // ------------------------------------------------------------- patterns
 
@@ -136,11 +145,13 @@ field_name: LIDENT | QLIDENT
          | pat_app
 
 ?pat_app: UPATH pat_atom                                  -> pctor_arg
+        | IMPORT_CTOR pat_atom                            -> pctor_arg
         | pat_atom
 
 ?pat_atom: "_"                                            -> pwild
          | LIDENT                                         -> pvar
          | UPATH                                          -> pctor
+         | IMPORT_CTOR                                    -> pctor
          | INT                                            -> pint
          | MINUS INT                                      -> pnegint
          | FLOAT                                          -> pfloat
@@ -174,6 +185,7 @@ field_pat: field_name ["=" pattern]
           | "(" type_expr ")"
 
 type_name: LIDENT | QLIDENT
+         | LIDENT "." type_name                           -> qualified_name
 
 type_def: [type_params] LIDENT "=" type_rhs
 type_params: TYVAR
@@ -218,6 +230,9 @@ SLASH: "/"
 MOD: "mod"
 
 QLIDENT.2: /([A-Z][A-Za-z0-9_']*\.)+[a-z_][A-Za-z0-9_']*/
+IMPORT_CTOR.3: /([a-z_][A-Za-z0-9_']*\.)+[A-Z][A-Za-z0-9_']*(\.[A-Z][A-Za-z0-9_']*)*(?![A-Za-z0-9_']|\.[a-z_])/
+IMPORT_FIELD.3: /([a-z_][A-Za-z0-9_']*\.)+([A-Z][A-Za-z0-9_']*\.)*[a-z_][A-Za-z0-9_']*/
+IMPORT_PATH.-1: /[a-z_][A-Za-z0-9_']*(\.[a-z_][A-Za-z0-9_']*)*/
 UPATH: /[A-Z][A-Za-z0-9_']*(\.[A-Z][A-Za-z0-9_']*)*/
 LIDENT: /[a-z][A-Za-z0-9_']*|_[A-Za-z0-9_']+/
 TYVAR: /'[a-z_][A-Za-z0-9_']*/

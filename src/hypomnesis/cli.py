@@ -46,9 +46,9 @@ def _load_files(
                 result = None
             else:
                 result = (
-                    session.load_program(program, filename=str(path))
+                    session.load_program(program, filename=str(path), source_text=source)
                     if execute
-                    else session.check_program(program, filename=str(path))
+                    else session.check_program(program, filename=str(path), source_text=source)
                 )
         except HypomnesisError as exc:
             if as_json:
@@ -289,6 +289,7 @@ def _lancer(
                     environment=_pairs(env),
                     permissions=frozenset() if sans_permission else None,
                     generated=generated or (programme is None and demande is not None),
+                    filename=str(programme) if programme is not None else None,
                 )
         if missing_program:
             message = "un programme M1 ou une --demande transcriptible est requis"

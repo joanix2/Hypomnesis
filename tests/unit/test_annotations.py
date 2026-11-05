@@ -10,7 +10,7 @@ from hypomnesis.language.typesystem.annotations import annotation_problems, free
 from hypomnesis.language.typesystem.infer import Checker
 from hypomnesis.language.typesystem.types import TypePrinter
 from hypomnesis.runtime.natives import default_registry
-from hypomnesis.session import prelude_source
+from hypomnesis.session import Session, prelude_source
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "demo" / "examples"
 # Ordre de chargement : plate.hyp utilise les modules de units.hyp.
@@ -55,10 +55,12 @@ def nodes(e: object, kind: type) -> list:
 
 
 def test_prelude_and_examples_are_fully_annotated():
-    c = Checker(default_registry().arities())
-    sources = [prelude_source()] + [p.read_text() for p in EXAMPLE_FILES]
-    for source in sources:
-        assert annotation_problems(c.check_program(parse_program(source)).definitions) == []
+    session = Session(execute_prelude=False)
+    assert annotation_problems(session.definitions) == []
+    for path in EXAMPLE_FILES:
+        before = len(session.definitions)
+        session.check(path.read_text(), filename=str(path))
+        assert annotation_problems(session.definitions[before:]) == []
 
 
 def test_lambda_parameters_carry_their_types(checker):

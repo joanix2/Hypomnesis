@@ -1,5 +1,9 @@
-(* Section 4.2 of the specification: a plate described in a domain module.
-   Requires units.hyp:  hypomnesis run demo/examples/mechanics/units.hyp demo/examples/mechanics/plate.hyp *)
+(* Section 4.2 of the specification: a plate described in a domain module. *)
+
+from units import Length
+from units import Area
+from units import Volume
+from units import Dimensions
 
 module Mechanics = struct
 

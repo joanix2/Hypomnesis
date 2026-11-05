@@ -68,6 +68,23 @@ Briques M3 utilisées par l'interpréteur : `epistemics/` (provenance, connaissa
 
 ### Déclarations natives et couches (HYP-147/151, ADR 0013/0016)
 
+HYP-011 / ADR 0017 ajoute les imports locaux `import`, `from`, `as` (sans
+étoile). `Session` résout les chemins relativement au fichier source et
+partage les espaces de noms par chemin canonique. Le typeur élabore les
+dépendances dans des frames isolées avec le seul prélude ; alias, types et
+constructeurs gardent leur identité. Les imports restent des opérations
+de compilation vers les définitions Core existantes, pas une nouvelle IR.
+Les imports de sources M2 sont confinés au paquet et les overlays LSP se
+propagent transitivement ; le catalogue projette la documentation sous
+les noms publics. Les avertissements conservent le fichier importé.
+
+Les caches d'import sont transactionnels pour les erreurs d'analyse.
+Une session statique peut ensuite exécuter les définitions importées non
+encore évaluées, sans les dupliquer dans les certificats. Après un échec
+d'exécution impliquant ces définitions, la réutilisation exige une nouvelle
+session afin de ne pas rejouer automatiquement des effets partiels.
+`execute_prelude=False` prépare aussi le prélude sans l'évaluer.
+
 Le fichier d'entrée `.hyp`, par convention `langage.hyp`, commence par
 `language nom = struct let version = "1" let imports = ["../base"] end`.
 HYP-151 remplace la forme extérieure à accolades : le parseur la refuse

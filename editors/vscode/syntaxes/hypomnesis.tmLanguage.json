@@ -6,6 +6,7 @@
     {"include": "#comment"},
     {"include": "#string"},
     {"include": "#language-declaration"},
+    {"include": "#file-import"},
     {"include": "#type-declaration"},
     {"include": "#keywords"},
     {"include": "#numbers"},
@@ -16,6 +17,13 @@
     {"name": "punctuation.section.hypomnesis", "match": "[()\\[\\]{};,\\.]"}
   ],
   "repository": {
+    "file-import": {
+      "match": "\\b(import|from)[ \\t]+([a-z_][A-Za-z0-9_']*(?:\\.[a-z_][A-Za-z0-9_']*)*)",
+      "captures": {
+        "1": {"name": "keyword.control.hypomnesis"},
+        "2": {"name": "entity.name.namespace.hypomnesis"}
+      }
+    },
     "language-declaration": {
       "name": "meta.language.hypomnesis",
       "begin": "\\b(language)\\s+([a-z_][A-Za-z0-9_']*)",
@@ -114,7 +122,7 @@
     },
     "keywords": {
       "name": "keyword.control.hypomnesis",
-      "match": "\\b(?:and|as|else|end|external|false|fun|function|if|in|language|let|match|mod|module|of|open|rec|struct|then|true|type|when|with)\\b"
+      "match": "\\b(?:and|as|else|end|external|false|from|fun|function|if|import|in|language|let|match|mod|module|of|open|rec|struct|then|true|type|when|with)\\b"
     },
     "numbers": {
       "name": "constant.numeric.hypomnesis",

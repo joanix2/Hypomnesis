@@ -18,6 +18,7 @@ class Client:
             stderr=subprocess.PIPE,
         )
         self.messages = queue.Queue()
+        self.pending_messages = []
         self.thread = threading.Thread(target=self.read, daemon=True)
         self.thread.start()
         self.send(
@@ -59,10 +60,14 @@ class Client:
         self.process.stdin.flush()
 
     def wait(self, predicate):
+        for index, message in enumerate(self.pending_messages):
+            if predicate(message):
+                return self.pending_messages.pop(index)
         while True:
             message = self.messages.get(timeout=15)
             if predicate(message):
                 return message
+            self.pending_messages.append(message)
 
     def diagnostics(self, uri, version):
         return self.wait(
@@ -251,4 +256,20 @@ def test_imported_language_declaration_overlay_rechecks_its_users(client, tmp_pa
     [issue] = client.diagnostics(uri, 1)
     assert issue["code"] == "type"
     client.change(dependency, initial, 3)
+    assert client.diagnostics(uri, 1) == []
+
+
+def test_file_imports_follow_transitive_unsaved_dependencies(client, tmp_path):
+    base = tmp_path / "base.hyp"
+    base.write_text("let x = 1")
+    (tmp_path / "middle.hyp").write_text("import base\nlet x = base.x")
+    uri = (tmp_path / "main.hyp").as_uri()
+    dependency = base.as_uri()
+    client.open(uri, "import middle\nlet answer = middle.x + 1")
+    assert client.diagnostics(uri, 1) == []
+    client.open(dependency, "let x = true")
+    assert client.diagnostics(dependency, 1) == []
+    [issue] = client.diagnostics(uri, 1)
+    assert issue["code"] == "type"
+    client.change(dependency, "let x = 42", 2)
     assert client.diagnostics(uri, 1) == []

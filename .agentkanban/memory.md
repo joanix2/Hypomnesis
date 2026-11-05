@@ -36,6 +36,17 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
 - `engine/layers.py` partage le plan avec CLI, LSP (overlays transitifs) et Codegen ; les
   configurations I/O et permissions des dépendances ne sont jamais héritées implicitement.
 
+## Imports de fichiers (ADR 0017, HYP-011)
+
+- Syntaxe Python limitée aux imports : `import units`, `import physique.units as mesures`,
+  `from units import mm as millimetres`. Les autres constructions restent fonctionnelles.
+- Résolution relative au fichier importeur, cache par chemin canonique et session,
+  cycles refusés ; `open` ouvre un module chargé et ne lit aucun fichier.
+- Les fichiers importés sont isolés (prélude et leurs propres imports), les alias
+  partagent les mêmes identités typées. Le mode statique ne lance aucune définition.
+- Les API de chargement depuis une chaîne acceptent `filename` ; sans origine, pas
+  d'import relatif. Les programmes M1 de `lancer` conservent leur chemin d'origine.
+
 ## Génération de programmes (ADR 0012, HYP-146)
 
 - Distribution optionnelle `hypomnesis-codegen` sous `packages/codegen/`, module Python

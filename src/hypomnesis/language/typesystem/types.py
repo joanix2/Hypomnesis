@@ -211,8 +211,9 @@ def arity_of(t: Type) -> int:
 class TypePrinter:
     """Prints types OCaml-style, naming variables 'a, 'b, ... consistently."""
 
-    def __init__(self) -> None:
+    def __init__(self, type_names: dict[str, str] | None = None) -> None:
         self._names: dict[object, str] = {}
+        self._type_names = type_names or {}
 
     def _var_name(self, key: object) -> str:
         if key not in self._names:
@@ -240,7 +241,7 @@ class TypePrinter:
         if t.name == TUPLE:
             text = " * ".join(self._show(a, 2) for a in t.args)
             return f"({text})" if prec > 1 else text
-        name = t.name.split("#", 1)[0]  # redefinitions get a "#n" suffix
+        name = self._type_names.get(t.name, t.name.split("#", 1)[0])
         if not t.args:
             return name
         if len(t.args) == 1:

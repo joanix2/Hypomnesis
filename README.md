@@ -90,10 +90,15 @@ python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 
 hypomnesis run demo/examples/basics/tour.hyp
-hypomnesis run demo/examples/mechanics/units.hyp demo/examples/mechanics/plate.hyp
-hypomnesis check demo/examples/mechanics/units.hyp demo/examples/mechanics/plate.hyp
+hypomnesis run demo/examples/mechanics/plate.hyp
+hypomnesis check demo/examples/mechanics/plate.hyp
 hypomnesis repl
 ```
+
+Les fichiers déclarent leurs dépendances avec une syntaxe d'import Python :
+`import units`, `from units import Length`, ou `from units import mm as millimetres`.
+Le reste du langage conserve sa syntaxe fonctionnelle. Résolution locale relative
+au fichier, cycles refusés, imports partagés ; `open` ne charge pas de fichier.
 
 Le backend de régression est optionnel : `pip install -e '.[sklearn]'`.
 La suite complète de développement demande `pip install -e '.[dev,sklearn]'`

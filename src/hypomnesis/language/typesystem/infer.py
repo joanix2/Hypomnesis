@@ -8,7 +8,7 @@ phrases are layered). A failed phrase leaves the environment untouched.
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 
 from hypomnesis.ir import core as ir
@@ -164,7 +164,9 @@ class Checker:
         self._new_values: list[ValueInfo] = []
         self._new_types: list[TypeInfo] = []
         self._match_sites: list[MatchSite] = []
+        self._match_filenames: dict[int, str] = {}
         self.types_by_qname: dict[str, TypeInfo] = {}
+        self.import_loader: Callable[[A.ImportItem], Namespace] | None = None
         self._install_builtins()
 
     def _install_builtins(self) -> None:
@@ -189,6 +191,7 @@ class Checker:
         saved = self._snapshot()
         self._definitions, self._new_values, self._new_types = [], [], []
         self._match_sites = []
+        self._match_filenames = {}
         try:
             for item in program.items:
                 self._annot_vars = {}
@@ -196,7 +199,9 @@ class Checker:
             close(self._definitions)
             coverage = Coverage(self.types_by_qname)
             warnings = [
-                warning for site in self._match_sites for warning in coverage.warnings(site)
+                CompilerWarning(warning.message, warning.span, self._match_filenames.get(id(site)))
+                for site in self._match_sites
+                for warning in coverage.warnings(site)
             ]
         except BaseException:
             self._restore(saved)
@@ -218,14 +223,15 @@ class Checker:
     def _snapshot(self):
         namespaces = (self.root, self.frames[0].visible)
         tables = [{k: copy.copy(v) for k, v in ns.__dict__.items()} for ns in namespaces]
-        return namespaces, tables, set(self.used_qnames)
+        return namespaces, tables, set(self.used_qnames), dict(self.types_by_qname)
 
     def _restore(self, saved) -> None:
-        namespaces, tables, used = saved
+        namespaces, tables, used, types = saved
         del self.frames[1:]
         for ns, table in zip(namespaces, tables, strict=True):
             ns.__dict__.update(table)
         self.used_qnames = used
+        self.types_by_qname = types
 
     # ------------------------------------------------------- name lookup
 
@@ -262,7 +268,7 @@ class Checker:
         return module
 
     def _lookup(self, kind: str, path: str, span: Span | None, label: str):
-        if path[0].isupper() and "." in path:  # operators such as `+.` are not paths
+        if "." in path and (path[0].isalpha() or path[0] == "_"):
             module_path, name = path.rsplit(".", 1)
             table = getattr(self._lookup_module(module_path, span), kind)
             if name in table:
@@ -273,6 +279,80 @@ class Checker:
                 if path in table:
                     return table[path]
         raise NameResolutionError(f"unbound {label} {path}", span)
+
+    def check_imported_program(
+        self, program: A.Program, namespace: Namespace, prelude: Namespace, filename: str
+    ) -> None:
+        """Elaborate one file with only the prelude and its own declared imports visible."""
+        frames = self.frames
+        visible = Namespace(namespace.path)
+        visible.merge(prelude)
+        self.frames = [Frame(namespace, visible)]
+        start = len(self._match_sites)
+        try:
+            for item in program.items:
+                self._annot_vars = {}
+                self._check_item(item)
+            for site in self._match_sites[start:]:
+                self._match_filenames.setdefault(id(site), filename)
+        finally:
+            self.frames = frames
+
+    def _check_import(self, item: A.ImportItem) -> None:
+        if self.import_loader is None:
+            raise NameResolutionError("file imports require a source filename", item.span)
+        namespace = self.import_loader(item)
+        kinds = ("values", "types", "ctors", "fields", "modules")
+        if item.member is not None:
+            name = item.alias or item.member
+            matches = [
+                (kind, getattr(namespace, kind)[item.member])
+                for kind in kinds
+                if item.member in getattr(namespace, kind)
+            ]
+            if not matches:
+                raise NameResolutionError(
+                    f"module {item.path} has no exported member {item.member}", item.span
+                )
+            for kind, _ in matches:
+                if (kind in ("values", "types") and name[0].isupper()) or (
+                    kind == "ctors" and not name[0].isupper()
+                ):
+                    raise NameResolutionError(
+                        f"alias {name} has incompatible capitalization for {kind}", item.span
+                    )
+            for kind, value in matches:
+                other = "modules" if kind == "values" else "values" if kind == "modules" else None
+                if other is not None and name in getattr(self._frame.visible, other):
+                    raise NameResolutionError(f"import collision for {name}", item.span)
+                existing = getattr(self._frame.visible, kind).get(name)
+                if existing is not None and existing is not value:
+                    raise NameResolutionError(f"import collision for {name} ({kind})", item.span)
+            for kind, value in matches:
+                getattr(self._frame.visible, kind)[name] = value
+                getattr(self._frame.exports, kind)[name] = value
+            return
+        parts = (item.alias or item.path).split(".")
+        visible, exports = self._frame.visible, self._frame.exports
+        for segment in parts[:-1]:
+            if segment in visible.values:
+                raise NameResolutionError(f"import collision for {segment}", item.span)
+            existing = visible.modules.get(segment)
+            if existing is not None and existing.path != f"$package:{segment}":
+                raise NameResolutionError(f"import collision for module {segment}", item.span)
+            wrapper = Namespace(f"$package:{segment}")
+            if existing is not None:
+                wrapper.merge(existing)
+            visible.modules[segment] = wrapper
+            exports.modules[segment] = wrapper
+            visible = exports = wrapper
+        name = parts[-1]
+        if name in visible.values:
+            raise NameResolutionError(f"import collision for {name}", item.span)
+        existing = visible.modules.get(name)
+        if existing is not None and existing is not namespace:
+            raise NameResolutionError(f"import collision for module {name}", item.span)
+        visible.modules[name] = exports.modules[name] = namespace
 
     def _define_value(self, name: str, qname: str, scheme: Scheme) -> ValueInfo:
         info = ValueInfo(name, qname, scheme)
@@ -289,7 +369,9 @@ class Checker:
     # -------------------------------------------------------------- items
 
     def _check_item(self, item: A.Item) -> None:
-        if isinstance(item, A.LetItem):
+        if isinstance(item, A.ImportItem):
+            self._check_import(item)
+        elif isinstance(item, A.LetItem):
             self._check_let_item(item)
         elif isinstance(item, A.TypeItem):
             self._check_type_item(item)
@@ -784,6 +866,27 @@ class Checker:
         return record_t, ir.RecordUpdate(base, tuple(seen.items()))
 
     def _infer_Field(self, e: A.Field, env: Env, level: int):
+        if "." in e.name and not e.name[0].isupper():
+            expr = e.expr
+            for name in e.name.split("."):
+                expr = A.Field(expr, name, span=e.span)
+            return self.infer(expr, env, level)
+        parts = [e.name]
+        base = e.expr
+        while isinstance(base, A.Field):
+            parts.append(base.name)
+            base = base.expr
+        if isinstance(base, (A.Var, A.Ctor)):
+            path = ".".join((base.path, *reversed(parts)))
+            first = base.path.split(".", 1)[0]
+            if first not in env and any(first in f.visible.modules for f in self.frames):
+                module_path, _ = path.rsplit(".", 1)
+                try:
+                    self._lookup_module(module_path, e.span)
+                except NameResolutionError:
+                    pass  # The prefix may instead be an imported record value.
+                else:
+                    return self._infer_Var(A.Var(path, span=e.span), env, level)
         et, expr = self.infer(e.expr, env, level)
         owner = self._record_owner(et, e.name, e.span)
         short = e.name.rsplit(".", 1)[-1]

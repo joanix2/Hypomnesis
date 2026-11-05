@@ -5,6 +5,10 @@ délimiteurs, repliement par indentation et régions `(* #region … *)`.
 Les diagnostics de syntaxe, de résolution des noms et de types proviennent du compilateur,
 sans exécuter les programmes ni importer les adaptateurs du langage.
 
+La version 0.1.3 colore aussi les imports `import units`, `from units import mm`
+et `as`. Les diagnostics suivent les dépendances `.hyp` transitives et leurs
+modifications non enregistrées ; `open` ne charge jamais de fichier.
+
 ## Construire et installer
 
 Depuis la racine du dépôt :

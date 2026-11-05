@@ -11,7 +11,7 @@ from hypomnesis.engine.layers import ENTRY, check_layers, resolve_layers
 from hypomnesis.language import ast as A
 from hypomnesis.language.errors import HypomnesisError, Span
 from hypomnesis.language.parser import parse_program
-from hypomnesis.session import Session, prelude_source
+from hypomnesis.session import Session
 
 
 def language_root(path: Path, workspace: Path, configured: str | None) -> Path | None:
@@ -79,8 +79,7 @@ def analyze(
     """Check preceding M2 files, then the unsaved target, with no user evaluation."""
     path = path.resolve()
     try:
-        session = Session(prelude=False)
-        session.check(prelude_source())
+        session = Session(execute_prelude=False)
         program = parse_program(source)
         declares_language = any(isinstance(item, A.LanguageItem) for item in program.items)
         root = path if declares_language else language_root(path, workspace, configured)
@@ -94,10 +93,10 @@ def analyze(
                 ),
                 None,
             )
-            session = check_layers(plan, strict=False, stop_at=path, entry=owner)
+            session = check_layers(plan, strict=False, stop_at=path, entry=owner, overlays=overlays)
             if owner is not None:
                 return _warnings(session, path, source, encoding)
-        session.check_program(program, filename=str(path))
+        session.check_program(program, filename=str(path), overlays=overlays, source_text=source)
     except SourceError as exc:
         if exc.path == path:
             return [diagnostic(exc.message, exc.stage_id, exc.span, source, encoding)]

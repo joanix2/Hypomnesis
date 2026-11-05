@@ -20,8 +20,42 @@ type a = A of b | Nil and b = { next : a }             (* types mutuellement ré
 
 module Geometry = struct ... end
 open Geometry
+import units
+import physique.units as mesures
+from units import mm as millimetres
 external sqrt : float -> float = "float.sqrt"          (* primitive du registre natif *)
 ```
+
+### Imports locaux de fichiers
+
+`import units` charge `units.hyp` relativement au fichier importeur et expose
+ses exports sous `units.*`. `import physique.units` charge
+`physique/units.hyp` et conserve la qualification `physique.units.*`.
+`as mesures` donne plutôt le préfixe `mesures.*`. Si le fichier déclare
+`module Length`, sa fonction s'appelle `units.Length.mm`, pas `units.mm`.
+
+`from units import Length` importe ce module précis ;
+`from units import mm as millimetres` importe une valeur de premier niveau
+sous un autre nom. Types, constructeurs et champs conservent leur identité
+entre alias. Les alias de valeurs/types restent minuscules et ceux des
+constructeurs majuscules. Aucun import `*`.
+
+`open units.Length` ouvre seulement un module déjà chargé ; il ne cherche
+aucun fichier. Les collisions d'import et membres manquants sont refusés.
+Les chemins canoniques dédupliquent fichiers, liens et diamants par session ;
+les cycles affichent leur chaîne. Un fichier importé ne voit pas les
+variables de son importeur, seulement le prélude et ses propres imports.
+
+Il n'y a ni recherche dans le répertoire courant, ni téléchargement, ni
+chargement de Python. `check`, LSP et catalogue restent sans évaluation.
+Pour l'API Python, fournir `filename` à `Session.check/load` ou
+`check_program/load_program` ; sans fichier d'origine, un import est refusé.
+Les imports de sources M2 restent confinés au paquet de leur couche.
+
+Après une erreur d'analyse, le chargement peut être corrigé puis réessayé.
+Après une erreur d'exécution impliquant des imports, une nouvelle session
+est exigée pour les réutiliser : aucun rejeu automatique d'effets partiels.
+Voir [ADR 0017](../adr/0017-imports-locaux-python.md).
 
 ## Expressions
 

@@ -19,6 +19,7 @@ if (!code) {
       "hypomnesis.debounceMs": 20,
     }));
     fs.writeFileSync(path.join(workspace, "probe.hyp"), "let x = true + 1\n");
+    fs.writeFileSync(path.join(workspace, "units.hyp"), "(** Increment. *)\nlet mm x = x + 1\n");
     fs.copyFileSync(path.join(__dirname, "fixtures/language.hyp"), path.join(workspace, "langage.hyp"));
     const report = path.join(temp, "result.txt");
     const result = spawnSync(code, [

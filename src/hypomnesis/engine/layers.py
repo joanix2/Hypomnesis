@@ -14,7 +14,7 @@ from hypomnesis.language import ast as A
 from hypomnesis.language.docs import missing_descriptions
 from hypomnesis.language.errors import HypomnesisError
 from hypomnesis.language.parser import parse_program
-from hypomnesis.session import Session, prelude_source
+from hypomnesis.session import Session
 
 ENTRY = "langage.hyp"
 DECLARATION_SCHEMA = "https://schemas.example.org/hypomnesis/language-declaration/1.0.0"
@@ -215,14 +215,13 @@ def check_layers(
     strict: bool = True,
     stop_at: Path | None = None,
     entry: Path | None = None,
+    overlays: dict[str, str] | None = None,
 ) -> Session:
     """Check each layer only with its declared closure; return the root's static session."""
     result: Session | None = None
     root = entry or plan.entry
     for target in plan.order(root):
-        session = Session(prelude=False)
-        session.check(prelude_source())
-        session.prelude_definitions = len(session.definitions)
+        session = Session(execute_prelude=False)
         owners: dict[tuple[str, str], Path] = {}
         for entry in plan.order(target):
             for source in plan.layers[entry].sources:
@@ -233,13 +232,22 @@ def check_layers(
                     for name, value in getattr(session.checker.root, kind).items()
                 }
                 try:
-                    session.check_program(source.program, filename=str(source.path))
+                    session.check_program(
+                        source.program,
+                        filename=str(source.path),
+                        overlays=overlays,
+                        import_root=plan.layers[entry].root,
+                        source_text=source.text,
+                    )
                     if strict:
                         missing = missing_descriptions(source.text)
                         if missing:
                             raise MissingDescriptionError(missing[0], str(source.path))
+                        for imported in session.imported_sources.values():
+                            if imported.text and (missing := missing_descriptions(imported.text)):
+                                raise MissingDescriptionError(missing[0], str(imported.path))
                 except HypomnesisError as exc:
-                    if isinstance(exc, MissingDescriptionError):
+                    if isinstance(exc, (MissingDescriptionError, SourceError)):
                         raise
                     raise SourceError(exc, source.path, source.text) from exc
                 for kind in tables:

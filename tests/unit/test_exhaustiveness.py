@@ -154,9 +154,7 @@ def test_prelude_and_all_examples_are_warning_free():
     for path in examples:
         session = Session()
         assert not session.warnings
-        if path.name == "plate.hyp":
-            assert not session.check((root / "mechanics/units.hyp").read_text()).warnings
-        assert not session.check(path.read_text()).warnings, path
+        assert not session.check(path.read_text(), filename=str(path)).warnings, path
 
 
 @pytest.mark.parametrize("as_entry", [False, True])

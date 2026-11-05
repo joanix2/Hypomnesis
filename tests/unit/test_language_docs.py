@@ -194,8 +194,8 @@ def test_descriptions_change_neither_the_core_ir_nor_the_certificate(name):
     with_docs, without = Session(), Session()
     for path in SOURCE_SETS[name]:
         source = path.read_text(encoding="utf-8")
-        with_docs.check(source)
-        without.check(strip_docs(source))
+        with_docs.check(source, filename=str(path))
+        without.check(strip_docs(source), filename=str(path))
     assert with_docs.definitions == without.definitions
     assert json.dumps(session_certificate(with_docs), sort_keys=True) == json.dumps(
         session_certificate(without), sort_keys=True

@@ -48,6 +48,17 @@ test("types, booleans, numbers and operators are recognized", () => {
   assert(scoped(tokens, "keyword.control.hypomnesis", "true"));
 });
 
+test("Python-style imports have keyword and namespace scopes", () => {
+  const tokens = tokenize(
+    "import physique.units as mesures\nfrom units import mm as millimetres\nopen mesures.Length",
+  );
+  for (const word of ["import", "from", "as", "open"]) {
+    assert(scoped(tokens, "keyword.control.hypomnesis", word));
+  }
+  assert(scoped(tokens, "entity.name.namespace.hypomnesis", "physique.units"));
+  assert(scoped(tokens, "entity.name.namespace.hypomnesis", "units"));
+});
+
 test("native language declarations highlight without a JSON manifest", () => {
   const tokens = tokenize('language exemple = struct let imports = ["../base"] let version = "1" end');
   assert(scoped(tokens, "keyword.control.hypomnesis", "language"));

@@ -23,7 +23,7 @@ pytestmark = pytest.mark.skipif(not EXE.exists(), reason="hypomnesis-check non c
 def certificate(*paths: Path) -> dict:
     session = Session()
     for path in paths:
-        session.load(path.read_text())
+        session.load(path.read_text(), filename=str(path))
     return session_certificate(session)
 
 
@@ -39,6 +39,20 @@ def test_certifiable_example_is_accepted(tmp_path):
     result = run("check", certificate(EXAMPLES / "basics" / "certifiable.hyp"), tmp_path)
     assert result.returncode == 0, result.stderr
     assert result.stdout.startswith("accepté")
+
+
+def test_python_style_file_imports_are_accepted_by_the_real_checker(tmp_path):
+    (tmp_path / "units.hyp").write_text("type t = C of int\nlet mm x = x + 1")
+    source = tmp_path / "main.hyp"
+    source.write_text(
+        "import units\nimport units as u\nfrom units import mm as inc\n"
+        "let c = u.C (inc 40)\nlet answer = match c with units.C n -> n + 1"
+    )
+    checked = run("check", certificate(source), tmp_path)
+    assert checked.returncode == 0, checked.stderr
+    evaluated = run("eval", certificate(source), tmp_path)
+    assert evaluated.returncode == 0, evaluated.stderr
+    assert "42" in evaluated.stdout
 
 
 def test_lean_semantics_computes_the_same_values(tmp_path):

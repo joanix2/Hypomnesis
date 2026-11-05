@@ -13,10 +13,18 @@ MECHANICS = [EXAMPLES / "mechanics" / "units.hyp", EXAMPLES / "mechanics" / "pla
 def test_mechanics_example_runs():
     session = Session()
     for path in MECHANICS:
-        session.load(path.read_text())
+        session.load(path.read_text(), filename=str(path))
     assert session.eval("area_mm2").render() == "val it : float = 9600."
     assert session.eval("volume_mm3").render() == "val it : float option = Some 38400."
     assert session.type_of("Mechanics.area") == "Mechanics.plate -> Area.t"
+
+
+@pytest.mark.parametrize("paths", [[MECHANICS[1]], MECHANICS])
+def test_mechanics_cli_runs_standalone_or_with_explicit_files(paths, capsys):
+    assert main(["run", *map(str, paths)]) == 0
+    output = capsys.readouterr().out
+    assert "area_mm2 : float = 9600." in output
+    assert "volume_mm3 : float option = Some 38400." in output
 
 
 def test_dimension_errors_are_caught_before_execution():

@@ -49,8 +49,8 @@ class Language:
         fn = self.session.value(path)
         return lambda *args: self.session.interpreter.apply(fn, list(args))
 
-    def load_program(self, source: str) -> None:
-        self.session.load(source)
+    def load_program(self, source: str, *, filename: str | None = None) -> None:
+        self.session.load(source, filename=filename)
 
 
 def load_language(root: Path, *, strict: bool = True, execute: bool = True) -> Language:
@@ -68,8 +68,16 @@ def load_language(root: Path, *, strict: bool = True, execute: bool = True) -> L
         session = Session()
         for source in plan.source_files():
             try:
-                session.load_program(source.program, filename=str(source.path))
+                owner = next(layer for layer in plan.layers.values() if source in layer.sources)
+                session.load_program(
+                    source.program,
+                    filename=str(source.path),
+                    import_root=owner.root,
+                    source_text=source.text,
+                )
             except HypomnesisError as exc:
+                if isinstance(exc, SourceError):
+                    raise
                 raise SourceError(exc, source.path, source.text) from exc
     else:
         session = checked

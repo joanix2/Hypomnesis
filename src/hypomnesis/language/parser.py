@@ -160,6 +160,29 @@ class _ToAst(Transformer):
     def open_item(self, meta, children):
         return A.OpenItem(str(children[0]), span=_span(meta))
 
+    def import_path(self, meta, children):
+        return ".".join(map(str, children))
+
+    def import_name(self, meta, children):
+        name = str(children[0])
+        if "." in name:
+            raise ParseError("an imported member or alias must be a single name", _span(meta))
+        return name
+
+    def module_path(self, meta, children):
+        return ".".join(str(child) for child in children if child is not None)
+
+    def import_item(self, meta, children):
+        path, alias = children
+        return A.ImportItem(path, alias=alias, span=_span(meta))
+
+    def from_import_item(self, meta, children):
+        path, member, alias = children
+        return A.ImportItem(path, member, alias, span=_span(meta))
+
+    def qualified_name(self, meta, children):
+        return ".".join(map(str, children))
+
     def external_item(self, meta, children):
         name, type_, symbol = children
         return A.ExternalItem(name, type_, pyast.literal_eval(str(symbol)), span=_span(meta))

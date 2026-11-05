@@ -129,6 +129,7 @@ def run_procedure(
     policy: PermissionPolicy | None = None,
     approve: Callable[[Command], bool] | None = None,
     generated: bool = False,
+    filename: str | None = None,
 ) -> ProcedureReport:
     if type(generated) is not bool:
         raise ValueError("generated must be a boolean host decision")
@@ -138,7 +139,7 @@ def run_procedure(
     kb, tracer = KnowledgeBase(), Tracer()
     report = ProcedureReport(language.name, program, kb, tracer, generated=generated)
     with tracer.span("language.typecheck"):
-        language.load_program(program)
+        language.load_program(program, filename=filename)
     entry = proc["entry"]
     if not language.session.type_of(entry).endswith("Effect.t"):
         raise LanguageError(f"`{entry}` doit être une procédure (type … Effect.t)")

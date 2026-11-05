@@ -23,14 +23,20 @@ from __future__ import annotations
 
 import re
 import textwrap
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
 from itertools import pairwise
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from lark import Token
 
 from hypomnesis.language import ast as A
 from hypomnesis.language.errors import Span
 from hypomnesis.language.parser import lex, parse_program
+
+if TYPE_CHECKING:
+    from hypomnesis.session import ImportedSource
 
 _TAG = re.compile(r"^@(\w+)\s*(.*)$")
 
@@ -174,6 +180,42 @@ def declarations(source: str, program: A.Program | None = None) -> list[Declarat
 
     walk(program.items, "")
     return found
+
+
+def declarations_with_imports(
+    source: str, filename: Path, imports: Mapping[Path, ImportedSource]
+) -> list[Declaration]:
+    """Project imported documentation under its public names, never internal file identities."""
+    program = parse_program(source)
+    found = declarations(source, program)
+
+    def walk(items: tuple[A.Item, ...], prefix: str) -> None:
+        for item in items:
+            if isinstance(item, A.ModuleItem):
+                walk(item.items, prefix + item.name + ".")
+            elif isinstance(item, A.ImportItem):
+                path = (filename.parent / Path(*item.path.split(".")).with_suffix(".hyp")).resolve()
+                imported = imports[path]
+                members = declarations_with_imports(imported.text, path, imports)
+                if item.member is None:
+                    name = prefix + (item.alias or item.path)
+                    for i in range(len(name.split("."))):
+                        ancestor = ".".join(name.split(".")[: i + 1])
+                        found.append(
+                            Declaration("module", ancestor, Doc(f"Module importé : {item.path}."))
+                        )
+                    found.extend(replace(d, path=name + "." + d.path) for d in members)
+                else:
+                    old = item.member
+                    name = prefix + (item.alias or old)
+                    found.extend(
+                        replace(d, path=name + d.path[len(old) :])
+                        for d in members
+                        if d.path == old or d.path.startswith(old + ".")
+                    )
+
+    walk(program.items, "")
+    return list({(d.kind, d.path): d for d in found}.values())
 
 
 def is_public(declaration: Declaration) -> bool:
