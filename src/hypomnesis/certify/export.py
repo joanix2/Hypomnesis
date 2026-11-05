@@ -25,11 +25,11 @@ from __future__ import annotations
 
 import math
 import struct
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 from hypomnesis.ir import core as ir
 from hypomnesis.language.typesystem.infer import TypeInfo
-from hypomnesis.language.typesystem.types import TCon, TGen, TVar, Type, prune
+from hypomnesis.language.typesystem.types import TCon, TGen, TVar, Type, prune, substitute
 
 CERTIFICATE_VERSION = "1.1.0"
 CERTIFICATE_SCHEMA_ID = "https://schemas.example.org/hypomnesis/certificate/1.1.0"
@@ -46,35 +46,60 @@ def export_certificate(
 ) -> Json:
     """``program_start`` is the index of the first definition of the program
     itself (the ones before it come from the prelude)."""
+    types = tuple(types)
+    abstract = {info.qname: info for info in types if info.kind == "abstract"}
+
+    def representation(t: Type) -> Type:
+        t = prune(t)
+        seen: set[str] = set()
+        while isinstance(t, TCon) and t.name in abstract:
+            info = abstract[t.name]
+            if t.name in seen or info.alias is None or len(t.args) != info.arity:
+                raise CertificateError(f"invalid abstract representation: {t.name}")
+            seen.add(t.name)
+            t = prune(substitute(info.alias, t.args))
+        return t
+
     return {
         "certificate_version": CERTIFICATE_VERSION,
         "program_start": program_start,
-        "types": [_type_decl(info) for info in types if info.kind != "alias"],
-        "definitions": [_Exporter().definition(d) for d in definitions],
+        "types": [
+            _type_decl(info, representation)
+            for info in types
+            if info.kind not in ("alias", "abstract")
+        ],
+        "definitions": [_Exporter(representation).definition(d) for d in definitions],
     }
 
 
 # ------------------------------------------------------------------- types
 
 
-def _template(t: Type) -> Json:
+def _template(t: Type, representation: Callable[[Type], Type]) -> Json:
+    t = representation(t)
     if isinstance(t, TGen):
         return {"param": t.index}
     if isinstance(t, TCon):
-        return {"con": t.name, "args": [_template(a) for a in t.args]}
+        return {"con": t.name, "args": [_template(a, representation) for a in t.args]}
     raise CertificateError(f"unexpected term in a type declaration: {t!r}")
 
 
-def _type_decl(info: TypeInfo) -> Json:
+def _type_decl(info: TypeInfo, representation: Callable[[Type], Type]) -> Json:
     return {
         "name": info.qname,
         "params": info.arity,
         "kind": info.kind,
         "constructors": [
-            {"tag": c.name, "index": c.index, "arg": None if c.arg is None else _template(c.arg)}
+            {
+                "tag": c.name,
+                "index": c.index,
+                "arg": None if c.arg is None else _template(c.arg, representation),
+            }
             for c in info.ctors
         ],
-        "fields": [{"name": f.name, "type": _template(f.type)} for f in info.fields],
+        "fields": [
+            {"name": f.name, "type": _template(f.type, representation)} for f in info.fields
+        ],
     }
 
 
@@ -82,8 +107,9 @@ def _type_decl(info: TypeInfo) -> Json:
 
 
 class _Exporter:
-    def __init__(self) -> None:
+    def __init__(self, representation: Callable[[Type], Type]) -> None:
         self.type_names: dict[int, str] = {}
+        self.representation = representation
 
     # types ---------------------------------------------------------------
 
@@ -100,7 +126,7 @@ class _Exporter:
     def type(self, t: Type | None) -> Json:
         if t is None:
             raise CertificateError("missing type annotation")
-        t = prune(t)
+        t = self.representation(t)
         if isinstance(t, TVar):
             if t.id not in self.type_names:
                 raise CertificateError("free type variable in an annotation")

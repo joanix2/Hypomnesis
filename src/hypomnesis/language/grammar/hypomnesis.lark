@@ -7,6 +7,7 @@ start: _item*
 _item: let_item
      | type_item
      | module_item
+     | module_type_item
      | open_item
      | external_item
      | language_item
@@ -29,7 +30,10 @@ config_field: config_key "=" config_value
 
 let_item: "let" [REC] binding ("and" binding)*
 type_item: "type" type_def ("and" type_def)*
-module_item: "module" UPATH "=" "struct" _item* "end"
+module_item: "module" UPATH [":" module_path] "=" "struct" _item* "end"
+module_type_item: "module" "type" UPATH "=" "sig" signature_spec* "end"
+?signature_spec: "val" value_name ":" type_expr -> value_spec
+               | "type" [type_params] LIDENT ["=" type_expr] -> type_spec
 open_item: "open" module_path
 import_item: "import" import_path ["as" import_name]
 from_import_item: "from" import_path "import" import_name ["as" import_name]

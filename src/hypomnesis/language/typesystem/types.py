@@ -9,7 +9,7 @@ encoding is used for the parameters of declared types.
 from __future__ import annotations
 
 import itertools
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from hypomnesis.language.errors import Span, TypeCheckError
@@ -179,6 +179,17 @@ def substitute(t: Type, args: Sequence[Type]) -> Type:
         return args[t.index]
     if isinstance(t, TCon) and t.args:
         return TCon(t.name, tuple(substitute(a, args) for a in t.args))
+    return t
+
+
+def replace_constructors(t: Type, replacements: Mapping[str, Type]) -> Type:
+    """Replace named type constructors with templates over their arguments."""
+    t = prune(t)
+    if isinstance(t, TCon):
+        args = tuple(replace_constructors(a, replacements) for a in t.args)
+        if t.name in replacements:
+            return substitute(replacements[t.name], args)
+        return TCon(t.name, args)
     return t
 
 

@@ -27,6 +27,7 @@ from hypomnesis.language.errors import (
 )
 from hypomnesis.language.parser import parse_expression, parse_program
 from hypomnesis.language.typesystem.infer import (
+    NAMESPACE_KINDS,
     Checker,
     CheckResult,
     Namespace,
@@ -113,7 +114,7 @@ class Session:
                 self.check(prelude_source())
         self.prelude_definitions = len(self.definitions)
         self._import_prelude = copy(self.checker.root)
-        for key in ("values", "types", "ctors", "fields", "modules"):
+        for key in NAMESPACE_KINDS:
             setattr(self._import_prelude, key, dict(getattr(self.checker.root, key)))
 
     def check(self, source: str, *, filename: str | None = None) -> LoadResult:
@@ -171,10 +172,7 @@ class Session:
         self._import_root = import_root.resolve() if import_root else None
         self._execute_imports = execute
         saved = dict(self.imported_sources)
-        before = {
-            kind: dict(getattr(self.checker.root, kind))
-            for kind in ("values", "types", "ctors", "fields", "modules")
-        }
+        before = {kind: dict(getattr(self.checker.root, kind)) for kind in NAMESPACE_KINDS}
         try:
             result = self.checker.check_program(program)
             if filename:

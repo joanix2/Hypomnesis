@@ -57,6 +57,52 @@ Après une erreur d'exécution impliquant des imports, une nouvelle session
 est exigée pour les réutiliser : aucun rejeu automatique d'effets partiels.
 Voir [ADR 0017](../adr/0017-imports-locaux-python.md).
 
+### Signatures de modules et types abstraits
+
+```ocaml
+module type Mesure = sig
+  val creer : int -> t
+  type t
+  val lire : t -> int
+end
+module Distance : Mesure = struct
+  type t = int
+  let creer x = x
+  let lire x = x
+  let detail_prive = true
+end
+let resultat = Distance.lire (Distance.creer 42)
+```
+
+Les types et valeurs promis sont obligatoires, indépendamment de leur ordre.
+Une valeur manquante ou de type incompatible produit une erreur au module.
+Les membres supplémentaires, ici `detail_prive`, ne sont pas accessibles.
+Une implémentation plus polymorphe peut être spécialisée par sa signature,
+mais une fonction `int -> int` ne satisfait pas `val f : 'a -> 'a`.
+
+`type t` est **opaque** : `Distance.t` n'est pas interchangeable avec `int`,
+même si son implémentation utilise des entiers. Ses constructeurs et champs
+privés ne permettent pas de le construire ou déconstruire depuis l'extérieur.
+Deux modules scellés ont des identités abstraites distinctes ; les alias
+d'un même module importé partagent son identité. `type 'a t` est aussi accepté.
+
+Pour révéler une égalité, l'écrire dans la signature : `type t = float`.
+Les alias manifestes peuvent référencer d'autres types de la signature.
+Les signatures capturent leur environnement de déclaration et peuvent être
+qualifiées (`Interfaces.Mesure`), ouvertes ou importées
+(`from interfaces import Mesure`). Les alias de signatures restent majuscules.
+
+Cette version accepte les spécifications `val` et `type` abstrait/alias :
+pas de foncteurs, `with type`, sous-modules ou déclarations de records/variants
+dans `sig`. Les contrats JSON dérivés refusent un type opaque sans représentation
+publique. La documentation et le catalogue ne montrent que les exports visibles ;
+les membres cachés d'une structure n'ont pas besoin de description.
+
+Les certificats conservent les représentations concrètes pour vérifier le
+programme élaboré avec Lean. Ils ne constituent pas une preuve du scellement
+du frontend ni un moyen de garder ces représentations secrètes.
+Voir [ADR 0018](../adr/0018-signatures-opaques.md).
+
 ## Expressions
 
 | Forme | Exemple |
@@ -304,6 +350,6 @@ Les exemples complets sont dans `demo/languages/booleen`, `arithmetique`, `contr
 
 ## Pas encore implémenté
 
-Signatures de modules et foncteurs, registre distant et versions d'import,
+Foncteurs, registre distant et versions d'import,
 opérateurs définis par l'utilisateur, exceptions rattrapables, vérification
 d'exhaustivité du filtrage, macros, types dimensionnels, effets.

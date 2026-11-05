@@ -59,6 +59,17 @@ test("Python-style imports have keyword and namespace scopes", () => {
   assert(scoped(tokens, "entity.name.namespace.hypomnesis", "units"));
 });
 
+test("module signatures color contracts and abstract types", () => {
+  const tokens = tokenize(
+    "module type S = sig type t val make : int -> t end\nmodule M : S = struct type t = int end",
+  );
+  for (const word of ["module", "type", "sig", "val", "end", "struct"]) {
+    assert(scoped(tokens, "keyword.control.hypomnesis", word));
+  }
+  assert(scoped(tokens, "entity.name.type.hypomnesis", "S"));
+  assert(scoped(tokens, "entity.name.type.hypomnesis", "t"));
+});
+
 test("native language declarations highlight without a JSON manifest", () => {
   const tokens = tokenize('language exemple = struct let imports = ["../base"] let version = "1" end');
   assert(scoped(tokens, "keyword.control.hypomnesis", "language"));

@@ -85,6 +85,24 @@ d'exécution impliquant ces définitions, la réutilisation exige une nouvelle
 session afin de ne pas rejouer automatiquement des effets partiels.
 `execute_prelude=False` prépare aussi le prélude sans l'évaluer.
 
+HYP-012 / ADR 0018 ajoute `module type S = sig ... end` et `module M : S`.
+`Namespace.signatures` contient les spécifications lexicalement résolues ;
+les types/alias sont résolus avant les valeurs, indépendamment de leur ordre.
+Le scellement construit un espace de noms public distinct : types abstraits
+génératifs (`TypeInfo.kind = abstract`), alias manifestes et valeurs promises
+seulement. Une instanciation rigide vérifie la subsomption polymorphe.
+Des `DefValue` Core adaptent explicitement les arguments de type des valeurs
+exportées ; leurs définitions privées restent dans l'ordre d'évaluation.
+
+Les représentations privées des types abstraits sont conservées dans `alias`
+pour l'export, mais jamais développées par `_to_type` ni par les contrats JSON.
+L'export des certificats les abaisse dans les annotations et les templates
+de types ; aucune extension de la Core IR, du format 1.1.0 ou de Lean.
+Le vrai checker vérifie ces programmes élaborés ; l'opacité du frontend
+reste testée en Python, pas nouvellement prouvée en Lean. Les déclarations
+documentaires sont filtrées par les namespaces publics pour le catalogue
+et la vérification des descriptions M2.
+
 Le fichier d'entrée `.hyp`, par convention `langage.hyp`, commence par
 `language nom = struct let version = "1" let imports = ["../base"] end`.
 HYP-151 remplace la forme extérieure à accolades : le parseur la refuse

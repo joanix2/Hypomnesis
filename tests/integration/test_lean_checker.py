@@ -55,6 +55,44 @@ def test_python_style_file_imports_are_accepted_by_the_real_checker(tmp_path):
     assert "42" in evaluated.stdout
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "module type S = sig type t val make : int -> t val read : t -> int end "
+        "module M : S = struct type t = int let make x = x let read x = x end "
+        "let answer = M.read (M.make 42)",
+        "module type S = sig type t val make : int -> t val read : t -> int end "
+        "module M : S = struct type t = C of int "
+        "let make x = C x let read = function C x -> x end "
+        "type box = {value : M.t} type choice = Chosen of M.t "
+        "let box = {value = M.make 42} let choice = Chosen box.value "
+        "let answer = match choice with Chosen x -> M.read x",
+        "module type S = sig type t val make : int -> t val read : t -> int end "
+        "module M : S = struct type t = {value : int} "
+        "let make x = {value = x} let read x = x.value end "
+        "module type R = sig type t val x : t val read : t -> int end "
+        "module N : R = struct type t = M.t let x = M.make 42 let read = M.read end "
+        "let answer = N.read N.x",
+        "module type S = sig type 'a t val make : 'a -> 'a t val read : 'a t -> 'a end "
+        "module B : S = struct type 'a t = Box of 'a "
+        "let make x = Box x let read = function Box x -> x end "
+        "let answer = B.read (B.make 42) let truth = B.read (B.make true)",
+        "module type S = sig val id : int -> int end "
+        "module M : S = struct let id x = x end let answer = M.id 42",
+    ],
+)
+def test_sealed_interfaces_elaborate_to_existing_lean_semantics(tmp_path, source):
+    session = Session()
+    session.load(source)
+    cert = session_certificate(session)
+    checked = run("check", cert, tmp_path)
+    assert checked.returncode == 0, checked.stderr
+    evaluated = run("eval", cert, tmp_path)
+    assert evaluated.returncode == 0, evaluated.stderr
+    assert "42" in evaluated.stdout
+    assert session.value("answer") == 42
+
+
 def test_lean_semantics_computes_the_same_values(tmp_path):
     result = run("eval", certificate(EXAMPLES / "basics" / "certifiable.hyp"), tmp_path)
     assert result.returncode == 0, result.stderr

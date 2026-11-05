@@ -134,7 +134,9 @@ def catalogue(language: Language, *, plugins: ExtensionRegistry | None = None) -
         if source.path in imports:
             imports[source.path] = replace(imports[source.path], text=source.text)
     for source in language.plan.source_files():
-        found += declarations_with_imports(source.text, source.path, imports)
+        found += declarations_with_imports(
+            source.text, source.path, imports, namespace=language.session.checker.root
+        )
 
     modules: list[ModuleDoc] = []
     shown = published(found)

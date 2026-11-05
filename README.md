@@ -17,7 +17,8 @@ décrire, les composer et contrôler leurs interactions.
 ## État
 
 Phases 0 (fondations) et 1 (langage minimal) du plan d'implémentation :
-parser LALR, inférence Hindley-Milner, types algébriques, records, modules, filtrage,
+parser LALR, inférence Hindley-Milner, types algébriques, records, modules,
+signatures à types abstraits, imports locaux explicites, filtrage,
 interpréteur avec appels terminaux, prélude écrit en Hypomnesis, REPL, contrats JSON Schema
 de l'enveloppe de message et du manifeste d'extension.
 

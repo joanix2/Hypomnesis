@@ -323,9 +323,29 @@ class TypeItem(Item):
 
 
 @dataclass(frozen=True)
+class ValueSpec(Node):
+    name: str
+    type: TypeExpr
+
+
+@dataclass(frozen=True)
+class TypeSpec(Node):
+    name: str
+    params: tuple[str, ...]
+    manifest: TypeExpr | None
+
+
+@dataclass(frozen=True)
+class ModuleTypeItem(Item):
+    name: str
+    specs: tuple[ValueSpec | TypeSpec, ...]
+
+
+@dataclass(frozen=True)
 class ModuleItem(Item):
     name: str
     items: tuple[Item, ...]
+    signature: str | None = None
 
 
 @dataclass(frozen=True)

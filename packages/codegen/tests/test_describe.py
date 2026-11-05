@@ -38,6 +38,31 @@ def test_undocumented_items_stay_out_of_the_catalogue():
     assert "valider_et_exporter" not in text and "petit_cote" not in text
 
 
+def test_imported_sealed_module_only_publishes_its_opaque_interface(tmp_path):
+    (tmp_path / "langage.hyp").write_text(
+        'language example = struct let version = "1" end\nimport units as mesures'
+    )
+    (tmp_path / "units.hyp").write_text(
+        "(** Interface. *)\nmodule type S = sig type t val make : int -> t "
+        "val read : t -> int end\n"
+        "(** Mesures abstraites. *)\nmodule M : S = struct\n"
+        "(** Mesure. *)\ntype t = Secret of int\n"
+        "(** Construction. *)\nlet make x = Secret x\n"
+        "(** Lecture. *)\nlet read = function Secret x -> x\n"
+        "(** Ne doit pas être publié. *)\nlet private_value = 1 / 0\nend"
+    )
+    result = catalogue(load_language(tmp_path, execute=False))
+    text = result.render()
+    assert "private_value" not in text and "Secret" not in text
+    module = next(m for m in result.modules if m.path == "mesures.M")
+    assert {v.path: v.signature for v in module.values} == {
+        "mesures.M.make": "int -> mesures.M.t",
+        "mesures.M.read": "mesures.M.t -> int",
+    }
+    assert len(module.types) == 1
+    assert module.types[0].fields == () and module.types[0].constructors == ()
+
+
 def test_interne_elements_are_documented_but_not_published():
     for name in ("mecanique", "ventilation"):
         text = render(name)

@@ -82,6 +82,25 @@ exports.run = async () => {
     "import units\nlet answer = units.mm 41 && true\n");
   assert(await vscode.workspace.applyEdit(useImported));
   await waitFor(() => vscode.languages.getDiagnostics(uri).length === 0);
-  console.log("Hypomnesis Extension Host: association, activation, scopes, legacy rejection, imports and unsaved dependency OK");
+  const signature = [
+    "module type S = sig type t val make : int -> t val read : t -> int end",
+    "module M : S = struct type t = int let make x = x let read x = x end",
+  ].join("\n");
+  const invalidAbstraction = new vscode.WorkspaceEdit();
+  invalidAbstraction.replace(uri, new vscode.Range(0, 0, document.lineCount, 0),
+    signature + "\nlet answer = M.make 42 + 1\n");
+  assert(await vscode.workspace.applyEdit(invalidAbstraction));
+  await waitFor(() => vscode.languages.getDiagnostics(uri).some(
+    diagnostic => diagnostic.source === "hypomnesis" && diagnostic.code === "type",
+  ));
+  for (const keyword of ["sig", "val"]) {
+    assert(scoped(tokenize(signature), "keyword.control.hypomnesis", keyword));
+  }
+  const validAbstraction = new vscode.WorkspaceEdit();
+  validAbstraction.replace(uri, new vscode.Range(0, 0, document.lineCount, 0),
+    signature + "\nlet answer = M.read (M.make 42)\n");
+  assert(await vscode.workspace.applyEdit(validAbstraction));
+  await waitFor(() => vscode.languages.getDiagnostics(uri).length === 0);
+  console.log("Hypomnesis Extension Host: activation, scopes, legacy rejection, imports, overlays and opaque signatures OK");
   fs.writeFileSync(process.env.HYPOMNESIS_TEST_RESULT, "passed");
 };

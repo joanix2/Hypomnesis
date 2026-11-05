@@ -39,6 +39,7 @@ from hypomnesis.language.typesystem.types import (
     list_of,
     mono,
     prune,
+    replace_constructors,
     substitute,
     tuple_of,
     unify,
@@ -53,6 +54,7 @@ LITERAL_TYPES: dict[str, Type] = {
 }
 
 Env = dict[str, Scheme]
+NAMESPACE_KINDS = ("values", "types", "ctors", "fields", "modules", "signatures")
 
 
 # ------------------------------------------------------------ environment
@@ -63,7 +65,7 @@ class TypeInfo:
     qname: str
     name: str
     arity: int
-    kind: str  # "builtin" | "alias" | "record" | "variant"
+    kind: str  # "builtin" | "alias" | "record" | "variant" | "abstract"
     alias: Type | None = None
     fields: list[FieldInfo] = field(default_factory=list)
     ctors: list[CtorInfo] = field(default_factory=list)
@@ -96,6 +98,12 @@ class ValueInfo:
 
 
 @dataclass(eq=False)
+class ModuleSignature:
+    types: dict[str, TypeInfo]
+    values: dict[str, Scheme]
+
+
+@dataclass(eq=False)
 class Namespace:
     path: str
     values: dict[str, ValueInfo] = field(default_factory=dict)
@@ -103,12 +111,13 @@ class Namespace:
     ctors: dict[str, CtorInfo] = field(default_factory=dict)
     fields: dict[str, FieldInfo] = field(default_factory=dict)
     modules: dict[str, Namespace] = field(default_factory=dict)
+    signatures: dict[str, ModuleSignature] = field(default_factory=dict)
 
     def qualify(self, name: str) -> str:
         return f"{self.path}.{name}" if self.path else name
 
     def merge(self, other: Namespace) -> None:
-        for kind in ("values", "types", "ctors", "fields", "modules"):
+        for kind in NAMESPACE_KINDS:
             getattr(self, kind).update(getattr(other, kind))
 
 
@@ -302,7 +311,7 @@ class Checker:
         if self.import_loader is None:
             raise NameResolutionError("file imports require a source filename", item.span)
         namespace = self.import_loader(item)
-        kinds = ("values", "types", "ctors", "fields", "modules")
+        kinds = NAMESPACE_KINDS
         if item.member is not None:
             name = item.alias or item.member
             matches = [
@@ -316,7 +325,7 @@ class Checker:
                 )
             for kind, _ in matches:
                 if (kind in ("values", "types") and name[0].isupper()) or (
-                    kind == "ctors" and not name[0].isupper()
+                    kind in ("ctors", "signatures") and not name[0].isupper()
                 ):
                     raise NameResolutionError(
                         f"alias {name} has incompatible capitalization for {kind}", item.span
@@ -377,6 +386,8 @@ class Checker:
             self._check_type_item(item)
         elif isinstance(item, A.ModuleItem):
             self._check_module(item)
+        elif isinstance(item, A.ModuleTypeItem):
+            self._check_signature(item)
         elif isinstance(item, A.OpenItem):
             module = self._lookup_module(item.path, item.span)
             self._frame.visible.merge(module)
@@ -495,15 +506,157 @@ class Checker:
             self._new_types.append(info)
 
     def _check_module(self, item: A.ModuleItem) -> None:
+        signature = (
+            self._lookup("signatures", item.signature, item.span, "module type")
+            if item.signature is not None
+            else None
+        )
         namespace = Namespace(self._frame.exports.qualify(item.name))
+        value_start, type_start = len(self._new_values), len(self._new_types)
         self.frames.append(Frame(namespace, Namespace(namespace.path)))
         try:
             for sub in item.items:
                 self._check_item(sub)
+            if signature is not None:
+                namespace = self._seal(namespace, signature, item.span)
+                self._new_values[value_start:] = list(namespace.values.values())
+                self._new_types[type_start:] = list(namespace.types.values())
         finally:
             self.frames.pop()
         self._frame.exports.modules[item.name] = namespace
         self._frame.visible.modules[item.name] = namespace
+
+    def _check_signature(self, item: A.ModuleTypeItem) -> None:
+        types: dict[str, TypeInfo] = {}
+        values: dict[str, Scheme] = {}
+        specs = {spec.name: spec for spec in item.specs if isinstance(spec, A.TypeSpec)}
+        namespace = Namespace(self._frame.exports.qualify(item.name))
+        self.frames.append(Frame(namespace, Namespace(namespace.path)))
+        try:
+            for spec in item.specs:
+                if isinstance(spec, A.TypeSpec):
+                    if spec.name in types or len(set(spec.params)) != len(spec.params):
+                        raise TypeCheckError(
+                            f"duplicate type or parameter in {spec.name}", spec.span
+                        )
+                    types[spec.name] = TypeInfo(
+                        self._fresh_qname(spec.name, "type:"),
+                        spec.name,
+                        len(spec.params),
+                        "abstract" if spec.manifest is None else "alias",
+                    )
+            resolving: set[str] = set()
+
+            def lookup(te: A.TECon) -> TypeInfo:
+                if te.path not in types:
+                    return self._lookup("types", te.path, te.span, "type constructor")
+                info, spec = types[te.path], specs[te.path]
+                if info.kind == "alias" and info.alias is None:
+                    if te.path in resolving:
+                        raise TypeCheckError(f"recursive signature alias {te.path}", spec.span)
+                    resolving.add(te.path)
+                    assert spec.manifest is not None
+                    info.alias = self._to_type(
+                        spec.manifest,
+                        params={p: TGen(i) for i, p in enumerate(spec.params)},
+                        lookup=lookup,
+                    )
+                    resolving.remove(te.path)
+                return info
+
+            for name in types:
+                lookup(A.TECon(name, (), span=item.span))
+            for spec in item.specs:
+                if isinstance(spec, A.ValueSpec):
+                    if spec.name in values:
+                        raise TypeCheckError(f"duplicate value {spec.name} in signature", spec.span)
+                    values[spec.name] = generalize(
+                        self._to_type(spec.type, tvars={}, lookup=lookup), 0
+                    )
+        finally:
+            self.frames.pop()
+        signature = ModuleSignature(types, values)
+        self._frame.exports.signatures[item.name] = signature
+        self._frame.visible.signatures[item.name] = signature
+
+    @staticmethod
+    def _type_template(info: TypeInfo) -> Type:
+        if info.kind == "alias" and info.alias is not None:
+            return info.alias
+        return TCon(info.qname, tuple(TGen(i) for i in range(info.arity)))
+
+    def _seal(
+        self, implementation: Namespace, signature: ModuleSignature, span: Span | None
+    ) -> Namespace:
+        concrete: dict[str, Type] = {}
+        for name, spec in signature.types.items():
+            actual = implementation.types.get(name)
+            if actual is None or actual.arity != spec.arity:
+                raise TypeCheckError(
+                    f"module {implementation.path} must provide type {name} "
+                    f"with arity {spec.arity}",
+                    span,
+                )
+            concrete[spec.qname] = self._type_template(actual)
+        for name, spec in signature.types.items():
+            if spec.alias is not None:
+                params = tuple(TCon(self.gensym()) for _ in range(spec.arity))
+                expect(
+                    substitute(concrete[spec.qname], params),
+                    substitute(replace_constructors(spec.alias, concrete), params),
+                    span,
+                    f"Type {name} in module {implementation.path}",
+                )
+        public = Namespace(implementation.path)
+        for name, spec in signature.types.items():
+            public.types[name] = TypeInfo(
+                self._fresh_qname(name, "type:"), name, spec.arity, spec.kind
+            )
+        exposed = {
+            spec.qname: self._type_template(public.types[name])
+            for name, spec in signature.types.items()
+        }
+        for name, spec in signature.types.items():
+            info = public.types[name]
+            if spec.kind == "abstract":
+                info.alias = concrete[spec.qname]
+            else:
+                assert spec.alias is not None
+                info.alias = replace_constructors(spec.alias, exposed)
+            self.types_by_qname[info.qname] = info
+        for name, spec in signature.values.items():
+            actual = implementation.values.get(name)
+            if actual is None:
+                raise TypeCheckError(
+                    f"module {implementation.path} is missing value {name} "
+                    "required by its signature",
+                    span,
+                )
+            required = replace_constructors(spec.body, concrete)
+            rigid = tuple(TCon(self.gensym()) for _ in range(spec.arity))
+            expect(
+                instantiate_args(actual.scheme, 1)[0],
+                substitute(required, rigid),
+                span,
+                f"Value {name} in module {implementation.path}",
+            )
+            variables = tuple(TVar(1) for _ in range(spec.arity))
+            inferred, arguments = instantiate_args(actual.scheme, 1)
+            expect(inferred, substitute(required, variables), span, f"Value {name}")
+            body = replace_constructors(spec.body, exposed)
+            qname = self._fresh_qname(name)
+            public.values[name] = ValueInfo(name, qname, Scheme(spec.arity, body))
+            self._definitions.append(
+                ir.DefValue(
+                    ir.PVar(name),
+                    ir.Global(actual.qname, type_args=arguments),
+                    ((name, qname),),
+                    span,
+                    forall_vars=variables,
+                    value_type=substitute(body, variables),
+                )
+            )
+        return public
 
     def _check_external(self, item: A.ExternalItem) -> None:
         tvars: dict[str, Type] = {}
@@ -533,6 +686,7 @@ class Checker:
         params: dict[str, Type] | None = None,
         tvars: dict[str, Type] | None = None,
         level: int = 1,
+        lookup: Callable[[A.TECon], TypeInfo] | None = None,
     ) -> Type:
         def go(te: A.TypeExpr) -> Type:
             if isinstance(te, A.TEVar):
@@ -549,7 +703,11 @@ class Checker:
             if isinstance(te, A.TETuple):
                 return tuple_of([go(t) for t in te.items])
             assert isinstance(te, A.TECon)
-            info = self._lookup("types", te.path, te.span, "type constructor")
+            info = (
+                lookup(te)
+                if lookup is not None
+                else self._lookup("types", te.path, te.span, "type constructor")
+            )
             if len(te.args) != info.arity:
                 raise TypeCheckError(
                     f"type {te.path} expects {info.arity} argument(s) but is given {len(te.args)}",

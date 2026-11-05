@@ -122,7 +122,7 @@
     },
     "keywords": {
       "name": "keyword.control.hypomnesis",
-      "match": "\\b(?:and|as|else|end|external|false|from|fun|function|if|import|in|language|let|match|mod|module|of|open|rec|struct|then|true|type|when|with)\\b"
+      "match": "\\b(?:and|as|else|end|external|false|from|fun|function|if|import|in|language|let|match|mod|module|of|open|rec|sig|struct|then|true|type|val|when|with)\\b"
     },
     "numbers": {
       "name": "constant.numeric.hypomnesis",

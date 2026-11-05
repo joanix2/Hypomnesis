@@ -36,6 +36,7 @@ from hypomnesis.language.errors import Span
 from hypomnesis.language.parser import lex, parse_program
 
 if TYPE_CHECKING:
+    from hypomnesis.language.typesystem.infer import Namespace
     from hypomnesis.session import ImportedSource
 
 _TAG = re.compile(r"^@(\w+)\s*(.*)$")
@@ -52,7 +53,7 @@ class Doc:
 
 @dataclass(frozen=True)
 class Declaration:
-    kind: str  # "module" | "value" | "type" | "field" | "constructor"
+    kind: str  # "module" | "signature" | "value" | "type" | "field" | "constructor"
     path: str  # qualified: Module.name, Module.type, Module.type.field
     doc: Doc | None
     type_text: str | None = None  # field / constructor type, as written in the source
@@ -130,7 +131,9 @@ def _slice(lines: list[str], span: Span | None) -> str | None:
     return lines[span.line - 1][span.column - 1 : span.end_column - 1].strip()
 
 
-def declarations(source: str, program: A.Program | None = None) -> list[Declaration]:
+def declarations(
+    source: str, program: A.Program | None = None, *, namespace: Namespace | None = None
+) -> list[Declaration]:
     """Every declaration of a source, in order, with its documentation if any."""
     program = program or parse_program(source)
     lines = source.splitlines()
@@ -153,6 +156,10 @@ def declarations(source: str, program: A.Program | None = None) -> list[Declarat
                 path = prefix + item.name
                 found.append(Declaration("module", path, doc_at(item.span), None, item.span))
                 walk(item.items, path + ".")
+            elif isinstance(item, A.ModuleTypeItem):
+                found.append(
+                    Declaration("signature", prefix + item.name, doc_at(item.span), None, item.span)
+                )
             elif isinstance(item, A.LetItem):
                 for i, binding in enumerate(item.bindings):
                     if isinstance(binding, A.FunBinding):
@@ -179,11 +186,49 @@ def declarations(source: str, program: A.Program | None = None) -> list[Declarat
                             member("constructor", f"{path}.{name}", token, on_line, text)
 
     walk(program.items, "")
-    return found
+    return _visible(found, namespace)
+
+
+def _visible(found: list[Declaration], namespace: Namespace | None) -> list[Declaration]:
+    if namespace is None:
+        return found
+    result = []
+    for declaration in found:
+        parts = declaration.path.split(".")
+        tail = 2 if declaration.kind in ("field", "constructor") else 1
+        current = namespace
+        for part in parts[:-tail]:
+            if part not in current.modules:
+                break
+            current = current.modules[part]
+        else:
+            if tail == 2:
+                info = current.types.get(parts[-2])
+                members = (
+                    (info.fields if declaration.kind == "field" else info.ctors)
+                    if info is not None
+                    else ()
+                )
+                if any(member.name == parts[-1] for member in members):
+                    result.append(declaration)
+            else:
+                table = {
+                    "module": current.modules,
+                    "signature": current.signatures,
+                    "value": current.values,
+                    "type": current.types,
+                }[declaration.kind]
+                if parts[-1] in table:
+                    result.append(declaration)
+    return result
 
 
 def declarations_with_imports(
-    source: str, filename: Path, imports: Mapping[Path, ImportedSource]
+    source: str,
+    filename: Path,
+    imports: Mapping[Path, ImportedSource],
+    *,
+    namespace: Namespace | None = None,
 ) -> list[Declaration]:
     """Project imported documentation under its public names, never internal file identities."""
     program = parse_program(source)
@@ -196,7 +241,9 @@ def declarations_with_imports(
             elif isinstance(item, A.ImportItem):
                 path = (filename.parent / Path(*item.path.split(".")).with_suffix(".hyp")).resolve()
                 imported = imports[path]
-                members = declarations_with_imports(imported.text, path, imports)
+                members = declarations_with_imports(
+                    imported.text, path, imports, namespace=imported.namespace
+                )
                 if item.member is None:
                     name = prefix + (item.alias or item.path)
                     for i in range(len(name.split("."))):
@@ -215,7 +262,7 @@ def declarations_with_imports(
                     )
 
     walk(program.items, "")
-    return list({(d.kind, d.path): d for d in found}.values())
+    return _visible(list({(d.kind, d.path): d for d in found}.values()), namespace)
 
 
 def is_public(declaration: Declaration) -> bool:
@@ -234,9 +281,11 @@ def published(found: list[Declaration]) -> list[Declaration]:
     ]
 
 
-def missing_descriptions(source: str, program: A.Program | None = None) -> list[Declaration]:
+def missing_descriptions(
+    source: str, program: A.Program | None = None, *, namespace: Namespace | None = None
+) -> list[Declaration]:
     """Public declarations without a description, in source order. An ``@interne``
     declaration must be described too; its members are exempt."""
-    found = declarations(source, program)
+    found = declarations(source, program, namespace=namespace)
     hidden = [d.path + "." for d in found if d.internal]
     return [d for d in found if not d.doc and is_public(d) and not d.path.startswith(tuple(hidden))]

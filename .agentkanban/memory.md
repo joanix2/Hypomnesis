@@ -47,6 +47,18 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
 - Les API de chargement depuis une chaîne acceptent `filename` ; sans origine, pas
   d'import relatif. Les programmes M1 de `lancer` conservent leur chemin d'origine.
 
+## Signatures de modules (ADR 0018, HYP-012)
+
+- `module type S = sig ... end` déclare des spécifications lexicales `val` et
+  `type` abstrait/alias manifeste ; `module M : S = struct ... end` scelle la structure.
+- `type t` crée une identité abstraite par scellement ; `type t = float` révèle
+  l'égalité. Valeurs/types non déclarés, constructeurs et champs privés sont masqués.
+- La subsomption polymorphe est vérifiée rigidement. Les alias d'import ne
+  rescellent pas les types. Les contrats JSON opaques sont refusés.
+- Les certificats abaissent l'abstraction vers les représentations concrètes,
+  sans changement du format ni de Lean. La vérification du programme élaboré
+  ne prouve pas l'implémentation Python du scellement.
+
 ## Génération de programmes (ADR 0012, HYP-146)
 
 - Distribution optionnelle `hypomnesis-codegen` sous `packages/codegen/`, module Python

@@ -225,7 +225,7 @@ def check_layers(
         owners: dict[tuple[str, str], Path] = {}
         for entry in plan.order(target):
             for source in plan.layers[entry].sources:
-                tables = ("values", "types", "modules", "ctors")
+                tables = ("values", "types", "modules", "ctors", "signatures")
                 before = {
                     (kind, name): value
                     for kind in tables
@@ -240,11 +240,15 @@ def check_layers(
                         source_text=source.text,
                     )
                     if strict:
-                        missing = missing_descriptions(source.text)
+                        missing = missing_descriptions(source.text, namespace=session.checker.root)
                         if missing:
                             raise MissingDescriptionError(missing[0], str(source.path))
                         for imported in session.imported_sources.values():
-                            if imported.text and (missing := missing_descriptions(imported.text)):
+                            if imported.text and (
+                                missing := missing_descriptions(
+                                    imported.text, namespace=imported.namespace
+                                )
+                            ):
                                 raise MissingDescriptionError(missing[0], str(imported.path))
                 except HypomnesisError as exc:
                     if isinstance(exc, (MissingDescriptionError, SourceError)):

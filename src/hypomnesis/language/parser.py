@@ -152,10 +152,23 @@ class _ToAst(Transformer):
         return A.TypeItem(tuple(children), span=_span(meta))
 
     def module_item(self, meta, children):
-        name, *items = children
+        name, signature, *items = children
         if "." in name:
             raise ParseError(f"module name {name!s} must not be qualified", _span(meta))
-        return A.ModuleItem(str(name), tuple(items), span=_span(meta))
+        return A.ModuleItem(str(name), tuple(items), signature, span=_span(meta))
+
+    def module_type_item(self, meta, children):
+        name, *specs = children
+        if "." in name:
+            raise ParseError(f"signature name {name!s} must not be qualified", _span(meta))
+        return A.ModuleTypeItem(str(name), tuple(specs), span=_span(meta))
+
+    def value_spec(self, meta, children):
+        return A.ValueSpec(*children, span=_span(meta))
+
+    def type_spec(self, meta, children):
+        params, name, manifest = children
+        return A.TypeSpec(str(name), params or (), manifest, span=_span(meta))
 
     def open_item(self, meta, children):
         return A.OpenItem(str(children[0]), span=_span(meta))
