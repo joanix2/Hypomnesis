@@ -147,8 +147,8 @@ Les trois axes restent séparés :
 - `grade` est le support de la proposition sélectionnée, ou `None` avant
   résolution. `proposals` conserve chaque instantané Fact, support et provenance.
 - `coherence` vaut `consistent` ou `conflict`. Ici un conflit signifie des
-  valeurs typées inégales pour le même trou ; ce n'est pas encore le détecteur
-  logique général HYP-035 ni une théorie d'égalité propre à un domaine.
+  valeurs typées inégales pour le même trou ; les vérifications déclarées
+  d'une base relèvent de HYP-035 ci-dessous, pas d'une théorie d'égalité métier.
 
 `Constraint(name, accepts)` impose un prédicat pur fourni par l'hôte,
 retournant exactement `True` pour une valeur admissible. Les noms sont
@@ -195,6 +195,69 @@ Une future sortie LLM doit être estampillée Hypothesis à sa frontière de
 confiance, jamais autorisée à se déclarer Observed elle-même (HYP-082).
 Ni ces propositions ni leur résolution ne changent automatiquement une
 KnowledgeBase ou son journal ; l'intégration des stratégies revient aux capacités.
+
+## Incompatibilités déclarées (HYP-035)
+
+`epistemics.conflicts.ConflictChecker` déclare les clés d'attributs
+fonctionnels et des `Invariant(name, keys, accepts)`. Le prédicat pur reçoit
+les instantanés Fact dans l'ordre des clés déclarées et doit retourner un
+booléen exact. La règle métier reste en M2 ; l'hôte peut fournir une liaison
+vers une fonction Hypomnesis pure, comme pour les contraintes de métavariable.
+La pureté de cette liaison hôte est une obligation de l'appelant, pas une
+preuve Python. Les exceptions et retours non booléens ne sont pas masqués.
+
+```python
+from hypomnesis.epistemics.conflicts import ConflictChecker
+from hypomnesis.epistemics.knowledge import KnowledgeBase
+
+base = KnowledgeBase(conflict_checker=ConflictChecker(("objet.propriete",), policy="best-support"))
+first = base.observe("objet.propriete", 1, "première observation")
+base.estimate("objet.propriete", 2, "modèle", 0.9)
+scan = base.conflicts
+assert scan.coherence == "conflict"
+(report,) = scan.conflicts
+assert report.selection == first and report.resolution == "best-support"
+assert len(report.facts) == 2  # le choix n'efface aucune assertion
+```
+
+Le rapport est une **lecture vivante**, non mise en cache : après
+`retract_source` ou `replace_observation`, consulter `base.conflicts`
+recalcule l'état sans changer les retours existants de ces opérations ni
+modifier le journal. Ce n'est pas une notification poussée à un service.
+Les faits remplacés du journal restent des assertions tant que leur provenance
+booléenne tient ; regarder uniquement `base.facts` masquerait des observations
+successives incompatibles d'une même clé. Pour corriger une observation,
+employer `replace_observation`, qui retire explicitement sa source.
+Un simple `observe` ne retire aucune source antérieure.
+
+Les rapports distinguent :
+
+- Une incompatibilité fonctionnelle : au moins deux valeurs différentes selon
+  `Fact.same_value`, qui distingue notamment booléen, entier et flottant.
+- Une violation d'invariant : chaque combinaison d'assertions encore étayées
+  sur les clés requises est vérifiée ; chaque tuple refusé est cité exactement.
+- La liste des sources avec leur origine, les provenances complètes des faits
+  et les identifiants retirés encore présents dans une dérivation alternative.
+- Une préférence optionnelle de meilleur support, calculée depuis les sources
+  non retirées. Elle ne modifie ni faits, ni support, ni cohérence. Des meilleures
+  valeurs incompatibles à égalité donnent `tied-best-support`, sans sélection.
+  `report` laisse toutes les incompatibilités sans sélection ; une violation
+  d'invariant reste sans sélection même avec `best-support`.
+
+Sans déclaration applicable, ou si des clés nécessaires manquent, la cohérence
+vaut `unchecked` (avec `pending` pour les contrôles incomplets), jamais
+`consistent` par défaut. Un conflit détecté a priorité sur ce résultat partiel.
+`consistent` signifie uniquement que les contrôles déclarés sont complets et
+ne trouvent aucune incompatibilité dans les assertions actuelles ; ce n'est
+pas une preuve de cohérence logique universelle. Les sources de provenance
+non déclarées sont refusées. Aucune valeur Unknown ne devient un fait concret.
+
+La collecte est linéaire en taille d'historique, puis les invariants n-aires
+énumèrent le produit des assertions requises : pas de solveur implicite, de
+limite silencieuse ou d'analyse automatique de négations. La sélection du
+meilleur support réutilise celle des propositions de métavariables. Le
+contrat JSON knowledge/1.0.0 reste inchangé : ces rapports et prédicats hôte
+ne sont pas des valeurs Fact sérialisées. La preuve Lean est HYP-037.
 
 ## Chaînage avant et défauts (HYP-050)
 

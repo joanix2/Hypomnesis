@@ -154,6 +154,18 @@ source et laisse les conclusions invalidées inconnues jusqu'à nouvelle
 dérivation ; aucun libellé de méthode n'est exécuté comme du code. Les
 alternatives survivantes recalculent support et confiance sans sources retirées.
 
+HYP-035 : `epistemics/conflicts.py` vérifie les attributs fonctionnels et
+invariants purs déclarés. `KnowledgeBase.conflicts` est une lecture vivante
+du journal et des faits encore étayés, pas une notification poussée : une
+ancienne assertion ne disparaît pas par simple écrasement de la projection
+`facts`. Les rapports immuables citent faits, provenances, sources et retraits.
+`best-support` réutilise la sélection des métavariables ; une sélection ne
+masque jamais le conflit, une égalité incompatible ne choisit personne.
+Un invariant violé n'est pas réparé automatiquement. Les contrôles absents
+ou incomplets restent `unchecked`. Aucun nouveau statut concret ou schéma
+JSON ; preuve de correction réservée HYP-037. Tests de construction générés :
+`tests/unit/test_conflicts.py`. Détails : guide des connaissances.
+
 HYP-032 : `epistemics/metavariables.py` ajoute `MetaVar` (TypeCodec fermé,
 contraintes nommées), `Proposal`, `propose`, `best`, `resolve` et `conflict`.
 Opérations persistantes ; toute nouvelle proposition rouvre la résolution.

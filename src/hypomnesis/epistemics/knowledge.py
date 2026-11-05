@@ -25,7 +25,7 @@ import itertools
 import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import networkx as nx
 
@@ -44,6 +44,9 @@ from hypomnesis.epistemics.provenance import (
 )
 from hypomnesis.epistemics.revision import invalidated
 from hypomnesis.runtime.values import RecordValue, Variant
+
+if TYPE_CHECKING:
+    from hypomnesis.epistemics.conflicts import ConflictChecker, ConflictScan
 
 FACT = "fact:"  # node-id prefixes: a fact key may look like a source id
 SOURCE = "source:"
@@ -254,6 +257,7 @@ class KnowledgeBase:
     _journal: list[Event] = field(default_factory=list, init=False, repr=False)
     retracted: set[str] = field(default_factory=set)
     _ids: Any = field(default_factory=lambda: itertools.count(1), repr=False)
+    conflict_checker: ConflictChecker | None = field(default=None, repr=False)
 
     # -------------------------------------------------------------- input
 
@@ -407,6 +411,17 @@ class KnowledgeBase:
         return source_id not in self.retracted
 
     # ------------------------------------------------------------ queries
+
+    @property
+    def conflicts(self) -> ConflictScan:
+        """Live declared checks; no checker means unchecked, never proven consistent."""
+        from hypomnesis.epistemics.conflicts import ConflictChecker, ConflictScan
+
+        if self.conflict_checker is None:
+            return ConflictScan()
+        if not isinstance(self.conflict_checker, ConflictChecker):
+            raise ValueError("a conflict checker must be a ConflictChecker")
+        return self.conflict_checker.scan(self)
 
     def value(self, key: str) -> Any:
         return self.facts[key].value

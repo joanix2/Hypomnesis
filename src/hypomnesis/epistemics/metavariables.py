@@ -115,17 +115,21 @@ def propose(meta: MetaVar, value: Value, grade: Support, provenance: Prov) -> Me
 
 def conflict(meta: MetaVar) -> bool:
     return bool(meta.proposals) and any(
-        p.fact.value != meta.proposals[0].fact.value for p in meta.proposals[1:]
+        not p.fact.same_value(meta.proposals[0].fact) for p in meta.proposals[1:]
     )
 
 
 def best(meta: MetaVar) -> Proposal:
-    if not meta.proposals:
-        raise UnresolvedMetaVar(f"{meta.id}: no proposal")
-    grade = min(p.grade for p in meta.proposals)
-    candidates = [p for p in meta.proposals if p.grade == grade]
-    if any(p.fact.value != candidates[0].fact.value for p in candidates[1:]):
-        raise ResolutionConflict(f"{meta.id}: incompatible best-supported proposals")
+    return best_proposal(meta.proposals, meta.id)
+
+
+def best_proposal(proposals: tuple[Proposal, ...], key: str) -> Proposal:
+    if not proposals:
+        raise UnresolvedMetaVar(f"{key}: no proposal")
+    grade = min(p.grade for p in proposals)
+    candidates = [p for p in proposals if p.grade == grade]
+    if any(not p.fact.same_value(candidates[0].fact) for p in candidates[1:]):
+        raise ResolutionConflict(f"{key}: incompatible best-supported proposals")
     return candidates[0]
 
 
