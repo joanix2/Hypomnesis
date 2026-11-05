@@ -93,3 +93,29 @@ Validation rapide et rafraîchissement du graphe également verts après QA.
 Jalon prêt au commit local ; aucun push ni appel LLM.
 
 ### user
+
+### agent
+
+Suivi de régression découvert pendant la validation du volet HYP-151 :
+les deux nouveaux contrats rendent la relecture/revalidation de tous les
+schémas à chaque export/import suffisamment coûteuse pour dépasser les
+200 ms du test Hypothesis de faits (220,90 ms reproduits). Ne pas relever
+le délai ni désactiver le test. Corriger la cause dans SchemaRegistry :
+contrats embarqués validés une fois, copies indépendantes et ressources
+persistantes partagées. Les contrats personnalisés restent validés à chaque
+ajout. Tests explicites de validation unique, copies et résolution de
+références sans fuite entre instances ; validation complète à reprendre.
+
+### user
+
+### agent
+
+Correctif vérifié : 45 tests ciblés passent, dont 100 exemples Hypothesis
+du test ayant dépassé 200 ms ; temps typique observé autour de 3 ms, sans
+modification du délai. Les schémas sont enregistrés une fois par classe,
+les mutations des schémas fournis/exposés et les ajouts locaux ne contaminent
+pas les autres registres. Pyright sans erreur. Validations complète,
+rapide et graphe vertes, dont les 500 termes différentiels Python/Lean.
+Le ticket reste QA ; aucun push ni appel LLM.
+
+### user

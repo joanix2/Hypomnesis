@@ -126,3 +126,34 @@ def test_registry_rejects_invalid_or_conflicting_schemas(registry):
         registry.add({"$id": MOTOR_ID, "type": "object"})
     with pytest.raises(ValueError, match=r"\$id"):
         registry.add({"type": "object"})
+
+
+def test_builtin_contracts_are_registered_only_once_per_registry_class():
+    registered = []
+
+    class CountingRegistry(SchemaRegistry):
+        def add(self, schema):
+            registered.append(schema["$id"])
+            return super().add(schema)
+
+    first = CountingRegistry.with_builtin_schemas()
+    initial = list(registered)
+    assert initial and sorted(initial) == first.ids()
+    second = CountingRegistry.with_builtin_schemas()
+    assert registered == initial
+    assert second is not first and second.ids() == first.ids()
+
+
+def test_builtin_cache_preserves_mutation_and_reference_isolation():
+    first, second = SchemaRegistry.with_builtin_schemas(), SchemaRegistry.with_builtin_schemas()
+    external = {"$id": "https://example.test/isolated", "$ref": MANIFEST_ID}
+    first.add(external)
+    first.validate(external["$id"], MANIFEST)
+    assert external["$id"] not in second
+    external["$ref"] = "https://example.test/missing"
+    first.validate("https://example.test/isolated", MANIFEST)
+    snapshot = first.schema(MANIFEST_ID)
+    snapshot["properties"]["id"]["type"] = "integer"
+    first.validate(MANIFEST_ID, MANIFEST)
+    second.validate(MANIFEST_ID, MANIFEST)
+    SchemaRegistry.with_builtin_schemas().validate(MANIFEST_ID, MANIFEST)

@@ -11,6 +11,7 @@ import json
 from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import cache
 from importlib.resources import files
 from typing import Any
 
@@ -47,13 +48,24 @@ class SchemaRegistry:
 
     @classmethod
     def with_builtin_schemas(cls) -> SchemaRegistry:
+        schemas, resources = cls._builtins()
+        registry = cls()
+        registry._schemas = deepcopy(schemas)
+        registry._registry = resources
+        return registry
+
+    @classmethod
+    @cache
+    def _builtins(cls) -> tuple[dict[str, Mapping[str, Any]], Registry]:
+        """Validate packaged contracts once; referencing registries are persistent."""
         directory = files("hypomnesis.contracts").joinpath("schemas")
         schemas = [
             json.loads(entry.read_text(encoding="utf-8"))
             for entry in sorted(directory.iterdir(), key=lambda e: e.name)
             if entry.name.endswith(".json")
         ]
-        return cls(schemas)
+        registry = cls(schemas)
+        return registry._schemas, registry._registry
 
     def add(self, schema: Mapping[str, Any]) -> str:
         schema = deepcopy(dict(schema))

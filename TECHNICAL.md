@@ -463,6 +463,12 @@ résolution à l'inspection, même si une dépendance est absente. Codes 0 succ�
 
 `src/hypomnesis/contracts/` : schémas JSON Schema 2020-12 (enveloppe, manifeste d'extension) et
 `SchemaRegistry` (validation des schémas à l'enregistrement, enveloppe puis payload).
+Les contrats embarqués sont lus et vérifiés une fois par classe/processus,
+puis copiés dans chaque nouveau registre. Le registre de ressources
+`referencing` est persistant ; ajouter un contrat local ne modifie ni les
+autres instances ni le modèle en cache. Les ajouts personnalisés restent
+vérifiés, les schémas exposés restent des copies. Redémarrer le processus
+après modification des contrats embarqués.
 
 ### Correspondance des types et JSON (HYP-042, ADR 0010)
 
