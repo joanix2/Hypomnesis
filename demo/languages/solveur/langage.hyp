@@ -1,5 +1,5 @@
-language solveur = {
-  version = "1.0.0";
-  description = "Problèmes linéaires typés et modèles exacts via Problem et Effect.solve_typed.";
-  procedure = { kind = "program"; entry = "procedure" }
-}
+language solveur = struct
+  let version = "1.0.0"
+  let description = "Problèmes linéaires typés et modèles exacts via Problem et Effect.solve_typed."
+  let procedure = { kind = "program"; entry = "procedure" }
+end

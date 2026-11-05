@@ -23,12 +23,36 @@
         "1": {"name": "keyword.control.hypomnesis"},
         "2": {"name": "entity.name.type.language.hypomnesis"}
       },
-      "end": "(?<=\\})",
+      "end": "(?<=\\bend\\b)|(?=\\{)",
       "patterns": [
         {"include": "#documentation"},
         {"include": "#comment"},
-        {"include": "#language-record"},
+        {"include": "#language-body"},
         {"name": "keyword.operator.hypomnesis", "match": "="}
+      ]
+    },
+    "language-body": {
+      "name": "meta.body.language.hypomnesis",
+      "begin": "\\bstruct\\b",
+      "beginCaptures": {"0": {"name": "keyword.control.hypomnesis"}},
+      "end": "\\bend\\b",
+      "endCaptures": {"0": {"name": "keyword.control.hypomnesis"}},
+      "patterns": [
+        {"include": "#documentation"},
+        {"include": "#comment"},
+        {"include": "#string"},
+        {"include": "#language-record"},
+        {
+          "match": "\\b(let)\\s+([a-z_][A-Za-z0-9_']*)\\s*(=)",
+          "captures": {
+            "1": {"name": "keyword.control.hypomnesis"},
+            "2": {"name": "variable.other.property.hypomnesis"},
+            "3": {"name": "keyword.operator.hypomnesis"}
+          }
+        },
+        {"include": "#keywords"},
+        {"include": "#numbers"},
+        {"name": "punctuation.section.hypomnesis", "match": "[\\[\\];,]"}
       ]
     },
     "language-record": {

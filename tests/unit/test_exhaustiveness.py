@@ -165,7 +165,7 @@ def test_m2_warnings_keep_their_own_filename(tmp_path, capsys, as_entry, strict)
     root = tmp_path / "language"
     root.mkdir()
     entry = root / "langage.hyp"
-    entry.write_text('language sample = { version = "1"; sources = ["partial.hyp"] }')
+    entry.write_text('language sample = struct let version = "1" let sources = ["partial.hyp"] end')
     partial = root / "partial.hyp"
     partial.write_text("(** Une fonction partielle. *)\nlet f = function Some x -> x")
     program = tmp_path / "program.hyp"

@@ -1,6 +1,6 @@
 ---
 title: "HYP-151 · Cohérence des déclarations language et coloration VS Code"
-lane: doing
+lane: qa
 created: 2026-11-04T23:08:20+01:00
 updated: 2026-11-04T23:08:20+01:00
 description: "P2 · M · Métalangage et outillage · syntaxe des métadonnées et coloration sur le poste courant"
@@ -156,5 +156,70 @@ Hypothesis de 200 ms reste inchangé. Le volet coloration peut être committé
 indépendamment ; le parseur n'a pas changé. Arbitrage à soumettre dans
 le formulaire : A, syntaxe actuelle ; B, configuration statique struct/let/end ;
 ou une autre proposition. Le ticket reste doing en attendant cette décision.
+
+### user
+
+Forme B retenue, puis précision : « non remplace l'ancienne forme ».
+
+### agent
+
+Décision appliquée sans coexistence : `language nom = struct let clé = valeur end`.
+Les valeurs restent des constantes statiques ; les records imbriqués gardent
+leurs accolades, séparateurs et clés éventuellement citées. Les liaisons du
+bloc sont nommées par un identifiant minuscule, sans paramètres, récursion,
+annotation ni calcul arbitraire. L'ancienne déclaration à accolades sera
+refusée par le parseur, pas convertie implicitement.
+
+Plan / todo / implement : nouvelle ADR remplaçant seulement la surface
+syntaxique de l'ADR 0013 ; grammaire et transformation vers le même AST ;
+migration des déclarations actives, fixtures et documentation ; adaptation
+TextMate et vérification Extension Host réel. Tests de rejet de l'ancienne
+forme, des doublons et expressions, puis validations complète/rapide/graphe.
+Les conversations et ADR historiques restent intactes.
+
+### user
+
+### agent
+
+Remplacement implémenté (ADR 0016) : seule la déclaration struct/let/end
+est acceptée. Les huit langages de démonstration, fixtures Python/Codegen/
+certificats/LSP et documentation active sont migrés. L'AST et les contrats
+statiques restent identiques ; aucun calcul ni chargement Python ajouté.
+Les conversations et l'ADR 0013 restent des documents historiques.
+
+Tests : ancienne forme rejetée au parseur et via check JSON avec position
+exacte ; doublons extérieurs/imbriqués, calculs/paramètres/récursion/
+annotations refusés ; end dans chaînes/commentaires/records sans fermeture
+prématurée ; liaisons de métadonnées non exportées. Les tests existants
+conservent DAG, diamants, confinement, adaptateurs non importés et procédures.
+
+Onze tests TextMate verts. Hôte VS Code réel : association, activation,
+scopes, diagnostic/correction du programme et rejet de l'ancienne déclaration
+puis correction non enregistrée vérifiés. Extension 0.1.2 packagée et
+installée ; grammaire installée identique à la source. Aucun rechargement
+forcé de la fenêtre utilisateur ; Developer: Reload Window si nécessaire.
+
+Validation complète verte (linters/types/schémas, noyau, Codegen, Lean,
+audit et 500 termes différentiels), graphe rafraîchi sans appel LLM.
+Ticket proposé en QA, jamais en done par l'agent. Dernière validation
+rapide et commit local à suivre, sans push.
+
+### user
+
+### agent
+
+Dernière validation rapide verte : Ruff, formatage, 109 tâches Kanban
+valides, suites noyau et Codegen. Validation graphe également relancée
+après passage en QA. Le commit local regroupe uniquement HYP-151 et sa
+migration ; aucun push. Forme finale :
+
+```hyp
+language arithmetique = struct
+  let version = "1.0.0"
+  let description = "Arithmétique entière réutilisable, sans entrée/sortie."
+end
+```
+
+Le reste du lot Mac reste ouvert ; cette validation ne le déclare pas terminé.
 
 ### user

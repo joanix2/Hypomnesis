@@ -1,4 +1,4 @@
-language arithmetique = {
-  version = "1.0.0";
-  description = "Arithmétique entière réutilisable, sans entrée/sortie."
-}
+language arithmetique = struct
+  let version = "1.0.0"
+  let description = "Arithmétique entière réutilisable, sans entrée/sortie."
+end

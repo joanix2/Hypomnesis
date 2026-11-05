@@ -156,7 +156,8 @@ def test_static_plugin_contracts_permissions_and_adapters_are_exported(tmp_path,
 
 def test_library_and_top_level_values_are_publishable(tmp_path):
     (tmp_path / "langage.hyp").write_text(
-        'language racine = { version = "1.0.0" }\n(** Fonction identité. *)\nlet identite x = x\n'
+        'language racine = struct let version = "1.0.0" end\n'
+        "(** Fonction identité. *)\nlet identite x = x\n"
     )
     result = catalogue(load_language(tmp_path, execute=False))
     assert result.entry is None

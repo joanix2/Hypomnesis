@@ -313,7 +313,9 @@ def test_cli_procedure(capsys, tmp_path):
 
 
 def test_invalid_manifest_is_refused(tmp_path):
-    (tmp_path / "langage.hyp").write_text('language x = { version = "1"; unknown = true }')
+    (tmp_path / "langage.hyp").write_text(
+        'language x = struct let version = "1" let unknown = true end'
+    )
     with pytest.raises(LanguageError, match="déclaration invalide"):
         load_language(tmp_path)
 

@@ -49,7 +49,7 @@ test("types, booleans, numbers and operators are recognized", () => {
 });
 
 test("native language declarations highlight without a JSON manifest", () => {
-  const tokens = tokenize('language exemple = { imports = ["../base"]; version = "1" }');
+  const tokens = tokenize('language exemple = struct let imports = ["../base"] let version = "1" end');
   assert(scoped(tokens, "keyword.control.hypomnesis", "language"));
   assert(scoped(tokens, "string.quoted.double.hypomnesis", "../base"));
 });
@@ -63,15 +63,17 @@ test("the reported language declaration colors its name and metadata", () => {
     ["variable.other.property.hypomnesis", "description"],
     ["string.quoted.double.hypomnesis", "1.0.0"],
     ["keyword.operator.hypomnesis", "="],
-    ["punctuation.section.hypomnesis", ";"],
+    ["keyword.control.hypomnesis", "struct"],
+    ["keyword.control.hypomnesis", "let"],
+    ["keyword.control.hypomnesis", "end"],
   ]) assert(scoped(tokens, scope, text), `${scope}: ${text}`);
 });
 
-test("nested metadata and multiline declarations stop at the right closing brace", () => {
+test("nested metadata and multiline declarations stop at end, not a closing brace", () => {
   const tokens = tokenize([
     "language test",
-    '= { procedure = { kind = "program"; entry = "version = }" };',
-    '(* description = } *) version = "1" }',
+    '= struct let procedure = { kind = "program"; entry = "version = end }" }',
+    '(* description = end } *) let version = "1" end',
     'let normal = { version = "ordinary" }',
   ].join("\n"));
   assert(scoped(tokens, "variable.other.property.hypomnesis", "kind"));
@@ -79,6 +81,24 @@ test("nested metadata and multiline declarations stop at the right closing brace
   assert(scoped(tokens[2], "variable.other.property.hypomnesis", "version"));
   assert(!scoped([tokens[3]], "meta.language.hypomnesis"));
   assert(!scoped([tokens[3]], "variable.other.property.hypomnesis"));
+});
+
+test("record keys and strings containing end do not close a language block", () => {
+  const tokens = tokenize([
+    'language test = struct let extra = { end = "end"; nested = [{value = true}] }',
+    'let version = "1"',
+    'end let normal = { version = "ordinary" }',
+  ].join("\n"));
+  assert(scoped(tokens[1], "variable.other.property.hypomnesis", "version"));
+  const normal = tokens[2].filter(token => token.text.includes("version"));
+  assert(normal.length);
+  assert(!scoped([normal], "meta.language.hypomnesis"));
+});
+
+test("the removed record form does not receive metadata scopes", () => {
+  const tokens = tokenize('language legacy = { version = "1" }\nlet x = 1');
+  assert(!scoped(tokens, "variable.other.property.hypomnesis"));
+  assert(!scoped([tokens[1]], "meta.language.hypomnesis"));
 });
 
 for (const name of ["mecanique/plaque.hyp", "ventilation/ventilation.hyp"]) {

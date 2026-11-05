@@ -106,8 +106,12 @@ class _ToAst(Transformer):
         return A.Program(tuple(children), span=_span(meta))
 
     def language_item(self, meta, children):
-        name, configuration = children
-        return A.LanguageItem(str(name), configuration, span=_span(meta))
+        name, *bindings = children
+        return A.LanguageItem(str(name), self.config_record(meta, bindings), span=_span(meta))
+
+    def config_binding(self, meta, children):
+        name, value = children
+        return str(name), value
 
     def config_string(self, meta, children):
         return pyast.literal_eval(str(children[0]))

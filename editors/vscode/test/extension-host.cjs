@@ -45,8 +45,24 @@ exports.run = async () => {
     ["variable.other.property.hypomnesis", "description"],
     ["string.quoted.double.hypomnesis", "1.0.0"],
     ["keyword.operator.hypomnesis", "="],
-    ["punctuation.section.hypomnesis", "{"],
+    ["keyword.control.hypomnesis", "struct"],
+    ["keyword.control.hypomnesis", "let"],
+    ["keyword.control.hypomnesis", "end"],
   ]) assert(scoped(tokens, scope, text), `${scope}: ${text}`);
-  console.log("Hypomnesis Extension Host: association, activation, grammar scopes, diagnostic and correction OK");
+  const original = declaration.getText();
+  const legacy = new vscode.WorkspaceEdit();
+  legacy.replace(
+    declaration.uri, new vscode.Range(0, 0, declaration.lineCount, 0),
+    'language arithmetique = { version = "1.0.0" }\n',
+  );
+  assert(await vscode.workspace.applyEdit(legacy));
+  await waitFor(() => vscode.languages.getDiagnostics(declaration.uri).some(
+    diagnostic => diagnostic.source === "hypomnesis" && diagnostic.code === "syntax",
+  ));
+  const restore = new vscode.WorkspaceEdit();
+  restore.replace(declaration.uri, new vscode.Range(0, 0, declaration.lineCount, 0), original);
+  assert(await vscode.workspace.applyEdit(restore));
+  await waitFor(() => vscode.languages.getDiagnostics(declaration.uri).length === 0);
+  console.log("Hypomnesis Extension Host: association, activation, grammar scopes, diagnostics, legacy rejection and correction OK");
   fs.writeFileSync(process.env.HYPOMNESIS_TEST_RESULT, "passed");
 };

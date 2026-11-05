@@ -154,7 +154,7 @@ def resolve_layers(
             raise LanguageError(f"{path} : déclaration `language` unique et de premier niveau")
         config: dict[str, Any] = dict(declaration.configuration)
         if "name" in config:
-            raise LanguageError(f"{path} : le nom est déclaré après `language`, pas dans le record")
+            raise LanguageError(f"{path} : le nom est déclaré après `language`, pas dans le bloc")
         config["name"] = declaration.name
         config.setdefault("sources", [])
         config.setdefault("imports", [])

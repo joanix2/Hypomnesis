@@ -125,7 +125,9 @@ def test_certificate_write_failure_is_a_cli_diagnostic(tmp_path, capsys):
 
 def test_language_entry_exports_its_actual_session_not_the_unused_initial_prelude(tmp_path, capsys):
     path = tmp_path / "langage.hyp"
-    path.write_text('language sample = { version = "1.0.0" }\n(** Answer. *)\nlet answer = 42')
+    path.write_text(
+        'language sample = struct let version = "1.0.0" end\n(** Answer. *)\nlet answer = 42'
+    )
     certificate = tmp_path / "cert.json"
     assert (
         main(

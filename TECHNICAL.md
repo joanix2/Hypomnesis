@@ -66,10 +66,14 @@ enregistre ; seul le moteur crée des faits observés, lors d'une lecture de cap
 Briques M3 utilisées par l'interpréteur : `epistemics/` (provenance, connaissances),
 `ir/problem.py`, `backends/z3_solver.py`, `effects/dispatcher.py`, `observability/trace.py`.
 
-### Déclarations natives et couches (HYP-147, ADR 0013)
+### Déclarations natives et couches (HYP-147/151, ADR 0013/0016)
 
 Le fichier d'entrée `.hyp`, par convention `langage.hyp`, commence par
-`language nom = { version = "..."; imports = ["../base"]; … }`.
+`language nom = struct let version = "1" let imports = ["../base"] end`.
+HYP-151 remplace la forme extérieure à accolades : le parseur la refuse
+en attendant `struct`. Chaque champ est une liaison `let cle = valeur`,
+sans `;` entre liaisons ; les listes/records imbriqués restent inchangés.
+Ces liaisons ne sont pas exécutables et n'exportent aucune variable.
 `LanguageItem` dans l'AST porte des données statiques, lues par les règles `config_*`
 de Lark (pas par regex ni évaluation du langage). Le schéma interne
 `language-declaration/1.0.0` vérifie les champs et la configuration de procédure ;

@@ -103,14 +103,14 @@ def test_imports_do_not_implicitly_grant_or_register_python_io(tmp_path):
     dependency = tmp_path / "base"
     dependency.mkdir()
     (dependency / "langage.hyp").write_text(
-        'language base = { version = "1"; adapters = ["io.py"] }'
+        'language base = struct let version = "1" let adapters = ["io.py"] end'
     )
     (dependency / "io.py").write_text('raise RuntimeError("must not import")')
     root = tmp_path / "root"
     root.mkdir()
     (root / "langage.hyp").write_text(
-        'language root = { version = "1"; imports = ["../base"]; '
-        'procedure = { kind = "program"; entry = "main" } }'
+        'language root = struct let version = "1" let imports = ["../base"] '
+        'let procedure = { kind = "program"; entry = "main" } end'
     )
     report = run_procedure(load_language(root), "let main = Effect.return 42", out_dir=tmp_path)
     assert report.result == 42
@@ -118,8 +118,8 @@ def test_imports_do_not_implicitly_grant_or_register_python_io(tmp_path):
 
 def test_factory_result_must_match_decorated_identifier(tmp_path):
     (tmp_path / "langage.hyp").write_text(
-        'language test = { version = "1"; adapters = ["io.py"]; '
-        'procedure = { kind = "program"; entry = "main" } }'
+        'language test = struct let version = "1" let adapters = ["io.py"] '
+        'let procedure = { kind = "program"; entry = "main" } end'
     )
     (tmp_path / "io.py").write_text(
         "from hypomnesis.engine.adapters import actuator\n"

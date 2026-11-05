@@ -1,8 +1,8 @@
-language contraintes = {
-  version = "1.0.0";
-  imports = ["../booleen"; "../arithmetique"];
-  description = "Contraintes composées à partir de couches indépendantes."
-}
+language contraintes = struct
+  let version = "1.0.0"
+  let imports = ["../booleen"; "../arithmetique"]
+  let description = "Contraintes composées à partir de couches indépendantes."
+end
 
 (** Prédicats de contraintes communs aux langages métier. *)
 module Contraintes = struct

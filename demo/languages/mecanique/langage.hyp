@@ -1,17 +1,17 @@
-language mecanique = {
-  version = "0.2.0";
-  description = "Pièces mécaniques simples : plaques, estimation d'épaisseur, contraintes d'élancement et de masse, export de géométrie, mesure ; procédures écrites en Hypomnesis.";
-  sources = ["plaque.hyp"];
-  contracts = [
+language mecanique = struct
+  let version = "0.2.0"
+  let description = "Pièces mécaniques simples : plaques, estimation d'épaisseur, contraintes d'élancement et de masse, export de géométrie, mesure ; procédures écrites en Hypomnesis."
+  let sources = ["plaque.hyp"]
+  let contracts = [
     "contrats/geometry.export-1.0.0.json";
     "contrats/geometry.export.result-1.0.0.json";
     "contrats/thickness.reading-1.0.0.json"
-  ];
-  adapters = [
+  ]
+  let adapters = [
     "adaptateurs/atelier.py";
     "adaptateurs/export.py";
     "adaptateurs/transcription.py"
-  ];
-  examples = "exemples.json";
-  procedure = { kind = "program"; entry = "procedure" }
-}
+  ]
+  let examples = "exemples.json"
+  let procedure = { kind = "program"; entry = "procedure" }
+end

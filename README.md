@@ -59,11 +59,11 @@ let concevoir (d : demande) (est : estimateur) =
 Chaque langage se déclare directement en `.hyp`, par convention dans `langage.hyp` :
 
 ```ocaml
-language exemple = {
-  version = "1.0.0";
-  imports = ["../booleen"; "../arithmetique"];
-  procedure = { kind = "program"; entry = "procedure" }
-}
+language exemple = struct
+  let version = "1.0.0"
+  let imports = ["../booleen"; "../arithmetique"]
+  let procedure = { kind = "program"; entry = "procedure" }
+end
 ```
 
 Les modules importés conservent leurs types et noms qualifiés (`Booleen.*`,
@@ -80,6 +80,8 @@ par décorateurs Python (`@sensor`, `@actuator`, `@environment`, `@transcriber`)
 modules explicitement listés par `adapters`. Aucun module d'adaptateur n'est importé
 pendant `check` ou l'analyse VS Code. Voir [la référence](docs/language/reference.md#couches-de-langages-et-imports)
 et [l'ADR 0013](docs/adr/0013-couches-declarees-en-hypomnesis.md).
+La syntaxe extérieure à accolades est remplacée sans compatibilité par
+`struct / let / end` ([ADR 0016](docs/adr/0016-declarations-language-struct.md)).
 
 ## Démarrage
 

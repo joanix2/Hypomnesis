@@ -1,7 +1,7 @@
-language booleen = {
-  version = "1.0.0";
-  description = "Logique booléenne réutilisable, sans entrée/sortie."
-}
+language booleen = struct
+  let version = "1.0.0"
+  let description = "Logique booléenne réutilisable, sans entrée/sortie."
+end
 
 (** Opérations booléennes communes aux langages symboliques. *)
 module Booleen = struct

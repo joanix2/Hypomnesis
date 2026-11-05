@@ -48,7 +48,7 @@ def test_context_discovery_keeps_external_workspace_layouts(tmp_path, prefix):
     base = tmp_path / prefix
     root = base / "languages" / "sample"
     root.mkdir(parents=True)
-    (root / "langage.hyp").write_text('language sample = { version = "1" }')
+    (root / "langage.hyp").write_text('language sample = struct let version = "1" end')
     program = base / "programs" / "sample" / "nested" / "p.hyp"
     assert language_root(program, tmp_path, None) == root
     assert language_root(base / "programs" / "standalone.hyp", tmp_path, None) is None
@@ -57,8 +57,8 @@ def test_context_discovery_keeps_external_workspace_layouts(tmp_path, prefix):
 def make_language(root):
     root.mkdir()
     (root / "langage.hyp").write_text(
-        'language test = { version = "0.1.0"; sources = ["a.hyp"; "b.hyp"]; '
-        'procedure = { kind = "program"; entry = "main" } }'
+        'language test = struct let version = "0.1.0" let sources = ["a.hyp"; "b.hyp"] '
+        'let procedure = { kind = "program"; entry = "main" } end'
     )
     (root / "a.hyp").write_text("let x = 1")
     (root / "b.hyp").write_text("let y = x + 1")
@@ -97,7 +97,7 @@ def test_explicit_context_and_configuration_errors(tmp_path):
 
 def test_invalid_manifest_is_not_a_success(tmp_path):
     root = make_language(tmp_path / "m2")
-    (root / "langage.hyp").write_text("language test = {}")
+    (root / "langage.hyp").write_text("language test = struct end")
     [issue] = analyze(tmp_path / "p.hyp", "let x = 1", tmp_path, "m2", {})
     assert issue.code == "configuration"
     assert "déclaration invalide" in issue.message

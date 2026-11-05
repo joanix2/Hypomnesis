@@ -170,15 +170,15 @@ de langage contient `langage.hyp`. La déclaration `language` doit être le prem
 unique et hors de tout module :
 
 ```ocaml
-language exemple = {
-  version = "1.0.0";
-  description = "Un langage construit sur des couches communes.";
-  imports = ["../booleen"; "../arithmetique/langage.hyp"];
-  sources = ["definitions.hyp"];
-  adapters = ["adaptateurs/io.py"];
-  contracts = ["contrats/commande.json"];
-  procedure = { kind = "program"; entry = "procedure" }
-}
+language exemple = struct
+  let version = "1.0.0"
+  let description = "Un langage construit sur des couches communes."
+  let imports = ["../booleen"; "../arithmetique/langage.hyp"]
+  let sources = ["definitions.hyp"]
+  let adapters = ["adaptateurs/io.py"]
+  let contracts = ["contrats/commande.json"]
+  let procedure = { kind = "program"; entry = "procedure" }
+end
 ```
 
 - `version` est obligatoire. `description`, `imports`, `sources`, `adapters`, `contracts`,
@@ -186,6 +186,10 @@ language exemple = {
 - Les données de configuration sont statiques : chaînes, entiers, booléens, listes
   séparées par `;`, records de champs `cle = valeur` (clés chaînes possibles).
   Aucune expression, fonction, interpolation ou import Python n'est évalué pour les lire.
+- Chaque champ extérieur est `let cle = valeur`, sans `;` entre liaisons.
+  Les clés extérieures sont des identifiants minuscules ; paramètres, récursion,
+  annotations et `in` ne sont pas autorisés. Ces liaisons ne créent pas de
+  variables dans le programme.
 - `imports` contient des chemins **relatifs** de dossiers ou fichiers `.hyp` d'entrée.
   Les imports transitifs sont résolus avant les définitions de la couche.
   Les chemins canoniques dédupliquent les diamants ; cycles, identités dupliquées et
@@ -199,6 +203,11 @@ language exemple = {
   dans le paquet, comme les contrats, exemples et modules d'adaptateurs.
 - Sans `procedure`, la couche est une bibliothèque importable, pas un programme exécutable.
   Les configurations d'entrées/sorties ne sont pas héritées implicitement des imports.
+
+La forme extérieure à accolades est remplacée, sans compatibilité
+([ADR 0016](../adr/0016-declarations-language-struct.md)) : utiliser `struct`
+et `end`, ajouter `let` devant chaque champ et retirer les `;` extérieurs.
+Les records/listes imbriqués ne changent pas.
 
 Les anciens `langage.json` ne sont plus acceptés. Migrer leurs métadonnées vers la déclaration
 native et remplacer les références Python `fichier.py:fonction` par des modules dans

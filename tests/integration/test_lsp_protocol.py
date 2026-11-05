@@ -208,8 +208,8 @@ def test_context_configuration_and_unsaved_m2_dependencies(client, tmp_path):
     root = tmp_path / "language"
     root.mkdir()
     (root / "langage.hyp").write_text(
-        'language test = { version = "0.1.0"; sources = ["a.hyp"]; '
-        'procedure = { kind = "program"; entry = "main" } }'
+        'language test = struct let version = "0.1.0" let sources = ["a.hyp"] '
+        'let procedure = { kind = "program"; entry = "main" } end'
     )
     (root / "a.hyp").write_text("let x = 1")
     client.send(
@@ -230,11 +230,13 @@ def test_context_configuration_and_unsaved_m2_dependencies(client, tmp_path):
 def test_imported_language_declaration_overlay_rechecks_its_users(client, tmp_path):
     base = tmp_path / "base"
     base.mkdir()
-    initial = 'language base = { version = "1" }\nlet x = 1'
+    initial = 'language base = struct let version = "1" end\nlet x = 1'
     (base / "langage.hyp").write_text(initial)
     root = tmp_path / "language"
     root.mkdir()
-    (root / "langage.hyp").write_text('language example = { version = "1"; imports = ["../base"] }')
+    (root / "langage.hyp").write_text(
+        'language example = struct let version = "1" let imports = ["../base"] end'
+    )
     client.send(
         "workspace/didChangeConfiguration",
         {"settings": {"hypomnesis": {"languageRoot": "language", "debounceMs": 20}}},

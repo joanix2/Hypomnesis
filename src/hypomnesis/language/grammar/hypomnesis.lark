@@ -13,7 +13,8 @@ _item: let_item
 
 // ---------------------------------------------------------------- items
 
-language_item: "language" LIDENT "=" config_record
+language_item: "language" LIDENT "=" "struct" config_binding* "end"
+config_binding: "let" LIDENT "=" config_value
 config_record: "{" [config_field (";" config_field)* ";"?] "}"
 config_field: config_key "=" config_value
 ?config_key: LIDENT | STRING

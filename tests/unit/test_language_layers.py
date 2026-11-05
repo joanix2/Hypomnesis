@@ -12,7 +12,7 @@ from hypomnesis.engine.layers import check_layers, resolve_layers
 from hypomnesis.engine.procedure import run_procedure
 from hypomnesis.ir.core import DefValue
 from hypomnesis.language import ast as A
-from hypomnesis.language.errors import HypomnesisError
+from hypomnesis.language.errors import HypomnesisError, ParseError
 from hypomnesis.language.parser import parse_program
 from hypomnesis.lsp.analysis import analyze
 from hypomnesis.session import Session
@@ -25,29 +25,50 @@ def layer(tmp_path, name, body="", imports=(), config="", entry="langage.hyp"):
     root = tmp_path / name
     root.mkdir(exist_ok=True)
     paths = "; ".join(json.dumps(path) for path in imports)
+    configuration = f"let {config}" if config else ""
     (root / entry).write_text(
-        f'language {name} = {{ version = "1"; imports = [{paths}]; {config} }}\n{body}'
+        f'language {name} = struct let version = "1" let imports = [{paths}] '
+        f"{configuration} end\n{body}"
     )
     return root if entry == "langage.hyp" else root / entry
 
 
 def test_static_configuration_ast_and_positions():
     [item] = parse_program(
-        '\nlanguage test = { version = "1"; adapters = []; extra = {"a-b" = true; n = 1_000} }'
+        "\nlanguage test = struct\n"
+        '  let version = "1"\n'
+        "  (* end in a comment must not close the declaration. *)\n"
+        "  let adapters = []\n"
+        '  let extra = {"a-b" = true; n = 1_000; nested = [{end = "end"; value = false}]}\n'
+        "end"
     ).items
     assert isinstance(item, A.LanguageItem)
-    assert item.configuration["extra"] == {"a-b": True, "n": 1000}
+    assert item.configuration == {
+        "version": "1",
+        "adapters": [],
+        "extra": {"a-b": True, "n": 1000, "nested": [{"end": "end", "value": False}]},
+    }
     assert item.span.line == 2
+    assert item.span.end_line == 7
     with pytest.raises(HypomnesisError, match="package loader"):
-        Session().check('language test = { version = "1" }')
+        Session().check('language test = struct let version = "1" end')
 
 
 @pytest.mark.parametrize(
     "source",
     [
-        'language test = { version = "1"; version = "2" }',
-        "language test = { version = compute () }",
-        'language test = { version = "1"; imports = [read_file "evil"] }',
+        'language test = struct let version = "1" let version = "2" end',
+        "language test = struct let version = compute () end",
+        'language test = struct let version = "1" let imports = [read_file "evil"] end',
+        'language test = struct version = "1" end',
+        'language test = struct let version = "1"; end',
+        'language test = struct let version = "1"',
+        'language test = struct let version = "1" in "2" end',
+        'language test = struct let rec version = "1" end',
+        'language test = struct let version x = "1" end',
+        'language test = struct let version : string = "1" end',
+        'language test = struct let "version" = "1" end',
+        "language test = struct let version = struct end end",
     ],
 )
 def test_configuration_is_not_an_evaluated_expression(source):
@@ -57,12 +78,58 @@ def test_configuration_is_not_an_evaluated_expression(source):
 
 @pytest.mark.parametrize(
     "source",
+    ['language test = { version = "1" }', "language test = {}"],
+)
+def test_legacy_record_declarations_are_parse_errors(tmp_path, capsys, source):
+    with pytest.raises(ParseError, match="STRUCT") as caught:
+        parse_program(source)
+    assert caught.value.span.line == 1
+    assert caught.value.span.column == source.index("{") + 1
+    (tmp_path / "langage.hyp").write_text(source)
+    with pytest.raises(SourceError) as loaded:
+        resolve_layers(tmp_path)
+    assert loaded.value.stage_id == "syntax"
+    assert main(["check", str(tmp_path / "langage.hyp"), "--format", "json"]) == 1
+    [issue] = json.loads(capsys.readouterr().out)["diagnostics"]
+    assert issue["stage"] == "syntax"
+    assert issue["column"] == source.index("{") + 1
+    assert "STRUCT" in issue["message"]
+
+
+def test_duplicate_static_keys_remain_explicit_errors():
+    for source in (
+        'language test = struct let version = "1" let version = "2" end',
+        'language test = struct let procedure = {kind = "a"; kind = "b"} end',
+    ):
+        with pytest.raises(ParseError, match="duplicate language field"):
+            parse_program(source)
+
+
+def test_language_metadata_does_not_bind_executable_variables(tmp_path):
+    program = parse_program(
+        'language test = struct let version = "1" end\n'
+        "module M = struct let value = 42 end\nlet version = M.value"
+    )
+    assert len(program.items) == 3
+    assert isinstance(program.items[0], A.LanguageItem)
+    assert isinstance(program.items[1], A.ModuleItem)
+    assert isinstance(program.items[2], A.LetItem)
+    root = layer(tmp_path, "test", "let answer = version")
+    with pytest.raises(SourceError) as caught:
+        load_language(root, strict=False)
+    assert caught.value.stage_id == "name"
+
+
+@pytest.mark.parametrize(
+    "source",
     [
-        "language test = {}",
-        'language test = { version = "1"; extra = true }',
-        'let x = 1\nlanguage test = { version = "1" }',
-        'language test = { version = "1" }\nlanguage again = { version = "1" }',
-        'language test = { version = "1" }\nmodule M = struct language sub = {} end',
+        "language test = struct end",
+        'language test = struct let version = "1" let extra = true end',
+        'let x = 1\nlanguage test = struct let version = "1" end',
+        'language test = struct let version = "1" end\n'
+        'language again = struct let version = "1" end',
+        'language test = struct let version = "1" end\n'
+        "module M = struct language sub = struct end end",
     ],
 )
 def test_invalid_declarations_are_refused(tmp_path, source):
@@ -124,7 +191,7 @@ def test_duplicate_identity_is_refused(tmp_path):
     a = layer(tmp_path, "a", imports=["../b", "../c"])
     layer(tmp_path, "b")
     c = layer(tmp_path, "c")
-    (c / "langage.hyp").write_text('language b = { version = "1" }')
+    (c / "langage.hyp").write_text('language b = struct let version = "1" end')
     with pytest.raises(LanguageError, match="identité de couche dupliquée"):
         resolve_layers(a)
 
@@ -245,7 +312,7 @@ def test_lsp_follows_transitive_unsaved_sources_and_declarations(tmp_path):
         "let y = x + 1",
         tmp_path,
         str(a),
-        {str(b / "langage.hyp"): 'language b = { version = "1" }\nlet x = true'},
+        {str(b / "langage.hyp"): 'language b = struct let version = "1" end\nlet x = true'},
     )
     assert issue.code == "type"
     [issue] = analyze(
@@ -253,7 +320,7 @@ def test_lsp_follows_transitive_unsaved_sources_and_declarations(tmp_path):
         "let y = x + 1",
         tmp_path,
         str(a),
-        {str(a / "langage.hyp"): 'language a = { version = "1" }'},
+        {str(a / "langage.hyp"): 'language a = struct let version = "1" end'},
     )
     assert issue.code == "name"
 
@@ -269,7 +336,7 @@ def test_lsp_reports_dependency_errors_at_the_program_start(tmp_path):
 
 def test_lsp_checks_a_new_unsaved_entry_and_uses_its_configuration(tmp_path):
     entry = tmp_path / "langage.hyp"
-    source = 'language test = { version = "1" }\nlet x = 1 + true'
+    source = 'language test = struct let version = "1" end\nlet x = 1 + true'
     [issue] = analyze(entry, source, tmp_path, None, {})
     assert issue.code == "type"
     assert issue.range.start.line == 1

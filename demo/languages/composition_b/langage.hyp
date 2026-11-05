@@ -1,9 +1,9 @@
-language composition_b = {
-  version = "1.0.0";
-  imports = ["../contraintes"; "../booleen"];
-  description = "Second langage composé, réutilisant les mêmes définitions.";
-  procedure = { kind = "program"; entry = "procedure" }
-}
+language composition_b = struct
+  let version = "1.0.0"
+  let imports = ["../contraintes"; "../booleen"]
+  let description = "Second langage composé, réutilisant les mêmes définitions."
+  let procedure = { kind = "program"; entry = "procedure" }
+end
 
 (** Second langage utilisateur des couches communes. *)
 module CompositionB = struct

@@ -21,10 +21,12 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
 - **M0** `demo/sortie/` : résultats (non versionné).
 - Les dépendances ne vont que vers le niveau supérieur. Jamais de logique métier en Python.
 
-## Couches symboliques (ADR 0013, HYP-147)
+## Couches symboliques (ADR 0013/0016, HYP-147/151)
 
-- Déclaration native `language nom = { version = "..."; imports = ["../base"]; … }` dans
+- Déclaration native `language nom = struct let version = "1" let imports = ["../base"] end` dans
   le fichier d'entrée `.hyp` (par convention `langage.hyp`). Plus de lecture de `langage.json`.
+- HYP-151 remplace l'ancienne déclaration à accolades, désormais rejetée.
+  Les liaisons sont statiques ; seuls les records imbriqués gardent leurs accolades.
 - Imports locaux de fichiers/dossiers, DAG dépendance → utilisateur, déduplication des diamants,
   cycles/identités/collisions refusés. Bibliothèques sans procédure autorisées.
 - Les I/O Python sont déclarées par `@sensor`, `@actuator`, `@environment`, `@transcriber`

@@ -1,9 +1,9 @@
-language composition_a = {
-  version = "1.0.0";
-  imports = ["../contraintes"; "../arithmetique"];
-  description = "Premier langage composé, avec une dépendance en diamant.";
-  procedure = { kind = "program"; entry = "procedure" }
-}
+language composition_a = struct
+  let version = "1.0.0"
+  let imports = ["../contraintes"; "../arithmetique"]
+  let description = "Premier langage composé, avec une dépendance en diamant."
+  let procedure = { kind = "program"; entry = "procedure" }
+end
 
 (** Premier langage utilisateur des couches communes. *)
 module CompositionA = struct
