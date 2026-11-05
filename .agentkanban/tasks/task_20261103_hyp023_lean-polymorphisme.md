@@ -12,6 +12,29 @@ tags: [certification, lean, metalangage]
 
 ### user
 
+Étendre le pont P44 aux motifs scalaires et de paires, sans prendre les
+constructeurs paramétriques comme acquis.
+
+### agent
+
+`RuntimePat` borne explicitement les motifs pris en charge aux littéraux,
+variables, wildcard et paires. Le lemme `PatTy.erase_runtimePat` transforme
+ces typages de motifs vers `Core.PatTy`, et le cas `case` du fragment réutilise
+ensuite le véritable théorème `Core.eval_safe`. Une régression vérifie à tout
+fuel le filtrage d'une paire qui lie la première composante ; l'ordre de pile
+Core est conservé. Les cas de mismatch restent autorisés sous le contrat
+`Core.Safe`.
+
+Audit P44, catalogue, commentaires de syntaxe, `TECHNICAL.md` et checklist
+mis à jour. Validations réussies : `validate.sh lean` (audit inclus),
+`validate.sh rapide`, `validate.sh graphe`, `kanban.py check` (109 tâches) et
+`git diff --check`. Les motifs nominaux/paramétriques, records,
+`Coverage.Certified`, la sûreté des schémas multi-instanciés, le décodeur/CLI
+et le véritable `List.map` du prélude restent ouverts. Cette étape n'est pas
+la clôture de HYP-023.
+
+### user
+
 Poursuivre HYP-023 en étendant P44 à la récursion monomorphe.
 
 ### agent

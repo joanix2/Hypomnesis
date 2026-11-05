@@ -1,7 +1,7 @@
 import Hypomnesis.Core.Soundness
 import Hypomnesis.Core.PolyTyping
 
-/-! # Pont de sûreté polymorphe pour un fragment runtime monomorphe -/
+/-! # Pont de sûreté polymorphe pour des fragments runtime contrôlés -/
 
 namespace Hypomnesis.Core.Poly
 
@@ -31,10 +31,77 @@ def Expr.eraseMono : Expr → Core.Expr
   | .fail _ => .fail .unit
   | .raise _ message => .raise .unit message.eraseMono
 
+/-- Motifs non nominaux, partageant directement la sémantique de filtrage Core. -/
+inductive RuntimePat : Pat → Prop where
+  | wild : RuntimePat .wild
+  | var : RuntimePat .var
+  | int (value : Int) : RuntimePat (.int value)
+  | bool (value : Bool) : RuntimePat (.bool value)
+  | float (value : Float) : RuntimePat (.float value)
+  | string (value : String) : RuntimePat (.string value)
+  | pair {first second} : RuntimePat first → RuntimePat second →
+      RuntimePat (.pair first second)
+
+theorem PatTy.erase_runtimePat {sig : Signature} {pattern : Pat} {type : Ty}
+    {bindings : List Ty} (runtimePat : RuntimePat pattern)
+    (typed : PatTy sig pattern type = some bindings) :
+    Core.PatTy [] pattern type.erase (bindings.map Ty.erase) := by
+  induction runtimePat generalizing type bindings with
+  | wild =>
+    simp only [PatTy] at typed
+    cases typed
+    exact Core.PatTy.wild
+  | var =>
+    simp only [PatTy] at typed
+    cases typed
+    exact Core.PatTy.var
+  | int value =>
+    cases type with
+    | int =>
+      simp only [PatTy] at typed
+      cases typed
+      exact Core.PatTy.int
+    | _ => simp [PatTy] at typed
+  | bool value =>
+    cases type with
+    | bool =>
+      simp only [PatTy] at typed
+      cases typed
+      exact Core.PatTy.bool
+    | _ => simp [PatTy] at typed
+  | float value =>
+    cases type with
+    | float =>
+      simp only [PatTy] at typed
+      cases typed
+      exact Core.PatTy.float
+    | _ => simp [PatTy] at typed
+  | string value =>
+    cases type with
+    | string =>
+      simp only [PatTy] at typed
+      cases typed
+      exact Core.PatTy.string
+    | _ => simp [PatTy] at typed
+  | @pair first second firstPat secondPat ihFirst ihSecond =>
+    cases type with
+    | prod firstType secondType =>
+      simp only [PatTy] at typed
+      cases hFirst : PatTy sig first firstType with
+      | none => simp [hFirst] at typed
+      | some firstBindings =>
+        cases hSecond : PatTy sig second secondType with
+        | none => simp [hFirst, hSecond] at typed
+        | some secondBindings =>
+          simp only [hFirst, hSecond, Option.some.injEq] at typed
+          subst bindings
+          simpa [List.map_append, Ty.erase] using
+            Core.PatTy.pair (ihFirst hFirst) (ihSecond hSecond)
+    | _ => simp [PatTy] at typed
+
 /-- Sous-fragment fermé par les formes de contrôle et les `let` monomorphes ;
-les variables sans argument de type ainsi que les lambdas et applications
-monomorphes sont permises, mais pas la récursion, les constructions ni les
-motifs. -/
+les variables sans arguments de type, les fonctions monomorphes, les `fix`
+monomorphes et les motifs non nominaux sont permis. -/
 inductive RuntimeFragment : Expr → Prop where
   | var (index : Nat) : RuntimeFragment (.var index [])
   | int (value : Int) : RuntimeFragment (.int value)
@@ -62,6 +129,10 @@ inductive RuntimeFragment : Expr → Prop where
       scheme.arity = 0 →
       RuntimeFragment value → RuntimeFragment body →
       RuntimeFragment (.letE scheme value body)
+  | case {scrutinee pattern onMatch onFail} :
+      RuntimeFragment scrutinee → RuntimePat pattern →
+      RuntimeFragment onMatch → RuntimeFragment onFail →
+      RuntimeFragment (.case scrutinee pattern onMatch onFail)
 
 /-- Pour les termes du fragment, l'effacement spécialisé préserve exactement
 le résultat du véritable évaluateur Core. Les lambdas garantissent que leur
@@ -89,6 +160,9 @@ theorem Expr.eval_eraseMono_eq_erase (fuel : Nat) (env : List Core.Val)
     cases fuel <;> simp [Expr.eraseMono, Expr.erase, Core.eval, ihLhs, ihRhs]
   | letE _ valueFragment bodyFragment ihValue ihBody =>
     cases fuel <;> simp [Expr.eraseMono, Expr.erase, Core.eval, ihValue, ihBody]
+  | case scrutineeFragment _ matchFragment failFragment ihScrutinee ihMatch ihFail =>
+    cases fuel <;>
+      simp [Expr.eraseMono, Expr.erase, Core.eval, ihScrutinee, ihMatch, ihFail]
 
 /-- Le fragment de liaison de ce pont n'autorise que des schémas monomorphes. -/
 def MonoTyEnv (env : TyEnv) : Prop :=
@@ -237,8 +311,30 @@ theorem HasType.erase_runtimeFragment {sig : Signature} {depth : Nat}
         simpa [arity, TyEnv.weaken_zero] using h
       have bodyTyped := ihBody bodyFragment monoBody
       simpa [Expr.eraseMono] using Core.HasType.letE valueTyped bodyTyped
+  | case _ _ _ _ _ ihScrutinee ihMatch ihFail =>
+    rename_i depth' env' scrutinee pattern onMatch onFail scrutineeType bindings resultType
+      scrutineeTyped patternTyped bindingsScoped matchTyped failTyped
+    cases fragment with
+    | case scrutineeFragment patternFragment matchFragment failFragment =>
+      have scrutineeCore := ihScrutinee scrutineeFragment monoEnv
+      have patternCore := PatTy.erase_runtimePat patternFragment patternTyped
+      have branchMono : MonoTyEnv (bindings.map mono ++ env') := by
+        intro scheme member
+        simp only [List.mem_append] at member
+        rcases member with member | member
+        · obtain ⟨binding, _bindingMember, rfl⟩ := List.mem_map.mp member
+          rfl
+        · exact monoEnv scheme member
+      have matchCore := ihMatch matchFragment branchMono
+      have failCore := ihFail failFragment monoEnv
+      have matchCore' :
+          Core.HasType [] (bindings.map Ty.erase ++
+            env'.map fun scheme => scheme.body.erase)
+            onMatch.eraseMono resultType.erase := by
+        simpa [List.map_append, mono, Ty.erase, Function.comp_def] using matchCore
+      simpa [Expr.eraseMono, List.map_append, mono, Ty.erase] using
+        Core.HasType.case scrutineeCore patternCore matchCore' failCore
   | construct => cases fragment
-  | case => cases fragment
   | fail => cases fragment
   | raise => cases fragment
 
@@ -354,6 +450,34 @@ theorem eval_safe_recursiveCountdownApplication {sig : Signature} (fuel : Nat) :
 
 theorem eval_recursiveCountdownApplication :
     Core.eval 100 [] recursiveCountdownApplication.erase = .ok (.int 0) := by
+  rfl
+
+/-- Le filtrage Core conserve l'ordre des liaisons d'un motif de paire. -/
+def pairPatternCase : Expr :=
+  .case (.pair (.int 7) (.bool true))
+    (.pair .var (.bool true)) (.var 0 []) (.int 0)
+
+theorem eval_safe_pairPatternCase {sig : Signature} (fuel : Nat) :
+    Core.Safe [] (Core.eval fuel [] pairPatternCase.erase) .int := by
+  have typed : HasType sig 0 [] pairPatternCase .int := by
+    have scrutineeTyped :
+        HasType sig 0 [] (.pair (.int 7) (.bool true)) (.prod .int .bool) :=
+      .pair .int .bool
+    have matchTyped : HasType sig 0 [mono .int] (.var 0 []) .int := by
+      exact .var rfl (by simp [mono, Scheme.instantiate, Ty.subst]) (by simp)
+    exact .case scrutineeTyped rfl
+      (by simp [TyEnv.wellScoped, Scheme.wellScoped, Ty.wellScoped, mono])
+      matchTyped .int
+  have fragment : RuntimeFragment pairPatternCase := by
+    exact RuntimeFragment.case
+      (.pair (.int 7) (.bool true))
+      (.pair .var (.bool true))
+      (.var 0)
+      (.int 0)
+  exact eval_safe_monoLetRuntimeFragment RuntimeEnvRel.nil typed fragment fuel
+
+theorem eval_pairPatternCase :
+    Core.eval 20 [] pairPatternCase.erase = .ok (.int 7) := by
   rfl
 
 /-- Le `let` monomorphe inutilisé reste également sûr à tout fuel. -/

@@ -45,9 +45,10 @@ runtime monomorphe, `Poly.Expr.eraseMono` conserve les annotations lambda ;
 véritable `Core.eval` quand le corps des fermetures a le même effacement.
 Le pont de sûreté couvre les variables à arguments de types vides, les `let`
 monomorphes, les lambdas/applications monomorphes et les fermetures récursives
-monomorphes. Il reste limité aux schémas d'arité zéro et aux fragments dont les
-fermetures ont le même effacement ; les données paramétriques et les termes
-polymorphes multi-instanciés restent hors preuve.
+monomorphes, ainsi que les motifs scalaires et de paires. Il reste limité aux
+schémas d'arité zéro et aux fragments dont les fermetures ont le même
+effacement ; les motifs de constructeurs, les données paramétriques et les
+termes polymorphes multi-instanciés restent hors preuve.
 
 Scalaires (HYP-150). Float est binary64 (modèle logique Lean 4.35), String est
 Unicode. BinOp fixe domaines et résultats ; raise produit une erreur explicite.

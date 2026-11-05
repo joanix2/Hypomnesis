@@ -57,9 +57,10 @@ stocke exactement le corps justifié par le typage. Une relation
 valeurs Core pour ce fragment ; les variables à arguments de types vides sont
 donc prises en charge lorsque leur schéma est monomorphe, y compris dans le
 corps d'un `let` et les fermetures monomorphes peuvent capturer ces valeurs.
-La récursion, les motifs, les constructeurs paramétriques et les liaisons
-polymorphes multi-instanciées ne sont couverts que hors ce cas monomorphe ;
-P44 ne constitue pas encore la sûreté générale du polymorphisme de rang 1.
+La récursion et les motifs scalaires/de paires sont couverts dans ce fragment ;
+les motifs de constructeurs, les données paramétriques et les liaisons
+polymorphes multi-instanciées restent hors preuve. P44 ne constitue pas encore
+la sûreté générale du polymorphisme de rang 1.
 Indépendamment de cette preuve de fragment, P45 établit pour l'exemple concret
 du `let` identité partagé entre `int` et `bool` que l'exécution à fuel 20 rend
 une paire dans la relation Core `ValTy`. Cette régression n'est pas une
