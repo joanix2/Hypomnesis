@@ -283,6 +283,7 @@ def run_mvp(
     finally:
         tracer.close()
         report["trace"] = tracer.export()
+        report["sdk_metrics"] = tracer.metrics.snapshot()
         report["provenance_graph"] = kb.provenance_graph()
         report["knowledge"] = {
             key: {"value": kb.value(key), "support": kb.support(key).name} for key in kb.facts

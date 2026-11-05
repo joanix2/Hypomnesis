@@ -1,9 +1,10 @@
-"""Private SDK metrics with a closed, bounded set of label values (§12.4)."""
+"""Private SDK producers with closed application labels (§12.4, ADR 0019)."""
 
 from __future__ import annotations
 
 import json
 import math
+import uuid
 from collections.abc import Mapping
 from typing import Any
 
@@ -113,7 +114,9 @@ class Metrics:
             readers.append(
                 PeriodicExportingMetricReader(
                     LocalMetricExporter(
-                        endpoint=endpoint, timeout=timeout_seconds, session=local_session()
+                        endpoint=endpoint,
+                        timeout=timeout_seconds,
+                        session=local_session(),
                     ),
                     export_interval_millis=5000,
                     export_timeout_millis=timeout_seconds * 1000,
@@ -121,7 +124,9 @@ class Metrics:
             )
         self._provider = MeterProvider(
             metric_readers=readers,
-            resource=Resource({"service.name": "hypomnesis"}),
+            resource=Resource(
+                {"service.name": "hypomnesis", "service.instance.id": str(uuid.uuid4())}
+            ),
             shutdown_on_exit=False,
             views=[
                 View(

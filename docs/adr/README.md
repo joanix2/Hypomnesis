@@ -22,3 +22,4 @@ Un ADR accepté n'est pas modifié : on le remplace par un nouvel ADR qui le ren
 | [0016](0016-declarations-language-struct.md) | Déclarations language avec struct / let / end | Acceptée ; remplace la syntaxe de 0013 |
 | [0017](0017-imports-locaux-python.md) | Imports locaux avec syntaxe Python | Acceptée |
 | [0018](0018-signatures-opaques.md) | Signatures lexicales et scellement opaque | Acceptée |
+| [0019](0019-identite-producteurs-metriques.md) | Identité standard des producteurs de métriques indépendants | Acceptée |

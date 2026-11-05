@@ -49,6 +49,9 @@ l'instrumentation ; l'extra `telemetry` permet un export OTLP des traces et mét
 local explicitement configuré. Voir [la configuration](TECHNICAL.md#observabilité-hyp-015070).
 Les événements JSON corrélés sont écrits sur stderr, expurgés par défaut ;
 `HYPOMNESIS_LOGS=0` les désactive sans couper les traces/métriques.
+
+Stack Grafana/Prometheus/Tempo locale et vérification de vrais MVP, dont deux
+simultanés : [guide de démarrage](monitoring/README.md).
 Exemple, extrait de `demo/languages/mecanique/plaque.hyp` :
 
 ```ocaml

@@ -700,7 +700,13 @@ tiers n'est contacté par ces tests.
 sans fournisseur global. `tracer.metrics.snapshot()` expose les données du
 lecteur mémoire SDK ; elles restent consultables après `close()`. Le format
 historique de `rapport.json` est inchangé. Les ressources OTLP portent
-`service.name=hypomnesis`, sans identifiant individuel comme dimension.
+`service.name=hypomnesis` et une identité standard `service.instance.id`
+UUID indépendante par fournisseur SDK, stable pendant sa vie. Ce n'est
+pas un identifiant de run/trace/message ; elle distingue les producteurs
+de compteurs simultanés (ADR 0019). Les lecteurs mémoire et OTLP sont
+cumulatifs. Les labels applicatifs restent fermés, mais cette dimension
+technique augmente explicitement la cardinalité ; avec une CLI courte,
+elle peut créer de nouvelles séries à chaque lancement.
 
 ```bash
 HYPOMNESIS_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318/v1/traces \
@@ -745,6 +751,35 @@ d'écriture ; les tests de validateur couvrent séparément les réfutations.
 Une exécution réussie n'émet pas artificiellement un rejet ou un échec.
 `test_metrics.py` vérifie également SDK, protobuf OTLP reçu localement,
 isolement, désactivation, fermeture et erreurs/refus/redirections d'export.
+
+### Stack locale (HYP-073)
+
+`monitoring/docker-compose.yml` déploie les images officielles ARM64 fixées
+par version et digest : Collector contrib 0.164.0, Prometheus 3.15.1,
+Grafana OSS 13.3.0 et Tempo 2.10.10 (branche 2.x single-binary locale).
+Ports loopback, limites CPU/mémoire et volumes persistants. Sources Grafana
+provisionnées, sans cloud, LLM, Loki ni tableaux de bord P2.
+
+Prometheus conserve le label technique `instance` du producteur
+(`honor_labels: true`), plutôt que de le remplacer par l'adresse du
+Collector. Pas de conversion DELTA : elle ne corrige pas à elle seule
+la concurrence de producteurs indistinguables. Les histogrammes SDK sont
+transmis sans reconstruction ni modification des horodatages.
+
+`.venv/bin/python -m monitoring.verify --timeout 120` lance deux vrais MVP
+séquentiels puis deux simultanés. Via les proxies des sources Grafana, il
+exige tous les spans attendus et l'égalité des compteurs, comptes/sommes
+et buckets des histogrammes avec l'instantané SDK persisté par chaque MVP
+(`sdk_metrics`). Les producteurs sont vérifiés séparément ; l'expiration
+d'anciennes séries ne fausse donc pas le contrôle. Seul un succès écrit
+le nouveau bilan de vérification.
+
+L'identité par producteur a un coût de cardinalité accepté. Expiration du
+cache Collector à cinq minutes, historique Prometheus à un jour/256 Mo,
+traces Tempo à une heure. La somme des compteurs visibles n'est pas un
+registre durable d'exécutions depuis l'installation. Cette stack locale
+avec Grafana anonyme ne constitue pas un déploiement de production.
+Commandes, URLs et limites : `monitoring/README.md`.
 
 ### Logs JSON et expurgation (HYP-072)
 

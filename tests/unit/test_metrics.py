@@ -1,6 +1,7 @@
 """SDK aggregation, closed dimensions and real local OTLP metric delivery."""
 
 import threading
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -67,6 +68,8 @@ def metrics_collector():
         {"message_id": "m-1"},
         {"trace_id": "0123456789abcdef"},
         {"traceId": "0123456789abcdef"},
+        {"instance": "producer-id"},
+        {"service.instance.id": "producer-id"},
         {"knowledge_id": "fact-1"},
         {"correlation_id": "run-1"},
         {"plugin": "unbounded-plugin"},
@@ -239,6 +242,14 @@ def test_real_metrics_protobuf_arrives_at_the_local_endpoint(
     run = next(m for m in exported if m.name == "hypomnesis_runs_total")
     assert run.sum.data_points[0].as_int == 1
     assert run.sum.is_monotonic
+    assert run.sum.aggregation_temporality == 2
+    memory = report.tracer.metrics.snapshot()["resource_metrics"][0]["scope_metrics"][0]["metrics"]
+    assert (
+        next(m for m in memory if m["name"] == "hypomnesis_runs_total")["data"][
+            "aggregation_temporality"
+        ]
+        == 2
+    )  # CUMULATIVE in the memory reader.
     duration = next(m for m in exported if m.name == "hypomnesis_run_duration_seconds")
     assert duration.unit == "s" and duration.histogram.data_points[0].sum > 0
     assert all(
@@ -246,6 +257,35 @@ def test_real_metrics_protobuf_arrives_at_the_local_endpoint(
         for _, request in received
         for resource in request.resource_metrics
     )
+
+
+def test_concurrent_providers_have_distinct_stable_resource_identities(metrics_collector):
+    endpoint, received, _ = metrics_collector
+    with (
+        Tracer(config=TraceConfig(otlp_metrics_endpoint=endpoint)) as one,
+        Tracer(config=TraceConfig(otlp_metrics_endpoint=endpoint)) as two,
+    ):
+        for tracer in (one, two):
+            with tracer.span("hypomnesis.run"):
+                tracer.metrics.record("hypomnesis_plugin_duration_seconds", 0.125, kind="solver")
+        for tracer in (two, one):
+            assert tracer.metrics._provider.force_flush()
+    resources = [resource for _, packet in received for resource in packet.resource_metrics]
+    identities = [
+        next(a.value.string_value for a in r.resource.attributes if a.key == "service.instance.id")
+        for r in resources
+    ]
+    assert len(identities) == 4 and len(set(identities)) == 2
+    for identity in identities:
+        assert str(uuid.UUID(identity)) == identity
+        assert identity.replace("-", "") not in {one.run_id, two.run_id, one.trace_id, two.trace_id}
+    for resource in resources:
+        data = {metric.name: metric for scope in resource.scope_metrics for metric in scope.metrics}
+        run = data["hypomnesis_runs_total"]
+        assert run.sum.aggregation_temporality == 2
+        assert run.sum.data_points[0].as_int == 1
+        duration = data["hypomnesis_plugin_duration_seconds"].histogram.data_points[0]
+        assert duration.count == 1 and duration.sum == 0.125
 
 
 @pytest.mark.parametrize("response", [400, 302])
