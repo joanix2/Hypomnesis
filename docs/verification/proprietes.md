@@ -54,6 +54,8 @@ la manière dont on peut en établir la validité.
 | P31 | `Conflicts.no_false_conflict` | tout rapport produit rend incompatibles les assertions actives et les contraintes fonctionnelles/invariants déclarés | §7.1 ; HYP-037, valeurs à égalité décidable et prédicats purs génériques ; pont Python testé |
 | P32 | `Contracts.decode_encode` | toute valeur ValTy du fragment structurel fermé est reconstruite exactement après encodage, nom du record et distinction None/Some unit compris | §9.4, §13.4 ; HYP-043, int/bool/string/unit, listes, paires, options et records imbriqués |
 | P33 | `Contracts.encode_conforms` | l'encodage d'une valeur ValTy satisfait le schéma produit : types, propriétés requises, aucun champ supplémentaire | §9.4, §13.4 ; HYP-043, objets à champs distincts, ordre des propriétés indifférent |
+| P34 | `Coverage.check_sound`, `exhaustive_sound`, `guarded_exhaustive_selects` | un résultat `some true` du calcul par matrices couvre toute valeur bien typée ; la sélection réussit quelles que soient les réponses booléennes des gardes si les bras non gardés couvrent | §4 ; HYP-022, fragment monomorphe, budget épuisé = indéterminé, pas de complétude revendiquée |
+| P35 | `Coverage.Certified.typed`, `eval_protected`, `certified_program_no_matchFail` | tout programme clos certifié ne rend ni `matchFail` ni `stuck` dans le véritable `Core.eval`, pour tout budget ; corps et fermetures récursives compris | §4 ; HYP-022, jugement renforcé explicite, timeout/erreur permis, pas encore attaché au pont CLI |
 
 **Application aux programmes réels (HYP-026).** L'exécutable `hypomnesis-check` applique `typeOf`
 (P3) aux certificats émis par le compilateur Python. Pour un programme accepté, P1 s'applique
@@ -81,8 +83,17 @@ Voir [certification.md](certification.md) pour les limites du fragment.
   mise à jour et motifs partiels ; mêmes P1–P7, sans changer le noyau.
 
 Ne sont **pas encore** couverts : réels mathématiques et primitives hors catalogue,
-motifs alternatifs imbriqués et alias, exhaustivité
-(F1c) et polymorphisme (F2).
+élaboration des motifs alternatifs imbriqués et alias, certification automatique
+d'exhaustivité par la CLI et polymorphisme (F2).
+
+**Exhaustivité (HYP-022, F1c).** P34 prouve le calcul positif par matrices ;
+P35 ajoute un jugement `Certified` qui exige la couverture et certifie tous
+les corps, y compris les fermetures récursives. La sélection sous gardes est
+prouvée séparément de leur évaluation. Le corollaire programme entier
+suppose la dérivation renforcée : `typeOf`, `--strict` et `--certify` ne la
+produisent pas encore. Le corpus Python/Lean compare 271 matrices réelles
+et quatre cas de budget, sans preuve universelle du pont ni de complétude.
+Voir [les frontières détaillées](certification.md#exhaustivité-prouvée-et-frontière-cli-hyp-022).
 
 **Frontière JSON (HYP-042, ADR 0010).** La primitive Python `core.to_json`, les conversions
 `Json.t` et les codecs/contrats JSON ne font pas partie du catalogue de primitives du fragment
@@ -115,7 +126,7 @@ de contrats JSON Schema arbitraires ne sont prouvés.
 | fonctions pures, immutabilité | déterminisme ; l'évaluation ne dépend que de l'environnement | ✅ P8 |
 | typage avant exécution | sûreté du typage | ✅ P1, P21–P23 (variants, records, `match`) · 🎯 F2 (polymorphisme explicite) |
 | types algébriques, filtrage | sûreté étendue aux variants et au filtrage | ✅ P1, P14, P15 |
-| | **exhaustivité** : un `match` exhaustif bien typé ne lève jamais `Match_failure` | 🎯 F1c |
+| | **exhaustivité** : un `match` exhaustif bien typé ne lève jamais `Match_failure` | ✅ P34–P35 pour `Certified` ; rattachement CLI encore absent |
 | inférence Hindley-Milner | *correction* de l'inférence : obtenue **sans prouver l'inférence Python**, par vérification de son résultat (certificat) | 🎯 F3 |
 | | *principalité* (le type inféré est le plus général) | 🧪 tests différentiels ; preuve en Lean possible mais non prioritaire |
 | modules | la résolution de noms préserve le sens : renommer un module ne change pas le résultat | 🎯 F2 |

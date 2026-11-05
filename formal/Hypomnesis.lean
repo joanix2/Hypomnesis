@@ -4,6 +4,9 @@ import Hypomnesis.Core.Eval
 import Hypomnesis.Core.Soundness
 import Hypomnesis.Core.Check
 import Hypomnesis.Core.Fuel
+import Hypomnesis.Core.Coverage
+import Hypomnesis.Core.Covered
+import Hypomnesis.Core.CoverageExamples
 import Hypomnesis.Epistemics.Provenance
 import Hypomnesis.Epistemics.Revision
 import Hypomnesis.Epistemics.Conflicts

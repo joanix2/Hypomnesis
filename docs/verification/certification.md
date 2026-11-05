@@ -56,7 +56,36 @@ la signature des variables par slot. Une garde fausse passe au cas source
 suivant, jamais à l'autre alternative du même cas. Le validateur Lean et la CI
 exigent chaque acceptation via le checker indépendant et le pont CLI.
 Les alternatives imbriquées, alias et primitives non modélisés restent refusés ;
-aucune extension du noyau ni preuve d'exhaustivité n'est revendiquée.
+leur normalisation n'est pas prouvée.
+
+## Exhaustivité prouvée et frontière CLI (HYP-022)
+
+`Core.Coverage.check` est une analyse Lean par matrices : spécialisation des
+booléens, produits et constructeurs de la signature, matrice par défaut pour
+les domaines ouverts. `exhaustive` expose un budget et un résultat
+`Option Bool` : seul `some true` établit la couverture ; `none` signale
+un budget épuisé. Les bras gardés ne contribuent jamais à cette couverture.
+P34 relie le calcul positif à `matchPat` pour toute valeur bien typée.
+La sélection conserve au moins un bras, quelles que soient les réponses
+booléennes des gardes. Cela ne garantit ni leur terminaison ni l'absence
+d'erreur pendant leur évaluation.
+
+P35 porte sur **le véritable `Core.eval`** : tout programme clos muni
+d'une dérivation `Coverage.Certified` ne rend jamais `matchFail`, quel que
+soit le budget. Le jugement exige des sous-expressions et corps de fonctions
+certifiés, y compris les fermetures récursives et les expressions de garde ;
+il exclut aussi `stuck`, mais permet timeout et erreurs explicites.
+Les exemples prouvent une longueur récursive et une garde fausse qui
+passe au bras suivant.
+
+Le checker CLI actuel applique `typeOf`, **pas ce jugement renforcé**.
+Ni `--strict`, ni `--certify`, ni leur combinaison n'émet automatiquement
+une dérivation `Certified`. Le jugement est conservateur : on ne prouve
+pas que tout programme accepté sans avertissement Python est certifiable.
+Le corpus différentiel compare 31 matrices ciblées et 240 matrices générées,
+plus quatre cas de budget. Il normalise alias et alternatives pour comparer
+la couverture, sans prouver leur élaboration ni leur comportement avec gardes.
+Il n'établit ni équivalence universelle Python/Lean ni complétude du calcul.
 
 P3 garantit le typage du terme **traduit et accepté dans le fragment Lean**.
 Ni le décodage ni le runtime Python n'ont de preuve complète de raffinement :

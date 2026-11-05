@@ -11,6 +11,9 @@ Stratégie (certificats, tests différentiels) : [docs/verification/strategie.md
 | `Hypomnesis/Core/Eval.lean` | interpréteur de référence à environnements et budget |
 | scalaires (Syntax, Typing, Eval, Check) | Float binary64, String Unicode, primitives fermées et erreurs explicites ; P1–P7 étendus, modèle Float standard audité |
 | `Hypomnesis/Core/Soundness.lean` | sûreté : un terme bien typé ne se bloque jamais |
+| `Hypomnesis/Core/Coverage.lean` | couverture calculée par matrices avec budget, correction positive, sélection malgré les gardes et chaînes de `case` |
+| `Hypomnesis/Core/Covered.lean` | jugement `Certified`, valeurs/fermetures protégées et absence de `matchFail` pour les programmes certifiés |
+| `Hypomnesis/Core/CoverageExamples.lean` | longueur récursive certifiée, garde fausse suivie du bras suivant, calculs et preuves pour tout budget |
 | `Hypomnesis/Core/Check.lean` | vérificateur exécutable, correct et complet ; décidabilité ; unicité |
 | `Hypomnesis/Core/Fuel.lean` | le budget ne change jamais un résultat obtenu |
 | `Hypomnesis/Core/Examples.lean` | longueur d'une liste d'entiers : typage établi par calcul, exécution |
@@ -31,5 +34,7 @@ lake build hypomnesis-check && lake exe hypomnesis-check check ../cert.json
 Depuis la racine : `hypomnesis check demo/examples/basics/certifiable.hyp --certify`.
 L'export `--emit-certificate` seul n'appelle pas Lean.
 Couverture et refus hors fragment : [certification](../docs/verification/certification.md).
+La CLI vérifie le typage, pas encore les dérivations `Coverage.Certified` :
+la preuve d'exhaustivité n'est pas automatiquement attachée à `--certify`.
 
 Aucune dépendance (pas de Mathlib) ; version de Lean fixée dans `lean-toolchain`.

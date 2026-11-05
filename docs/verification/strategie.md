@@ -90,6 +90,27 @@ l'interpréteur doit, **dans le même changement** :
 
 ## Ce qui reste de confiance
 
+### Exhaustivité : preuve distincte du typage (HYP-022)
+
+`Core.Coverage.exhaustive_sound` relie une analyse par matrices à la réussite
+de `matchPat`. Budget explicite : `none` n'est jamais un verdict couvert.
+`guarded_exhaustive_selects` ignore les bras gardés pour établir la couverture.
+`Coverage.Certified` renforce ensuite le typage ordinaire par la certification
+des groupes de filtrage et de toutes leurs sous-expressions/corps de fonctions.
+Les environnements protégés conservent cette propriété dans les fermetures et
+les appels récursifs. `certified_program_no_matchFail` porte sur le même
+`Core.eval`, pour tout budget, et non sur un interpréteur simplifié.
+
+La CLI ne construit pas encore ces dérivations. L'absence d'avertissement
+Python n'est pas assimilée à la preuve renforcée. Les 31 cas ciblés et
+240 matrices finies générées comparent le véritable checker Python à Lean ;
+quatre tests vérifient les limites du budget. Le job Lean et les validateurs
+`lean`/`complet` exigent leur exécution, sans substitution si Lean est absent.
+Le pont de normalisation des alias/alternatives est testé, pas prouvé ;
+aucune équivalence des alternatives gardées imbriquées n'est revendiquée.
+
+### Base de confiance
+
 - le noyau de Lean et les axiomes `propext`, `Quot.sound` et `Classical.choice`
   (modèle Float standard, audités en CI : ni `sorryAx`, ni
   axiome ajouté) ;

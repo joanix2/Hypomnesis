@@ -59,6 +59,17 @@ axes n'adopte pas toute son architecture. Ne pas confondre exigences et preuves.
   sans changement du format ni de Lean. La vérification du programme élaboré
   ne prouve pas l'implémentation Python du scellement.
 
+## Exhaustivité Lean (HYP-022, P34–P35)
+
+- `Core.Coverage.check` calcule par matrices avec un budget ; seul `some true`
+  établit la couverture. Les gardes ne contribuent pas à cette preuve.
+- `Coverage.Certified` renforce le typage et certifie corps/sous-expressions ;
+  les fermetures récursives préservent cette propriété. Son corollaire exclut
+  `matchFail` dans le véritable `Core.eval`, mais permet timeout/erreur explicite.
+- Le checker CLI ne produit pas encore ces dérivations. `--strict` et
+  `--certify` ne suffisent pas à invoquer ce corollaire. Le corpus Python/Lean
+  teste la normalisation des alias/alternatives, sans la prouver.
+
 ## Génération de programmes (ADR 0012, HYP-146)
 
 - Distribution optionnelle `hypomnesis-codegen` sous `packages/codegen/`, module Python

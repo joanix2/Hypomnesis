@@ -340,7 +340,19 @@ Constructeurs, produits/records, littéraux, alternatives et alias sont couverts
 les gardes ne contribuent jamais à la couverture. Les sites incluent matches,
 fonctions, paramètres et liaisons. Un témoin `_` décrit une sous-valeur quelconque.
 L'inhabitabilité des types récursifs sans base et la vérité des gardes ne sont
-pas décidées ; l'analyse est conservatrice. Preuve Lean séparée en HYP-022.
+pas décidées ; l'analyse est conservatrice.
+
+HYP-022 : `Core/Coverage.lean` modélise les mêmes spécialisations/matrices
+par défaut avec budget explicite et `Option Bool` (seul `some true` accepte).
+P34 prouve la couverture des valeurs bien typées et la sélection malgré les
+gardes si les bras non gardés couvrent. `Core/Covered.lean` définit `Certified`,
+qui certifie aussi tous les corps et sous-expressions ; les environnements
+protégés incluent les fermetures récursives. P35 exclut `matchFail`/`stuck`
+du véritable `eval`, pour tout budget d'un programme clos certifié.
+Timeout et erreurs explicites restent permis. La CLI ne construit pas encore
+ces dérivations ; ni `--strict` ni `--certify` ne suffisent à invoquer P35.
+271 matrices réelles/générées sont comparées à Lean, plus quatre budgets ;
+ce pont normalise alias/alternatives mais ne prouve pas leur élaboration.
 
 `CheckResult.warnings` et `LoadResult.warnings` portent les nouveaux diagnostics ;
 `Session.warnings` en conserve l'historique du typage, avec fichiers des couches M2.

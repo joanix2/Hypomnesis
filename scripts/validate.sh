@@ -57,7 +57,7 @@ certificate_check() {
         tests/integration/test_effects_model.py tests/integration/test_effect_handlers_model.py \
         tests/integration/test_problem_model.py tests/integration/test_solver_effect.py \
         tests/integration/test_revision_model.py tests/integration/test_conflicts_model.py \
-        tests/integration/test_json_contract_model.py \
+        tests/integration/test_json_contract_model.py tests/integration/test_coverage_model.py \
         --hypothesis-show-statistics
 }
 
