@@ -41,7 +41,7 @@ from hypomnesis.effects.commands import (
 )
 from hypomnesis.effects.permissions import PermissionPolicy
 from hypomnesis.language.errors import EvaluationError
-from hypomnesis.observability.trace import current_tracer, operation
+from hypomnesis.observability.trace import current_tracer, log_event, operation
 from hypomnesis.runtime.json import data_to_json
 
 MODES = ("simulate", "dry-run", "production")
@@ -169,6 +169,13 @@ class Dispatcher:
         tracer = current_tracer()
         if fresh and tracer is not None:
             tracer.metrics.command(outcome.state, self.mode)
+            log_event(
+                "actuator.command.finished",
+                command_id=command.id,
+                plugin=command.actuator,
+                status=outcome.state,
+                mode=self.mode,
+            )
         return outcome
 
     def _authorize(self, command: Command) -> tuple[Outcome, Actuator | None]:

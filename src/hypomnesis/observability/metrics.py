@@ -11,7 +11,9 @@ from opentelemetry.metrics import Counter, Histogram
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     InMemoryMetricReader,
+    MetricExportResult,
     MetricReader,
+    MetricsData,
     PeriodicExportingMetricReader,
 )
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
@@ -19,6 +21,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor
 from opentelemetry.trace import StatusCode
 
+from hypomnesis.observability.logging import export_diagnostics
 from hypomnesis.observability.otlp import local_session, validate_endpoint
 
 _PLUGIN_KINDS = {
@@ -66,7 +69,13 @@ def bounded_labels(labels: Mapping[str, str]) -> dict[str, str]:
 
 class Metrics:
     def __init__(
-        self, *, enabled: bool = True, endpoint: str | None = None, timeout_seconds: float = 3.0
+        self,
+        *,
+        enabled: bool = True,
+        endpoint: str | None = None,
+        timeout_seconds: float = 3.0,
+        run_id: str | None = None,
+        trace_id: str | None = None,
     ) -> None:
         if type(enabled) is not bool:
             raise ValueError("telemetry enabled must be a boolean")
@@ -90,9 +99,20 @@ class Metrics:
                 )
             except ImportError as exc:
                 raise ValueError("OTLP export requires the 'telemetry' extra") from exc
+
+            class LocalMetricExporter(OTLPMetricExporter):
+                def export(
+                    self,
+                    metrics_data: MetricsData,
+                    timeout_millis: float | None = 10000,
+                    **kwargs: Any,
+                ) -> MetricExportResult:
+                    with export_diagnostics("metrics", run_id, trace_id):
+                        return super().export(metrics_data, timeout_millis, **kwargs)
+
             readers.append(
                 PeriodicExportingMetricReader(
-                    OTLPMetricExporter(
+                    LocalMetricExporter(
                         endpoint=endpoint, timeout=timeout_seconds, session=local_session()
                     ),
                     export_interval_millis=5000,

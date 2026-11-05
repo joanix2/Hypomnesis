@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
 
+from hypomnesis.observability.logging import export_response
+
 if TYPE_CHECKING:
     from requests import Session
 
@@ -30,6 +32,7 @@ def local_session() -> Session:
         def request(self, *args: Any, **kwargs: Any) -> Any:
             kwargs["allow_redirects"] = False
             response = super().request(*args, **kwargs)
+            export_response(response.status_code)
             if 300 <= response.status_code < 400:
                 raise HTTPError(
                     f"OTLP collector redirect refused (HTTP {response.status_code})",

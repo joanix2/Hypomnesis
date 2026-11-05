@@ -199,11 +199,11 @@ def test_failed_trace_setup_closes_the_already_started_metric_provider(
         created.append(metrics)
         return metrics
 
-    def fail_exporter(**_kwargs):
+    def fail_exporter(self, **_kwargs):
         raise ValueError("fixture exporter setup failure")
 
     monkeypatch.setattr(tracing, "Metrics", capture_metrics)
-    monkeypatch.setattr(exporter, "OTLPSpanExporter", fail_exporter)
+    monkeypatch.setattr(exporter.OTLPSpanExporter, "__init__", fail_exporter)
     with pytest.raises(ValueError, match="fixture exporter setup failure"):
         Tracer(config=TraceConfig(otlp_endpoint=endpoint, otlp_metrics_endpoint=endpoint))
     assert len(created) == 1 and created[0]._closed

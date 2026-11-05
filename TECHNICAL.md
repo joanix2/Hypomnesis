@@ -634,8 +634,10 @@ propre au `Tracer`, pas le contexte ambiant), `trace_id`, `spans`, `tree()`, `ex
 threads et tâches asynchrones ne partagent pas une pile mutable.
 Les identifiants sont exportés en hexadécimal (trace 32 caractères, span 16) ;
 le `trace_id` est fixé à la création du `Tracer` (générateur d'identifiants dédié). Les valeurs
-d'attributs non scalaires sont rendues par `repr`. Une exception ouvre le statut `error`
-(`StatusCode.ERROR`) puis est relancée.
+d'attributs non scalaires simples sont rendues par `repr`, après expurgation
+des champs sensibles ; les objets arbitraires ne sont jamais formatés.
+Une exception ouvre le statut `error` (`StatusCode.ERROR`) puis est relancée,
+sans enregistrer son message ni sa pile bruts (HYP-072).
 
 `trace_context(tracer)` renvoie `{"traceparent": "00-<trace>-<span>-<flags>"}` pour l'enveloppe de
 message (§9.6, schéma `envelope-1.0.0.json`) ; hors d'un span, l'identifiant de span est nul et
@@ -743,6 +745,66 @@ d'écriture ; les tests de validateur couvrent séparément les réfutations.
 Une exécution réussie n'émet pas artificiellement un rejet ou un échec.
 `test_metrics.py` vérifie également SDK, protobuf OTLP reçu localement,
 isolement, désactivation, fermeture et erreurs/refus/redirections d'export.
+
+### Logs JSON et expurgation (HYP-072)
+
+`observability/logging.py` utilise la bibliothèque standard `logging` :
+un logger privé et un handler JSON sur stderr par traceur, sans provider
+global ni modification des handlers de l'application. Les fins d'opérations,
+leurs erreurs, les contextes invalides et les états finaux des commandes
+produisent des événements structurés. `operation.completed`,
+`operation.failed` et `actuator.command.finished` ne contiennent ni
+arguments, ni résultats métier, ni payload de commande.
+
+Chaque événement actif porte `run_id`, `trace_id` et `span_id`. Le `run_id`
+est distinct du trace id : deux exécutions sous le même parent W3C gardent
+des identités d'exécution différentes. ContextVar isole aussi la corrélation
+des logs entre threads et tâches asynchrones. Le stdout JSON de la CLI
+reste exclusivement le résultat sémantique ; `Effect.note` et les diagnostics
+du programme ne sont pas altérés par le filtre de télémétrie.
+
+```bash
+# Désactiver les logs seulement, en gardant traces/métriques.
+HYPOMNESIS_LOGS=0 hypomnesis lancer demo/languages/mecanique demo/programs/mecanique/plaque_120x80.hyp
+```
+
+Activation par défaut ; seuls `0`/`1` sont admis. API :
+`TraceConfig(logs_enabled=False)`. `HYPOMNESIS_TELEMETRY=0` coupe les trois
+signaux. Pour un hôte : `Tracer(log_stream=flux, log_policy=RedactionPolicy(
+additional_sensitive_keys=frozenset({"plugin"})))`. Le flux reste propriété
+de l'hôte et n'est pas fermé. Les événements personnalisés passent par
+`log_event("mon.evenement", **champs)` dans un span actif.
+
+Les logs n'acceptent qu'une liste positive de métadonnées et des scalaires
+bornés ; les champs inconnus sont omis et signalés par `redacted=true`.
+Les prompts/messages, payloads, entrées/sorties, données personnelles et
+secrets connus deviennent `[REDACTED]`, y compris dans les structures
+imbriquées. La récursion est bornée, les cycles et valeurs non finies
+restent sérialisables. Aucun `repr` d'objet ni `str` d'exception pour le log.
+La politique hôte permet de **renforcer**, pas d'enlever, ces protections.
+Les noms/versions de plugins et autres métadonnées déclarées par l'hôte
+restent des métadonnées de confiance : ce filtre n'est pas une analyse DLP
+d'un texte arbitraire placé délibérément dans un nom de plugin.
+
+Les traces conservent leur format de rapport, avec expurgation des champs
+sensibles lors de l'ouverture du span. Les événements d'exception ne
+gardent que le type et des marqueurs expurgés ; le statut ne contient plus
+le message. L'exception originale est relancée sans modification.
+L'API SDK brute `span.set_attribute` reste sous la responsabilité de l'hôte :
+ne pas y ajouter explicitement des prompts ou données personnelles.
+
+Les exporteurs restent ceux du SDK officiel ; une portée de diagnostic
+expurge leurs messages/arguments, corps HTTP et traceback pour les exports
+de cet hôte seulement, sans reconfigurer les autres usages d'OTel.
+Les erreurs conservent signal, run/trace et code HTTP (également les 3xx
+refusés). Un export périodique hors span garde run/trace sans span fictif.
+Des handlers/prints installés directement par un adaptateur ou par l'hôte
+ne sont pas des événements de cette façade et ne passent pas par son filtre.
+
+`test_structured_logging.py` vérifie absence de prompt/données brutes,
+exceptions dont `__str__` est interdit, corps de refus HTTP réel pour traces
+et métriques, concurrence, désactivation, renforcement, cycles, stdout CLI
+et invariance des résultats/connaissances/commandes.
 
 ## Vérification formelle
 

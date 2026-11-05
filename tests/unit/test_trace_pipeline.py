@@ -246,10 +246,13 @@ def test_actual_transports_propagate_context_without_mutating_the_envelope(kind,
     assert transport.receive() == message
 
 
-def test_invalid_incoming_sensor_context_is_reported_without_payload_fallback(caplog):
+def test_invalid_incoming_sensor_context_is_reported_without_payload_fallback(capsys):
     with Tracer() as tracer, tracer.span("observer.read") as span:
         tracer.link_message(span, {"trace_context": {"traceparent": "bad"}})
-    assert "invalid incoming trace_context" in caplog.text
+    records = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    warning = next(record for record in records if record["event"] == "telemetry.context.invalid")
+    assert warning["level"] == "WARNING" and warning["reason_code"] == "invalid_trace_context"
+    assert warning["trace_id"] == tracer.trace_id
 
 
 @pytest.mark.parametrize(

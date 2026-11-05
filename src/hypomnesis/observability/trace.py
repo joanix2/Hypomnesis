@@ -16,22 +16,31 @@ from __future__ import annotations
 import logging
 import math
 import os
+import time
+import uuid
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, ExitStack, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TextIO
 
 from opentelemetry import trace as otel
 from opentelemetry.context import Context
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.sdk.trace.id_generator import IdGenerator, RandomIdGenerator
 from opentelemetry.trace import NoOpTracerProvider, Span, SpanContext, Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from hypomnesis.observability.logging import (
+    REDACTED,
+    JsonLogger,
+    RedactionPolicy,
+    correlation,
+    export_diagnostics,
+)
 from hypomnesis.observability.metrics import Metrics, OperationMetrics
 from hypomnesis.observability.otlp import local_session, validate_endpoint
 
@@ -47,10 +56,13 @@ class TraceConfig:
     otlp_endpoint: str | None = None
     timeout_seconds: float = 3.0
     otlp_metrics_endpoint: str | None = None
+    logs_enabled: bool = True
 
     def __post_init__(self) -> None:
         if type(self.enabled) is not bool:
             raise ValueError("telemetry enabled must be a boolean")
+        if type(self.logs_enabled) is not bool:
+            raise ValueError("structured logs enabled must be a boolean")
         if (
             isinstance(self.timeout_seconds, bool)
             or not math.isfinite(self.timeout_seconds)
@@ -64,13 +76,17 @@ class TraceConfig:
     @classmethod
     def from_environment(cls) -> TraceConfig:
         enabled = os.environ.get("HYPOMNESIS_TELEMETRY", "1")
+        logs_enabled = os.environ.get("HYPOMNESIS_LOGS", "1")
         if enabled not in ("0", "1"):
             raise ValueError("HYPOMNESIS_TELEMETRY must be 0 or 1")
+        if logs_enabled not in ("0", "1"):
+            raise ValueError("HYPOMNESIS_LOGS must be 0 or 1")
         return cls(
             enabled=enabled == "1",
             otlp_endpoint=os.environ.get("HYPOMNESIS_OTLP_TRACES_ENDPOINT"),
             timeout_seconds=float(os.environ.get("HYPOMNESIS_TELEMETRY_TIMEOUT", "3")),
             otlp_metrics_endpoint=os.environ.get("HYPOMNESIS_OTLP_METRICS_ENDPOINT"),
+            logs_enabled=logs_enabled == "1",
         )
 
 
@@ -112,6 +128,8 @@ class Tracer:
         *,
         config: TraceConfig | None = None,
         parent_context: Mapping[str, str] | None = None,
+        log_policy: RedactionPolicy | None = None,
+        log_stream: TextIO | None = None,
     ) -> None:
         if config is None:
             config = (
@@ -121,6 +139,7 @@ class Tracer:
         remote = otel.get_current_span(self._root).get_span_context()
         trace_id = remote.trace_id if remote.is_valid else RandomIdGenerator().generate_trace_id()
         self.trace_id = _hex_id(trace_id, 32)
+        self.run_id = uuid.uuid4().hex
         self.enabled = config.enabled
         self.config = config
         self._closed = False
@@ -128,10 +147,16 @@ class Tracer:
         provider: otel.TracerProvider
         self._provider: TracerProvider | None = None
         with ExitStack() as cleanup:
+            self.logs = JsonLogger(
+                enabled=self.enabled and config.logs_enabled, policy=log_policy, stream=log_stream
+            )
+            cleanup.callback(self.logs.close)
             self.metrics = Metrics(
                 enabled=self.enabled,
                 endpoint=config.otlp_metrics_endpoint,
                 timeout_seconds=config.timeout_seconds,
+                run_id=self.run_id,
+                trace_id=self.trace_id,
             )
             cleanup.callback(self.metrics.close)
             if self.enabled:
@@ -149,9 +174,17 @@ class Tracer:
                         )
                     except ImportError as exc:
                         raise ValueError("OTLP export requires the 'telemetry' extra") from exc
+
+                    run_id, trace_id_hex = self.run_id, self.trace_id
+
+                    class LocalSpanExporter(OTLPSpanExporter):
+                        def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+                            with export_diagnostics("traces", run_id, trace_id_hex):
+                                return super().export(spans)
+
                     sdk_provider.add_span_processor(
                         SimpleSpanProcessor(
-                            OTLPSpanExporter(
+                            LocalSpanExporter(
                                 endpoint=config.otlp_endpoint,
                                 timeout=config.timeout_seconds,
                                 session=local_session(),
@@ -174,6 +207,7 @@ class Tracer:
             if self._provider is not None:
                 self._provider.shutdown()
             self.metrics.close()
+            self.logs.close()
 
     def __enter__(self) -> Tracer:
         return self
@@ -187,27 +221,55 @@ class Tracer:
         # starts from an empty context, so a span of another tracer is never adopted.
         if self._closed:
             raise ValueError("tracer is closed")
+        started = time.perf_counter()
         stack = self._stack.get()
         parent = otel.set_span_in_context(stack[-1][1]) if stack else self._root
         s = self._tracer.start_span(
             name,
             context=parent,
-            attributes={k: _attribute(v) for k, v in attributes.items()},
+            attributes={
+                k: _attribute(v) for k, v in self.logs.policy.span_attributes(attributes).items()
+            },
             record_exception=False,
             set_status_on_exception=False,
         )
-        token = self._stack.set((*stack, (name, s)))
-        active = _ACTIVE.set(self)
-        try:
-            yield s
-        except Exception as exc:
-            s.record_exception(exc)
-            s.set_status(Status(StatusCode.ERROR, str(exc)))
-            raise
-        finally:
-            _ACTIVE.reset(active)
-            self._stack.reset(token)
-            s.end()
+        with correlation(self.run_id, self.trace_id, _hex_id(s.get_span_context().span_id, 16)):
+            token = self._stack.set((*stack, (name, s)))
+            active = _ACTIVE.set(self)
+            failed = False
+            try:
+                yield s
+            except Exception as exc:
+                failed = True
+                s.add_event(
+                    "exception",
+                    {
+                        "exception.type": type(exc).__name__,
+                        "exception.message": REDACTED,
+                        "exception.stacktrace": REDACTED,
+                    },
+                )
+                s.set_status(Status(StatusCode.ERROR, type(exc).__name__))
+                raise
+            finally:
+                duration = (time.perf_counter() - started) * 1000
+                try:
+                    s.end()
+                    attrs = s.attributes if isinstance(s, ReadableSpan) else {}
+                    status = (
+                        _status(s) if isinstance(s, ReadableSpan) else "error" if failed else "ok"
+                    )
+                    self.logs.emit(
+                        "operation.failed" if status == "error" else "operation.completed",
+                        level=logging.ERROR if status == "error" else logging.INFO,
+                        operation=name,
+                        status=status,
+                        duration_ms=round(duration, 3),
+                        attributes=attrs or {},
+                    )
+                finally:
+                    _ACTIVE.reset(active)
+                    self._stack.reset(token)
 
     def current_context(self) -> SpanContext:
         """Context of the innermost open span (invalid when none is open)."""
@@ -225,7 +287,11 @@ class Tracer:
             try:
                 context = extract_context(carrier)
             except ValueError:
-                logging.getLogger(__name__).warning("invalid incoming trace_context ignored")
+                self.logs.emit(
+                    "telemetry.context.invalid",
+                    level=logging.WARNING,
+                    reason_code="invalid_trace_context",
+                )
             else:
                 remote = otel.get_current_span(context).get_span_context()
                 local = span.get_span_context()
@@ -316,6 +382,12 @@ def current_tracer() -> Tracer | None:
 def operation(name: str, **attributes: Any) -> AbstractContextManager[Span | None]:
     tracer = current_tracer()
     return tracer.span(name, **attributes) if tracer is not None else nullcontext()
+
+
+def log_event(event: str, *, level: int = logging.INFO, **fields: Any) -> None:
+    tracer = current_tracer()
+    if tracer is not None:
+        tracer.logs.emit(event, level=level, **fields)
 
 
 def traced_message(message: Mapping[str, Any]) -> dict[str, Any]:
