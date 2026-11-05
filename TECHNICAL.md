@@ -154,6 +154,16 @@ source et laisse les conclusions invalidées inconnues jusqu'à nouvelle
 dérivation ; aucun libellé de méthode n'est exécuté comme du code. Les
 alternatives survivantes recalculent support et confiance sans sources retirées.
 
+HYP-034 : `epistemics/storage.py` persiste le journal typé, sous contrat
+`knowledge-journal/1.0.0` et schéma SQLite version 2. Transactions et protections
+UPDATE/DELETE préservent le préfixe ; upgrade 1 → 2 non destructif.
+`Event.unknown` conserve l'inconnue exacte issue d'une invalidation, le
+compteur explicite des sources survit au redémarrage. Rejeu sans exécution
+de méthode ou prédicat, avec TypeCodec fermé par propriété. Les descripteurs
+d'invariants exigent des liaisons hôte, pas du code importé. JSON strict et
+erreurs localisées ; les modifications non journalisées de la projection
+sont refusées. Tests : `tests/unit/test_knowledge_storage.py`.
+
 HYP-035 : `epistemics/conflicts.py` vérifie les attributs fonctionnels et
 invariants purs déclarés. `KnowledgeBase.conflicts` est une lecture vivante
 du journal et des faits encore étayés, pas une notification poussée : une

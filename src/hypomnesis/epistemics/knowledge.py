@@ -21,7 +21,6 @@ when a fact has several derivations.
 
 from __future__ import annotations
 
-import itertools
 import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -247,6 +246,7 @@ class Event:
     key: str
     detail: str
     fact: Fact | None = None
+    unknown: Unknown | None = None
 
 
 @dataclass
@@ -256,7 +256,7 @@ class KnowledgeBase:
     unknowns: dict[str, Unknown] = field(default_factory=dict)
     _journal: list[Event] = field(default_factory=list, init=False, repr=False)
     retracted: set[str] = field(default_factory=set)
-    _ids: Any = field(default_factory=lambda: itertools.count(1), repr=False)
+    _next_source_id: int = field(default=1, init=False, repr=False)
     conflict_checker: ConflictChecker | None = field(default=None, repr=False)
 
     # -------------------------------------------------------------- input
@@ -266,16 +266,29 @@ class KnowledgeBase:
         """Read-only history; events and their concrete fact snapshots are frozen."""
         return tuple(self._journal)
 
-    def _log(self, kind: str, key: str, detail: str, fact: Fact | None = None) -> None:
-        self._journal.append(Event(len(self._journal) + 1, kind, key, detail, fact))
+    def _log(
+        self,
+        kind: str,
+        key: str,
+        detail: str,
+        fact: Fact | None = None,
+        *,
+        unknown: Unknown | None = None,
+    ) -> None:
+        self._journal.append(Event(len(self._journal) + 1, kind, key, detail, fact, unknown))
 
     def _source(self, kind: str, origin: str, confidence: float) -> Source:
-        return Source(f"{kind[:3]}-{next(self._ids)}", kind, origin, confidence)
+        while True:
+            identifier = f"{kind[:3]}-{self._next_source_id}"
+            self._next_source_id += 1
+            source = Source(identifier, kind, origin, confidence)
+            if identifier not in self.sources and identifier not in self.retracted:
+                return source
 
     def unknown(self, key: str, description: str) -> Unknown:
         u = Unknown(key, description)
         self.unknowns[key] = u
-        self._log("unknown", key, description)
+        self._log("unknown", key, description, unknown=u)
         return u
 
     def observe(self, key: str, value: Any, origin: str) -> Fact:
@@ -383,7 +396,13 @@ class KnowledgeBase:
         for key in keys:
             fact = self.facts.pop(key)
             self.unknowns[key] = Unknown(key, f"invalidée : {reason}")
-            self._log("invalidated", key, f"dépendait de {source_id}", fact)
+            self._log(
+                "invalidated",
+                key,
+                f"dépendait de {source_id}",
+                fact,
+                unknown=self.unknowns[key],
+            )
         return keys
 
     def replace_observation(self, key: str, value: Any, origin: str, reason: str) -> Fact:

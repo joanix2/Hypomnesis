@@ -56,12 +56,17 @@ def _decode_provenance(data: dict[str, Any]) -> Prov:
     raise ValueError(f"invalid provenance operation: {op}")
 
 
-def to_json(knowledge: Knowledge, codec: TypeCodec) -> dict[str, Any]:
+def to_json(
+    knowledge: Knowledge, codec: TypeCodec, *, registry: SchemaRegistry | None = None
+) -> dict[str, Any]:
     """Encode an immutable snapshot, checking concrete values against ``codec``."""
+    registry = registry or SchemaRegistry.with_builtin_schemas()
     data: dict[str, Any] = {"schema_version": "1.0.0"}
     if isinstance(knowledge, Observation):
         data.update(
-            kind="observation", source=asdict(knowledge.source), fact=to_json(knowledge.fact, codec)
+            kind="observation",
+            source=asdict(knowledge.source),
+            fact=to_json(knowledge.fact, codec, registry=registry),
         )
     elif isinstance(knowledge, Fact):
         data.update(
@@ -82,20 +87,21 @@ def to_json(knowledge: Knowledge, codec: TypeCodec) -> dict[str, Any]:
         )
     else:
         raise ValueError("expected Fact, Observation or Unknown")
-    SchemaRegistry.with_builtin_schemas().validate(SCHEMA_ID, data)
+    registry.validate(SCHEMA_ID, data)
     return data
 
 
-def from_json(data: Any, codec: TypeCodec) -> Knowledge:
+def from_json(data: Any, codec: TypeCodec, *, registry: SchemaRegistry | None = None) -> Knowledge:
     """Validate metadata and the host's expected type, then reconstruct a snapshot.
 
     The standalone schema deliberately does not validate ``value`` against a
     language type: only this function, with a trusted TypeCodec, does so.
     No knowledge base is mutated and no rule or plugin is executed.
     """
-    SchemaRegistry.with_builtin_schemas().validate(SCHEMA_ID, data)
+    registry = registry or SchemaRegistry.with_builtin_schemas()
+    registry.validate(SCHEMA_ID, data)
     if data["kind"] == "observation":
-        fact = from_json(data["fact"], codec)
+        fact = from_json(data["fact"], codec, registry=registry)
         if not isinstance(fact, Fact):
             raise ValueError("observation requires a concrete fact")
         return Observation(Source(**data["source"]), fact)

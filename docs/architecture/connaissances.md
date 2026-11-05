@@ -259,6 +259,82 @@ meilleur support réutilise celle des propositions de métavariables. Le
 contrat JSON knowledge/1.0.0 reste inchangé : ces rapports et prédicats hôte
 ne sont pas des valeurs Fact sérialisées. La preuve Lean est HYP-037.
 
+## Journal SQLite et échange complet (HYP-034)
+
+`epistemics.storage` ajoute un contrat distinct
+`knowledge-journal/1.0.0`. Ses événements utilisent les instantanés typés
+`knowledge/1.0.0` existants ; le type fermé attendu de chaque propriété vient
+d'un `TypeCodec` fourni par l'hôte, jamais d'un chargement de code depuis JSON.
+Une propriété conserve ce type dans son historique. Les valeurs Python
+arbitraires sans représentation dans ce type sont refusées, pas converties
+silencieusement. Entiers JSON exacts, records nominaux, options et listes du
+langage restent pris en charge.
+
+```python
+from hypomnesis.contracts.codec import TypeCodec
+from hypomnesis.epistemics.knowledge import KnowledgeBase
+from hypomnesis.epistemics.storage import SQLiteStore
+from hypomnesis.session import Session
+
+codecs = {"objet.propriete": TypeCodec(Session().checker, "int")}
+base = KnowledgeBase()
+base.observe("objet.propriete", 3, "observation")
+with SQLiteStore("knowledge.sqlite", codecs) as store:
+    store.save(base)
+    restored = store.load()
+    assert restored.facts == base.facts
+    encoded = store.export_json()
+    assert store.import_json(encoded).journal == base.journal
+```
+
+Le rejeu applique les transitions des événements, pas les textes de méthodes,
+les règles, les estimateurs ou les invariants. `Event.unknown` capture désormais
+l'Unknown exact créé par `unknown` ou une invalidation, sans analyser les
+messages humains. Le compteur de sources est explicite et sauvegardé :
+après redémarrage, la prochaine observation retrouve son identifiant attendu.
+La génération évite aussi les identifiants déjà déclarés ou retirés.
+
+Le document conserve sources, provenance, faits historiques, inconnues,
+retraits et compteur. Les contrôles de cohérence ont un descripteur déclaratif.
+Les contrôles fonctionnels peuvent être reconstruits sans code. Les invariants
+exécutables demandent le `checker=` de l'hôte, dont les noms et clés doivent
+correspondre ; il n'est pas exécuté au chargement. Ouvrir aussi `SQLiteStore`
+avec ces liaisons pour sauvegarder une base utilisant des invariants.
+La cohérence se recalcule à la consultation, jamais depuis un statut importé.
+
+`export_json(base, codecs)` et `import_json(text, codecs, checker=...)`
+fonctionnent également sans SQLite. `store.import_file(path)` lit un fichier
+UTF-8. La validation suit : JSON strict (doublons et nombres non finis refusés),
+schéma fermé, TypeCodec, puis séquence et transitions. `JournalError.path`
+et les erreurs de contrat donnent un chemin JSON, par exemple
+`$.events[0].fact.value`. Une séquence discontinue, des sources absentes ou
+dupliquées, une invalidation sans retrait ou un instantané incompatible sont
+refusés. Les compteurs et séquences exigent des jetons entiers.
+
+L'export rejoue son propre document et compare la projection : modifier
+directement `base.facts`, `unknowns` ou `retracted` sans événement ne peut pas
+faire perdre silencieusement ces changements. Publier les faits via
+`publish_fact` et employer les opérations de révision avant de sauvegarder.
+Le journal doit être complet depuis la création ; pas de compactage/checkpoint
+ni de rejeu d'un préfixe arbitrairement tronqué.
+
+SQLite utilise des transactions explicites : lecture cohérente, verrouillage
+du préfixe avant ajout, insertion des seuls nouveaux événements et mise à jour
+des métadonnées atomiques. Une divergence historique, une modification des
+sources précédentes ou un recul du compteur sont refusés. Les déclencheurs
+SQLite interdisent UPDATE et DELETE sur les événements. L'import vers une
+base existante doit prolonger son préfixe ; employer un nouveau fichier pour
+un historique indépendant. Une erreur de codec ou de base ne laisse aucun
+import partiel.
+
+Versions SQLite : `0 → 1` crée les tables `metadata` et `events` dans une base
+vide ; `1 → 2` ajoute les protections append-only en conservant les lignes.
+Une base non vide sans version ou une version inconnue est refusée sans
+écrasement. Ces migrations ne prétendent pas importer un ancien format
+historique de statuts exclusifs. Tests : vraie base SQLite, upgrade non vide,
+échec SQL injecté au milieu d'un ajout, redémarrage, 30 historiques générés
+et conservation des trois axes.
+
 ## Chaînage avant et défauts (HYP-050)
 
 `engine.rules.Rule(name, target, premises, evaluate, default=False)` décrit

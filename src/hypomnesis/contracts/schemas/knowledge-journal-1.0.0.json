@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.example.org/hypomnesis/knowledge-journal/1.0.0",
+  "title": "Typed append-only knowledge journal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "sources", "events", "next_source_id", "checker"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "sources": {
+      "type": "array",
+      "items": {"$ref": "https://schemas.example.org/hypomnesis/knowledge/1.0.0#/$defs/source"}
+    },
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}},
+    "next_source_id": {"type": "integer", "minimum": 1},
+    "checker": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["functional", "invariants", "policy"],
+          "properties": {
+            "functional": {"$ref": "#/$defs/keys"},
+            "policy": {"enum": ["report", "best-support"]},
+            "invariants": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "keys"],
+                "properties": {
+                  "name": {"$ref": "#/$defs/identifier"},
+                  "keys": {"allOf": [{"$ref": "#/$defs/keys"}], "minItems": 1}
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "\\S"},
+    "keys": {
+      "type": "array", "uniqueItems": true,
+      "items": {"$ref": "#/$defs/identifier"}
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "kind", "key", "detail", "fact", "unknown"],
+      "properties": {
+        "seq": {"type": "integer", "minimum": 1},
+        "kind": {
+          "enum": ["observed", "estimated", "hypothesis", "derived", "replaced",
+                   "retracted", "invalidated", "unknown", "revised"]
+        },
+        "key": {"$ref": "#/$defs/identifier"},
+        "detail": {"type": "string"},
+        "fact": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "https://schemas.example.org/hypomnesis/knowledge/1.0.0#/$defs/fact"}
+          ]
+        },
+        "unknown": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "https://schemas.example.org/hypomnesis/knowledge/1.0.0#/$defs/unknown"}
+          ]
+        }
+      }
+    }
+  }
+}
