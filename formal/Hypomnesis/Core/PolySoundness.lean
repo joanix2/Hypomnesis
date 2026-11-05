@@ -42,6 +42,85 @@ inductive RuntimePat : Pat → Prop where
   | pair {first second} : RuntimePat first → RuntimePat second →
       RuntimePat (.pair first second)
 
+def Signature.eraseMono (sig : Signature) : Core.Sig :=
+  sig.map fun declaration => declaration.constructors.map Ty.erase
+
+theorem Signature.eraseMono_declLookup {sig : Signature} {data : Nat}
+    {declaration : DataDecl} (lookup : sig[data]? = some declaration) :
+    sig.eraseMono[data]? = some (declaration.constructors.map Ty.erase) := by
+  simp [Signature.eraseMono, lookup]
+
+theorem Signature.eraseMono_constructorLookup {sig : Signature} {data ctor : Nat}
+    {declaration : DataDecl} {payload : Ty}
+    (declLookup : sig[data]? = some declaration)
+    (ctorLookup : declaration.constructors[ctor]? = some payload) :
+    ∃ constructors,
+      sig.eraseMono[data]? = some constructors ∧
+      constructors[ctor]? = some payload.erase := by
+  refine ⟨declaration.constructors.map Ty.erase, ?_, ?_⟩
+  · exact Signature.eraseMono_declLookup declLookup
+  · simpa using congrArg (Option.map Ty.erase) ctorLookup
+
+theorem Signature.constructorType_zeroArity {sig : Signature} {data ctor : Nat}
+    {declaration : DataDecl} {payload : Ty}
+    (declLookup : sig[data]? = some declaration) (arity : declaration.parameters = 0)
+    (ctorLookup : declaration.constructors[ctor]? = some payload) :
+    sig.constructorType data ctor [] = some payload := by
+  simp [Signature.constructorType, declLookup, ctorLookup,
+    Scheme.instantiate, arity]
+  have instantiateEmpty : instantiateSubst [] = Ty.var := by
+    funext index
+    simp [instantiateSubst]
+  rw [instantiateEmpty, Ty.subst_var]
+
+theorem HasType.erase_monoConstructor {sig : Signature} {data ctor : Nat}
+    {declaration : DataDecl} {payload : Ty} {arg : Core.Expr}
+    (declLookup : sig[data]? = some declaration)
+    (ctorLookup : declaration.constructors[ctor]? = some payload)
+    (argTyped : Core.HasType sig.eraseMono [] arg payload.erase) :
+    Core.HasType sig.eraseMono [] (.construct data ctor arg) (.data data) := by
+  obtain ⟨constructors, dataLookup, payloadLookup⟩ :=
+    Signature.eraseMono_constructorLookup declLookup ctorLookup
+  exact Core.HasType.construct dataLookup payloadLookup argTyped
+
+def monoBoxDeclaration : DataDecl :=
+  { parameters := 0, constructors := [.int] }
+
+def monoBoxSignature : Signature := [monoBoxDeclaration]
+
+def monoBoxValue : Expr :=
+  .construct 0 0 [] (.int 5)
+
+theorem monoBoxValue_has_poly_type :
+    HasType monoBoxSignature 0 [] monoBoxValue (.data 0 []) := by
+  have constructorType :
+      monoBoxSignature.constructorType 0 0 [] = some .int := by
+    apply Signature.constructorType_zeroArity (declaration := monoBoxDeclaration)
+    · rfl
+    · rfl
+    · rfl
+  exact .construct constructorType (by simp) .int
+
+theorem monoBoxValue_erases_to_core_typed :
+    Core.HasType monoBoxSignature.eraseMono [] monoBoxValue.erase (.data 0) := by
+  exact HasType.erase_monoConstructor (declaration := monoBoxDeclaration)
+    (by rfl) (by rfl) Core.HasType.int
+
+theorem eval_monoBoxValue :
+    Core.eval 10 [] monoBoxValue.erase = .ok (.con 0 (.int 5)) := by
+  rfl
+
+theorem eval_safe_monoBoxValue (fuel : Nat) :
+    Core.Safe monoBoxSignature.eraseMono
+      (Core.eval fuel [] monoBoxValue.erase) (.data 0) :=
+  Core.eval_safe fuel Core.EnvTy.nil monoBoxValue_erases_to_core_typed
+
+theorem monoBoxValue_type_and_runtime_safe (fuel : Nat) :
+    HasType monoBoxSignature 0 [] monoBoxValue (.data 0 []) ∧
+    Core.Safe monoBoxSignature.eraseMono
+      (Core.eval fuel [] monoBoxValue.erase) (.data 0) :=
+  ⟨monoBoxValue_has_poly_type, eval_safe_monoBoxValue fuel⟩
+
 theorem PatTy.erase_runtimePat {sig : Signature} {pattern : Pat} {type : Ty}
     {bindings : List Ty} (runtimePat : RuntimePat pattern)
     (typed : PatTy sig pattern type = some bindings) :

@@ -71,3 +71,10 @@ tags: [certification, lean, metalangage]
 - [ ] Étendre la sûreté à fuel arbitraire au fragment polymorphe général, sans réduire la sûreté des motifs, records, couverture certifiée ou fuel.
 - [ ] Étendre le pont aux motifs de constructeurs, records et `Coverage.Certified` sans affaiblir les garanties existantes.
 - [ ] Ajouter l'audit d'axiomes, les régressions de let-polymorphe multi-instancié et de données paramétriques, puis documenter le pont prouvé.
+
+## Itération 6 — correspondance des signatures Core
+
+- [x] Définir l'effacement des tables de constructeurs et prouver le transport de leurs recherches par index.
+- [x] Prouver l'instanciation d'un constructeur de déclaration mono sans paramètre et valider un exemple Core sûr à tout fuel.
+- [ ] Intégrer constructeurs et motifs nominaux au fragment de sûreté avec hypothèses explicites de compatibilité des signatures.
+- [ ] Étendre de la déclaration mono aux données paramétriques avec une relation de valeurs qui interprète les arguments de type.

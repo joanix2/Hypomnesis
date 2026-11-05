@@ -348,3 +348,28 @@ sûreté générale, les fonctions et la liaison du CLI restent ouverts. Aucun
 commit ni push.
 
 ### user
+
+Continuer le pont de sûreté en examinant les signatures nominales et le
+fichier de démonstration mécanique fourni.
+
+### agent
+
+P47 ajoute une correspondance formelle entre les déclarations de constructeurs
+et leur table Core après effacement des payloads. Le lemme
+`constructorType_zeroArity` établit le lien pour une déclaration sans
+paramètre ; `monoBoxValue_type_and_runtime_safe` vérifie sur un même terme le
+typage polymorphe et la sûreté de son effacement dans le véritable évaluateur
+Core, à tout fuel.
+
+Ce jalon ne relie pas encore les constructeurs/motifs nominaux au théorème
+général du fragment et ne traite pas les données paramétriques ; ces limites
+sont ajoutées à la checklist et à la documentation. Le fichier
+`demo/programs/mecanique/plaque_120x80.hyp` décrit un programme de démonstration
+du DSL, mais ne relève pas du pont formel HYP-023 et n'a pas été modifié.
+
+Validations : `validate.sh lean` avec audit d'axiomes (seuls axiomes Lean
+standards), `validate.sh rapide`, `validate.sh graphe`, `kanban.py check`
+(109 tâches) et `git diff --check` réussis. HYP-023 reste ouvert ; aucun push
+effectué.
+
+### user

@@ -50,6 +50,15 @@ open Hypomnesis.Core Hypomnesis.Epistemics
 #print axioms Poly.eval_recursiveCountdownApplication
 #print axioms Poly.eval_safe_pairPatternCase
 #print axioms Poly.eval_pairPatternCase
+#print axioms Poly.Signature.eraseMono_declLookup
+#print axioms Poly.Signature.eraseMono_constructorLookup
+#print axioms Poly.Signature.constructorType_zeroArity
+#print axioms Poly.HasType.erase_monoConstructor
+#print axioms Poly.monoBoxValue_has_poly_type
+#print axioms Poly.monoBoxValue_erases_to_core_typed
+#print axioms Poly.eval_monoBoxValue
+#print axioms Poly.eval_safe_monoBoxValue
+#print axioms Poly.monoBoxValue_type_and_runtime_safe
 #print axioms Poly.typeOfAux_sound
 #print axioms Poly.typeOf_sound
 #print axioms Poly.typeOf_complete

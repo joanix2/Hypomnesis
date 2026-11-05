@@ -61,6 +61,13 @@ La récursion et les motifs scalaires/de paires sont couverts dans ce fragment ;
 les motifs de constructeurs, les données paramétriques et les liaisons
 polymorphes multi-instanciées restent hors preuve. P44 ne constitue pas encore
 la sûreté générale du polymorphisme de rang 1.
+P47 établit une première correspondance de table de constructeurs mono :
+`Signature.eraseMono` projette les payloads vers la signature Core, et
+`monoBoxValue_type_and_runtime_safe` relie un constructeur polymorphe sans
+paramètre à une exécution Core sûre à tout fuel. Ce lemme/régression de
+signature n'intègre pas encore les constructeurs ou motifs nominaux dans le
+fragment de sûreté général ; les signatures paramétriques restent non
+interprétées par `Core.Sig`.
 Indépendamment de cette preuve de fragment, P45 établit pour l'exemple concret
 du `let` identité partagé entre `int` et `bool` que l'exécution à fuel 20 rend
 une paire dans la relation Core `ValTy`. Cette régression n'est pas une
